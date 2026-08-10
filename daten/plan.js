@@ -19,7 +19,7 @@ const STUNDENPLAN = {
   "WPF - Wirtschaftspsychologie (Die)",
   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
  ],
- "geprueftAm": "2026-08-10T09:46",
+ "geprueftAm": "2026-08-10T09:47",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3467,33 +3467,5 @@ const STUNDENPLAN = {
    "gruppe": ""
   }
  ],
- "aenderungen": [
-  {
-   "erkanntAm": "2026-08-10T09:46",
-   "anzahl": 1,
-   "eintraege": [
-    {
-     "typ": "geaendert",
-     "termin": {
-      "id": "sked.de1207992",
-      "start": "2026-08-11T08:00",
-      "ende": "2026-08-11T13:15",
-      "art": "SI",
-      "titel": "WPF - Social Innovation",
-      "dozent": "Druffel, WagnerL",
-      "raum": "CL: 6A.014",
-      "anmerkung": "",
-      "gruppe": ""
-     },
-     "felder": [
-      {
-       "feld": "Raum",
-       "vorher": "PRUEFRAUM 1.234",
-       "nachher": "CL: 6A.014"
-      }
-     ]
-    }
-   ]
-  }
- ]
+ "aenderungen": []
 };
