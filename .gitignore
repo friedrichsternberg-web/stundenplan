@@ -1,8 +1,9 @@
-# Der Arbeitsstand für den Vergleich – wird bei jedem Lauf neu geschrieben
-# und muss nicht ins Netz.
-daten/stand.json
-daten/protokoll.log
+# Erzeugte Dateien. Sie liegen NICHT im Zweig "main":
+#
+#   - auf dem Mac entstehen sie lokal fürs Dashboard und die Mitteilungen
+#   - im Netz erzeugt sie die GitHub-Automatik im Zweig "gh-pages"
+#
+# Lägen sie auch in "main", würden sich beide Seiten gegenseitig
+# überschreiben, sobald man einmal "git pull" macht.
+daten/
 .DS_Store
-
-# Bewusst NICHT ignoriert: daten/plan.js und daten/meine-termine.ics.
-# Die beiden sind es ja gerade, die auf dem Handy ankommen sollen.

@@ -1,0 +1,77 @@
+# Haelt die veroeffentlichte Seite aktuell - ohne dass Friedrichs Mac laeuft.
+#
+# GitHub startet diesen Auftrag nach Zeitplan, holt den Stundenplan von der
+# HWR und schreibt das Ergebnis in den Zweig gh-pages. Von dort liefert
+# GitHub Pages es ans Handy aus.
+#
+# Warum ein eigener Zweig? Damit sich Mac und Automatik nicht in die Quere
+# kommen. Der Mac arbeitet auf "main" (Quellcode), die Automatik schreibt
+# ausschliesslich nach "gh-pages" (Ergebnis). So kann keiner die Aenderungen
+# des anderen ueberschreiben.
+
+name: Stundenplan aktualisieren
+
+on:
+  schedule:
+    # Achtung: GitHub rechnet in UTC, nicht in Berliner Zeit. Fuer diesen
+    # Zweck ist das egal - geprueft wird ohnehin rund um die Uhr.
+    # Die krummen Minuten sind Absicht: zur vollen Stunde starten weltweit
+    # alle Auftraege gleichzeitig, dann stellt GitHub sie in die Warteschlange.
+    - cron: "7,37 * * * *"
+
+  # Erlaubt, den Auftrag von Hand auszuloesen - praktisch zum Ausprobieren.
+  workflow_dispatch:
+
+# Der Auftrag muss in den Zweig gh-pages schreiben duerfen. Ohne diese
+# Zeilen darf er nur lesen.
+permissions:
+  contents: write
+
+# Laeuft nie zweimal gleichzeitig. Sonst koennten sich zwei Laeufe beim
+# Hochladen gegenseitig abschiessen.
+concurrency:
+  group: stundenplan-aktualisieren
+  cancel-in-progress: false
+
+jobs:
+  aktualisieren:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Quellcode holen
+        uses: actions/checkout@v4
+
+      - name: Bisher veroeffentlichten Stand holen
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: veroeffentlichung
+
+      - name: Stundenplan abgleichen
+        env:
+          # Sagt abgleich.py, dass es ohne Bildschirm laeuft: keine
+          # macOS-Mitteilung versuchen.
+          STUNDENPLAN_SERVER: "1"
+          # Und wohin die Ergebnisdateien sollen.
+          STUNDENPLAN_DATEN: veroeffentlichung/daten
+        run: python3 abgleich.py
+
+      - name: Seite zusammenstellen
+        # Die Anzeige-Dateien koennen sich geaendert haben, wenn am
+        # Quellcode gearbeitet wurde. Deshalb bei jedem Lauf mitkopieren.
+        run: cp index.html app.js style.css symbol.png veroeffentlichung/
+
+      - name: Ergebnis hochladen
+        working-directory: veroeffentlichung
+        run: |
+          git config user.name "Stundenplan-Automatik"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          # Nur committen, wenn es wirklich etwas Neues gibt. Sonst wuerde
+          # bei jedem Lauf ein leerer Eintrag entstehen.
+          if git diff --staged --quiet; then
+            echo "Nichts Neues - kein Commit."
+          else
+            git commit -m "Stand vom $(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')"
+            git push
+          fi

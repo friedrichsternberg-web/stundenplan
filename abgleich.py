@@ -65,11 +65,26 @@ NICHT_BELEGTE_FAECHER = [
     "WPF - Wirtschaftspsychologie (Do) Kurs 1",
 ]
 
+# Laeuft das Skript auf deinem Mac oder bei GitHub?
+#
+# Beide tun dasselbe, aber mit unterschiedlichem Zweck:
+#   Mac    - vergleicht und benachrichtigt dich per Mitteilung
+#   GitHub - vergleicht und aktualisiert die Seite fuers Handy
+#
+# Der Server kann keine macOS-Mitteilung anzeigen; er wuerde bei jedem Lauf
+# in einen Fehler laufen. Deshalb setzt die Automatik STUNDENPLAN_SERVER=1
+# und das Skript laesst das Benachrichtigen dann weg.
+LAEUFT_AUF_SERVER = os.environ.get("STUNDENPLAN_SERVER") == "1"
+
 # Alle Dateien, die das Skript schreibt, liegen neben dem Skript im Ordner
 # "daten". So funktioniert der Aufruf unabhaengig davon, aus welchem
 # Verzeichnis heraus du das Skript startest.
+#
+# Die Automatik bei GitHub schreibt woandershin - naemlich in die
+# ausgecheckte Kopie des gh-pages-Zweigs. Dafuer laesst sich der Ordner ueber
+# STUNDENPLAN_DATEN umbiegen.
 PROJEKTORDNER = os.path.dirname(os.path.abspath(__file__))
-DATENORDNER = os.path.join(PROJEKTORDNER, "daten")
+DATENORDNER = os.environ.get("STUNDENPLAN_DATEN") or os.path.join(PROJEKTORDNER, "daten")
 
 # Der zuletzt gesehene Stand. Damit wird beim naechsten Lauf verglichen.
 DATEI_STAND = os.path.join(DATENORDNER, "stand.json")
@@ -434,7 +449,14 @@ def mitteilung_senden(titel, untertitel, text):
     """
     Zeigt eine macOS-Mitteilung an. "osascript" ist bei macOS dabei, es wird
     also nichts zusaetzlich installiert.
+
+    Auf dem GitHub-Server gibt es weder Bildschirm noch osascript - dort wird
+    die Meldung nur ins Protokoll geschrieben.
     """
+    if LAEUFT_AUF_SERVER or sys.platform != "darwin":
+        print("   (keine Mitteilung moeglich - Lauf ohne Bildschirm)")
+        return
+
     befehl = (
         "display notification " + applescript_text(text)
         + " with title " + applescript_text(titel)
@@ -511,29 +533,6 @@ def ueber_aenderungen_benachrichtigen(aenderungen):
 # ===========================================================================
 # 6. Ergebnisse speichern
 # ===========================================================================
-
-def veroeffentlichen():
-    """
-    Ruft veroeffentlichen.sh auf, das den neuen Stand zu GitHub schiebt.
-
-    Schlaegt das fehl - kein Netz, Anmeldung abgelaufen -, ist das kein Grund
-    abzubrechen: am Mac stimmt alles, nur das Handy hinkt dann hinterher.
-    Deshalb wird der Fehler nur ins Protokoll geschrieben.
-    """
-    skript = os.path.join(PROJEKTORDNER, "veroeffentlichen.sh")
-    if not os.path.exists(skript):
-        return
-    try:
-        ergebnis = subprocess.run(
-            ["bash", skript], cwd=PROJEKTORDNER, timeout=120,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        ausgabe = ergebnis.stdout.decode("utf-8", errors="replace").strip()
-        if ausgabe:
-            for zeile in ausgabe.split("\n"):
-                print("   [veroeffentlichen] " + zeile)
-    except Exception as fehler:
-        print("   [veroeffentlichen] fehlgeschlagen: " + str(fehler))
-
 
 def stunden_seit(zeitangabe):
     """
@@ -710,6 +709,18 @@ def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
         datei.write(";\n")
 
 
+def anzeige_schreiben(termine, verlauf, geprueft_am, fenster):
+    """
+    Schreibt beide Dateien, die angezeigt werden: die fuers Dashboard und die
+    fuer den Kalender. Steht als eigene Funktion da, damit an den zwei
+    Stellen, die sie aufrufen, nicht eine der beiden vergessen werden kann.
+    """
+    if not os.path.isdir(DATENORDNER):
+        os.makedirs(DATENORDNER)
+    dashboard_schreiben(termine, verlauf, geprueft_am, fenster)
+    kalender_schreiben(termine)
+
+
 # ===========================================================================
 # 7. Ablauf
 # ===========================================================================
@@ -735,27 +746,26 @@ def main():
         return 1
 
     if unveraendert and alter_stand:
-        # Der Server sagt, die Datei ist unveraendert. Wir aktualisieren nur
-        # den Zeitstempel der letzten Pruefung.
+        # Der Server sagt, die Datei ist unveraendert seit dem letzten Mal.
         alter_stand["geprueftAm"] = jetzt
-        stand_speichern(alter_stand)
-        dashboard_schreiben(
-            alter_stand.get("termine", []),
-            alter_stand.get("aenderungen", []),
-            jetzt,
-            (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
-        )
-        kalender_schreiben(alter_stand.get("termine", []))
         print(jetzt + "  unveraendert (Server meldet 304)")
 
-        # Auch wenn sich nichts geaendert hat, soll auf dem Handy nicht
-        # tagelang "Stand: vorletzte Woche" stehen. Deshalb einmal am Tag
-        # ein Lebenszeichen hochladen - aber eben nicht alle 30 Minuten,
-        # sonst waere die Versionsgeschichte voller sinnloser Eintraege.
-        if stunden_seit(alter_stand.get("veroeffentlichtAm", "")) >= 24:
-            veroeffentlichen()
-            alter_stand["veroeffentlichtAm"] = jetzt
-            stand_speichern(alter_stand)
+        # Die Anzeigedateien werden hier bewusst NICHT jedes Mal neu
+        # geschrieben. Sie enthalten den Zeitstempel der letzten Pruefung,
+        # aendern sich dadurch bei jedem Lauf - und die GitHub-Automatik
+        # wuerde daraus alle 30 Minuten einen Commit machen. Einmal am Tag
+        # genuegt, damit auf dem Handy nicht "Stand: letzte Woche" steht.
+        if stunden_seit(alter_stand.get("geschriebenAm", "")) >= 24:
+            anzeige_schreiben(
+                alter_stand.get("termine", []),
+                alter_stand.get("aenderungen", []),
+                jetzt,
+                (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
+            )
+            alter_stand["geschriebenAm"] = jetzt
+            print("   Anzeigedateien aufgefrischt (taegliches Lebenszeichen)")
+
+        stand_speichern(alter_stand)
         return 0
 
     neue_termine, fenster_von, fenster_bis = kalender_zerlegen(text)
@@ -807,29 +817,24 @@ def main():
             # der Plan neu erzeugt wurde, ohne dass sich etwas geaendert hat.
             print(jetzt + "  neue Datei, aber keine inhaltliche Aenderung")
 
-    dashboard_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
-    kalender_schreiben(neue_termine)
-
-    # Hochladen lohnt nur, wenn sich am Inhalt wirklich etwas getan hat.
+    # Neu schreiben lohnt nur, wenn sich am Inhalt wirklich etwas getan hat.
     #
-    # Der Vergleich prueft die Terminliste selbst und nicht bloss, ob es
-    # Aenderungen zu melden gab: an den Raendern des Zeitfensters kommen und
-    # gehen Termine, ohne dass das eine Meldung wert waere - auf dem Handy
-    # sollen sie aber trotzdem stimmen.
+    # Verglichen wird die Terminliste selbst und nicht bloss, ob es etwas zu
+    # melden gab: an den Raendern des Zeitfensters kommen und gehen Termine,
+    # ohne dass das eine Meldung wert waere - auf dem Handy sollen sie aber
+    # trotzdem stimmen.
     alte_termine = [] if erstlauf else alter_stand.get("termine", [])
-    veroeffentlicht_am = "" if erstlauf else alter_stand.get("veroeffentlichtAm", "")
+    geschrieben_am = "" if erstlauf else alter_stand.get("geschriebenAm", "")
 
-    if erstlauf or aenderungen or neue_termine != alte_termine:
-        veroeffentlichen()
-        veroeffentlicht_am = jetzt
-    elif stunden_seit(veroeffentlicht_am) >= 24:
-        veroeffentlichen()
-        veroeffentlicht_am = jetzt
+    if (erstlauf or aenderungen or neue_termine != alte_termine
+            or stunden_seit(geschrieben_am) >= 24):
+        anzeige_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
+        geschrieben_am = jetzt
 
     stand_speichern({
         "etag": etag,
         "geprueftAm": jetzt,
-        "veroeffentlichtAm": veroeffentlicht_am,
+        "geschriebenAm": geschrieben_am,
         "fensterVon": fenster_von,
         "fensterBis": fenster_bis,
         "termine": neue_termine,
