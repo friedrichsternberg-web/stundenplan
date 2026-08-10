@@ -36,6 +36,34 @@ STUNDENPLAN_URL = (
     + FACHRICHTUNG + "/" + SEMESTER + "/" + KURS + ".ics"
 )
 
+# Die Wahlpflichtfaecher, die du NICHT belegst.
+#
+# Der Plan des Kurses enthaelt das gesamte WPF-Angebot des Semesters. Ohne
+# diese Liste kaemen Mitteilungen auch fuer Faecher, die dich nichts angehen.
+#
+# Wichtig: Aenderungen an diesen Faechern werden trotzdem vollstaendig
+# aufgezeichnet - im Protokoll und im Aenderungsverlauf des Dashboards.
+# Es unterbleibt nur die Mitteilung. Es geht also nichts verloren.
+#
+# Diese Liste ist zugleich die Vorgabe fuer den Filter im Dashboard: sie wird
+# nach daten/plan.js mitgeschrieben. Wer sie hier aendert, aendert beides.
+# (Hakst du im Dashboard etwas anderes an, gilt das nur fuer die Anzeige in
+# diesem einen Browser - die Mitteilungen richten sich immer nach dieser Liste.)
+NICHT_BELEGTE_FAECHER = [
+    "WPF - Angewandte Wohlfahrtsstaatentheorie",
+    "WPF - Cross Cultural Management",
+    "WPF - Ethik in Wirtschaft und Gesellschaft",
+    "WPF - IRFS Rechnungslegung",
+    "WPF - Nachhaltiges Wirtschaften (Die)",
+    "WPF - Praxisorientierte Methoden der empirischen W",
+    "WPF - Recht der Künstlichen Intelligenz",
+    "WPF - Supply Chain Management",
+    "WPF - Wirtschaftsenglisch B2 (Do)",
+    "WPF - Wirtschaftsenglisch C1 (Do)",
+    "WPF - Wirtschaftspsychologie (Die)",
+    "WPF - Wirtschaftspsychologie (Do) Kurs 1",
+]
+
 # Alle Dateien, die das Skript schreibt, liegen neben dem Skript im Ordner
 # "daten". So funktioniert der Aufruf unabhaengig davon, aus welchem
 # Verzeichnis heraus du das Skript startest.
@@ -441,6 +469,14 @@ def aenderung_als_satz(aenderung):
     return titel + " (" + wann + ") - " + "; ".join(teile)
 
 
+def betrifft_dich(aenderung):
+    """
+    Sagt, ob eine Aenderung ein Fach betrifft, das du belegst. Nur solche
+    fuehren zu einer Mitteilung.
+    """
+    return aenderung["termin"]["titel"] not in NICHT_BELEGTE_FAECHER
+
+
 def ueber_aenderungen_benachrichtigen(aenderungen):
     """
     Fasst die Aenderungen zu einer Mitteilung zusammen. Mitteilungen sind
@@ -492,6 +528,9 @@ def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
         "semester": SEMESTER,
         "kurs": KURS,
         "quelle": STUNDENPLAN_URL,
+        # Wird vom Dashboard als Vorgabe fuer den Faecherfilter benutzt, damit
+        # die Liste nur an einer Stelle gepflegt werden muss.
+        "nichtBelegteFaecher": NICHT_BELEGTE_FAECHER,
         "geprueftAm": geprueft_am,
         "fensterVon": fenster[0],
         "fensterBis": fenster[1],
@@ -574,10 +613,20 @@ def main():
             verlauf = [eintrag] + verlauf
             verlauf = verlauf[:MAXIMALE_ANZAHL_AENDERUNGEN]
 
-            print(jetzt + "  " + str(len(aenderungen)) + " Aenderung(en):")
+            # Aufgezeichnet wird alles (siehe oben, "verlauf"). Gemeldet wird
+            # nur, was ein belegtes Fach betrifft. Im Protokoll steht trotzdem
+            # jede Zeile - die stummen sind mit "(stumm)" gekennzeichnet, damit
+            # man spaeter nachvollziehen kann, was passiert ist.
+            zu_melden = [a for a in aenderungen if betrifft_dich(a)]
+
+            print(jetzt + "  " + str(len(aenderungen)) + " Aenderung(en), davon "
+                  + str(len(zu_melden)) + " in belegten Faechern:")
             for aenderung in aenderungen:
-                print("   - " + aenderung_als_satz(aenderung))
-            ueber_aenderungen_benachrichtigen(aenderungen)
+                vorsatz = "   - " if betrifft_dich(aenderung) else "   - (stumm) "
+                print(vorsatz + aenderung_als_satz(aenderung))
+
+            if zu_melden:
+                ueber_aenderungen_benachrichtigen(zu_melden)
         else:
             # Die Datei war neu, aber inhaltlich gleich - das passiert, wenn
             # der Plan neu erzeugt wurde, ohne dass sich etwas geaendert hat.

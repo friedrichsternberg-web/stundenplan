@@ -18,27 +18,20 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
                     "Donnerstag", "Freitag", "Samstag"];
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
-   ausgeblendet, ohne dass du erst durch den Filter klicken musst. Aus dem
-   WPF-Angebot bleiben nur "Nachhaltiges Wirtschaften (Do)" und "Social
-   Innovation" übrig; alle Nicht-WPF-Module gehören ohnehin dazu.
+   ausgeblendet, ohne dass du erst durch den Filter klicken musst.
 
-   Die Namen müssen exakt so geschrieben sein wie im Stundenplan, sonst
-   greift der Eintrag nicht. Über den Filter im Dashboard kannst du das
-   jederzeit ändern - diese Liste ist nur der Startpunkt. */
-const NICHT_BELEGTE_FAECHER = [
-  "WPF - Angewandte Wohlfahrtsstaatentheorie",
-  "WPF - Cross Cultural Management",
-  "WPF - Ethik in Wirtschaft und Gesellschaft",
-  "WPF - IRFS Rechnungslegung",
-  "WPF - Nachhaltiges Wirtschaften (Die)",
-  "WPF - Praxisorientierte Methoden der empirischen W",
-  "WPF - Recht der Künstlichen Intelligenz",
-  "WPF - Supply Chain Management",
-  "WPF - Wirtschaftsenglisch B2 (Do)",
-  "WPF - Wirtschaftsenglisch C1 (Do)",
-  "WPF - Wirtschaftspsychologie (Die)",
-  "WPF - Wirtschaftspsychologie (Do) Kurs 1",
-];
+   Die Liste steht bewusst NICHT hier, sondern in abgleich.py und kommt über
+   daten/plan.js herein. Grund: dieselbe Liste bestimmt auch, worüber du
+   benachrichtigt wirst. Stünde sie an zwei Stellen, würden die beiden früher
+   oder später auseinanderlaufen – und du bekämst Mitteilungen für Fächer,
+   die das Dashboard gar nicht anzeigt. Ändern also in abgleich.py.
+
+   Das umständliche "typeof" ist Absicht: solange abgleich.py noch nie lief,
+   gibt es daten/plan.js nicht und STUNDENPLAN ist unbekannt. Ein direkter
+   Zugriff würde die Datei hier sofort abbrechen lassen – noch bevor starten()
+   unten den freundlichen Hinweis anzeigen kann. */
+const NICHT_BELEGTE_FAECHER =
+  (typeof STUNDENPLAN !== "undefined" && STUNDENPLAN.nichtBelegteFaecher) || [];
 
 /* Unter diesem Schlüssel merkt sich der Browser deine Auswahl.
 

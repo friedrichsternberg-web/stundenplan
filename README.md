@@ -81,10 +81,31 @@ Plan als „entfallen" gemeldet wird.
 Sicherheitsgründen, dass eine lokal geöffnete Seite Dateien nachlädt — ein
 `<script>`-Tag ist davon aber ausgenommen.
 
+## Welche Fächer du belegst
+
+Der Kursplan enthält das **gesamte** WPF-Angebot des Semesters, also auch
+Fächer, die du nicht belegst. Welche das sind, steht in `abgleich.py` unter
+`NICHT_BELEGTE_FAECHER` — an **einer** Stelle, denn diese Liste steuert beides:
+
+- was das Dashboard ausblendet (sie wird nach `daten/plan.js` mitgeschrieben)
+- worüber du benachrichtigt wirst
+
+Belegt sind aktuell alle Pflichtmodule plus die beiden Wahlpflichtfächer
+*Nachhaltiges Wirtschaften (Do)* und *Social Innovation* — 175 von 313
+Terminen.
+
+Änderungen an nicht belegten Fächern werden **trotzdem vollständig
+aufgezeichnet**: im Änderungsverlauf und im Protokoll, dort mit `(stumm)`
+gekennzeichnet. Es unterbleibt nur die Mitteilung.
+
+Der Filter im Dashboard überschreibt die Anzeige für diesen einen Browser.
+Die Mitteilungen richten sich immer nach der Liste in `abgleich.py`.
+
 ## Grenzen
 
 - Der Abgleich läuft nur, wenn der Mac an und du angemeldet bist. Für
   „Raum geändert, Vorlesung ist morgen" reicht das; für eine Meldung um
   6 Uhr morgens, während der Mac aus ist, nicht.
-- Der Filter im Dashboard (welche Wahlpflichtfächer du belegst) gilt nur
-  fürs Anzeigen. Die Mitteilungen kommen für **alle** Fächer im Plan.
+- Ein **neu hinzukommendes** Wahlpflichtfach steht nicht in der Liste und
+  wird deshalb angezeigt und gemeldet. Das ist Absicht: lieber einmal zu
+  viel sehen als etwas verpassen.
