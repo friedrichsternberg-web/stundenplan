@@ -30,6 +30,13 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    Zeitpunkt noch gar nicht geladen sind – siehe datenLaden() ganz unten. */
 let NICHT_BELEGTE_FAECHER = [];
 
+/* Kursgruppen, die du nicht besuchst – erkennbar am Dozentenfeld, etwa
+   "TM+HD" beim Modul Management. Anders als bei den Fächern kannst du das
+   nicht im Filterfenster umstellen: parallele Gruppen heißen gleich, im
+   Filter stünden sie als ein einziger Eintrag. Geändert wird das deshalb in
+   abgleich.py, von wo die Liste über daten/plan.js hereinkommt. */
+let NICHT_BELEGTE_GRUPPEN = [];
+
 /* Unter diesem Schlüssel merkt sich der Browser deine Auswahl.
 
    Die Zahl am Ende ist eine Versionsnummer. Sie steht dort, weil in deinem
@@ -166,14 +173,29 @@ function filterSpeichern() {
   }
 }
 
+/* Gehört ein Termin zu einer Kursgruppe, die du nicht besuchst?
+
+   Diese Prüfung läuft immer und vor dem Fächerfilter – auch die Anzahlen im
+   Filterfenster beziehen sich schon auf das Ergebnis. Sonst stünde dort
+   "23 Termine" bei einem Modul, von dem du nur 12 besuchst. */
+function fremdeGruppe(termin) {
+  const dozent = termin.dozent || "";
+  return NICHT_BELEGTE_GRUPPEN.some(gruppe => dozent.indexOf(gruppe) >= 0);
+}
+
+/* Alle Termine, die dich überhaupt betreffen – vor dem Fächerfilter. */
+function meineTermine() {
+  return STUNDENPLAN.termine.filter(t => !fremdeGruppe(t));
+}
+
 function sichtbareTermine() {
-  return STUNDENPLAN.termine.filter(t => !abgewaehlteFaecher.has(t.titel));
+  return meineTermine().filter(t => !abgewaehlteFaecher.has(t.titel));
 }
 
 /* Alle Fächer mit der Anzahl ihrer Termine, alphabetisch. */
 function alleFaecher() {
   const zaehler = new Map();
-  for (const termin of STUNDENPLAN.termine) {
+  for (const termin of meineTermine()) {
     zaehler.set(termin.titel, (zaehler.get(termin.titel) || 0) + 1);
   }
   return [...zaehler.entries()]
@@ -568,7 +590,7 @@ function sichtbareBloecke() {
     .map(block => ({
       erkanntAm: block.erkanntAm,
       eintraege: block.eintraege.filter(
-        e => !abgewaehlteFaecher.has(e.termin.titel)),
+        e => !fremdeGruppe(e.termin) && !abgewaehlteFaecher.has(e.termin.titel)),
     }))
     .filter(block => block.eintraege.length > 0);
 }
@@ -765,6 +787,7 @@ function starten() {
   // Erst jetzt sind die Daten da – also erst jetzt die Voreinstellung setzen
   // und die gespeicherte Auswahl laden.
   NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
+  NICHT_BELEGTE_GRUPPEN = STUNDENPLAN.nichtBelegteGruppen || [];
   abgewaehlteFaecher = filterLaden();
 
   try {

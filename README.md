@@ -32,10 +32,14 @@ Oben rechts schaltest du um; die Wahl bleibt im Browser gespeichert.
 Beide zeigen dieselbe Woche; die Pfeile gelten für beide.
 
 **Gleichzeitige Termine** stehen im Kalender nebeneinander statt
-übereinander. Das ist kein Luxus: bei *UN-Führung* und *Controlling* gibt es
-parallele Gruppen mit verschiedenen Räumen und Dozenten — ohne diese
-Aufteilung läge eine davon unsichtbar unter der anderen.
-`spaltenVerteilen()` in `app.js` erledigt das.
+übereinander; `spaltenVerteilen()` in `app.js` erledigt das.
+
+Aktuell überlappt in Friedrichs Plan nichts mehr — die Fälle waren genau die
+parallelen Gruppen TM+HD/TM+SP, und TM+HD ist ausgeblendet. Die Logik bleibt
+trotzdem drin: nächstes Semester oder bei einem zusätzlichen Wahlpflichtfach
+tritt der Fall wieder auf, und ohne die Aufteilung läge ein Termin unsichtbar
+unter dem anderen. Geprüft wird sie mit erfundenen Terminen, nicht mit dem
+echten Plan — sonst würde der Test stillschweigend nichts mehr messen.
 
 ## Benutzen
 
@@ -67,7 +71,7 @@ mit eigenem Symbol.
 **Termine im iPhone-Kalender.** Einstellungen → Kalender → Accounts →
 Account hinzufügen → Andere → *Kalenderabo hinzufügen*, dann die Adresse von
 `daten/meine-termine.ics` eintragen. Diese Datei enthält nur die Fächer, die
-du belegst — nicht alle 23 des Semesters.
+du belegst, und nur deine Kursgruppe — 133 statt 313 Termine.
 
 ## Wer was macht
 
@@ -157,16 +161,35 @@ Sicherheitsgründen, dass eine lokal geöffnete Seite Dateien nachlädt — ein
 
 ## Welche Fächer du belegst
 
-Der Kursplan enthält das **gesamte** WPF-Angebot des Semesters, also auch
-Fächer, die du nicht belegst. Welche das sind, steht in `abgleich.py` unter
-`NICHT_BELEGTE_FAECHER` — an **einer** Stelle, denn diese Liste steuert beides:
+Der Kursplan enthält das **gesamte** WPF-Angebot des Semesters und obendrein
+beide Gruppen der Module, die parallel gelesen werden. Zwei Listen in
+`abgleich.py` schneiden das zurecht — beide an **einer** Stelle, denn sie
+steuern zugleich, was das Dashboard ausblendet (sie werden nach
+`daten/plan.js` mitgeschrieben) und worüber du benachrichtigt wirst:
 
-- was das Dashboard ausblendet (sie wird nach `daten/plan.js` mitgeschrieben)
-- worüber du benachrichtigt wirst
+| Liste | schließt aus | Beispiel |
+|---|---|---|
+| `NICHT_BELEGTE_FAECHER` | ganze Module, nach Titel | *WPF - Supply Chain Management* |
+| `NICHT_BELEGTE_GRUPPEN` | Kursgruppen, nach Text im Dozentenfeld | `TM+HD` |
 
-Belegt sind aktuell alle Pflichtmodule plus die beiden Wahlpflichtfächer
-*Nachhaltiges Wirtschaften (Do)* und *Social Innovation* — 175 von 313
-Terminen.
+Die zweite Liste war nötig, weil das Modul *4 - Management* parallel in zwei
+Gruppen läuft. Beide heißen exakt gleich; sie unterscheiden sich nur in der
+Dozentenangabe (`Bergmann, TM+SP` gegenüber `Knoll, TM+HD`). Ein Filter nach
+Titel kann sie nicht trennen.
+
+`ist_belegt()` in `abgleich.py` wendet beide an — eine einzige Funktion,
+damit keine Stelle versehentlich anders filtert als die andere. Im Dashboard
+macht `fremdeGruppe()` dasselbe, und zwar **vor** dem Fächerfilter: sonst
+stünde im Filterfenster „23 Termine" bei einem Modul, von dem du nur 12
+besuchst.
+
+Belegt sind aktuell 10 Fächer mit **133 von 313 Terminen**: alle
+Pflichtmodule außer Personalmanagement, davon Management nur in der Gruppe
+TM+SP, plus die Wahlpflichtfächer *Nachhaltiges Wirtschaften (Do)* und
+*Social Innovation*.
+
+Der Gruppenfilter ist bewusst **nicht** im Dashboard umschaltbar: parallele
+Gruppen heißen gleich und stünden dort als ein einziger Eintrag.
 
 Änderungen an nicht belegten Fächern werden **trotzdem vollständig
 aufgezeichnet**: im Änderungsverlauf und im Protokoll, dort mit `(stumm)`

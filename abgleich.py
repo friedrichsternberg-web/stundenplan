@@ -67,6 +67,20 @@ NICHT_BELEGTE_FAECHER = [
     "WPF - Wirtschaftspsychologie (Do) Kurs 1",
 ]
 
+# Kursgruppen, die du NICHT besuchst.
+#
+# Manche Module werden parallel in mehreren Gruppen gelesen - beim Modul
+# "4 - Management" sind das TM+HD und TM+SP. Beide heissen gleich, sie
+# unterscheiden sich nur in der Dozentenangabe: "Bergmann, TM+SP" gegenueber
+# "Knoll, TM+HD". Die Liste oben kann sie deshalb nicht trennen, sie kennt
+# nur ganze Faecher.
+#
+# Hier steht also, welcher Text im Dozentenfeld bedeutet "nicht meine Gruppe".
+# Verglichen wird, ob der Text irgendwo darin vorkommt.
+NICHT_BELEGTE_GRUPPEN = [
+    "TM+HD",
+]
+
 # Laeuft das Skript auf deinem Mac oder bei GitHub?
 #
 # Beide tun dasselbe, aber mit unterschiedlichem Zweck:
@@ -505,12 +519,33 @@ def aenderung_als_satz(aenderung):
     return titel + " (" + wann + ") - " + "; ".join(teile)
 
 
+def ist_belegt(termin):
+    """
+    Sagt, ob ein Termin zu deinem Stundenplan gehoert.
+
+    Zwei Bedingungen, beide muessen erfuellt sein:
+      1. das Fach steht nicht in NICHT_BELEGTE_FAECHER
+      2. die Dozentenangabe enthaelt keine fremde Kursgruppe
+
+    Diese eine Funktion entscheidet ueberall - beim Benachrichtigen, in der
+    Kalenderdatei und (ueber daten/plan.js) im Dashboard. So kann keine der
+    Stellen versehentlich anders filtern als die anderen.
+    """
+    if termin["titel"] in NICHT_BELEGTE_FAECHER:
+        return False
+    dozent = termin.get("dozent", "")
+    for gruppe in NICHT_BELEGTE_GRUPPEN:
+        if gruppe in dozent:
+            return False
+    return True
+
+
 def betrifft_dich(aenderung):
     """
-    Sagt, ob eine Aenderung ein Fach betrifft, das du belegst. Nur solche
+    Sagt, ob eine Aenderung einen Termin betrifft, den du besuchst. Nur solche
     fuehren zu einer Mitteilung.
     """
-    return aenderung["termin"]["titel"] not in NICHT_BELEGTE_FAECHER
+    return ist_belegt(aenderung["termin"])
 
 
 def ueber_aenderungen_benachrichtigen(aenderungen):
@@ -644,7 +679,7 @@ def kalender_schreiben(termine):
     denselben Termin handelt, und verschiebt ihn, statt einen zweiten
     daneben anzulegen.
     """
-    meine_termine = [t for t in termine if t["titel"] not in NICHT_BELEGTE_FAECHER]
+    meine_termine = [t for t in termine if ist_belegt(t)]
     erzeugt_am = datetime.now(ZEITZONE_UTC).strftime("%Y%m%dT%H%M%SZ")
 
     zeilen = [
@@ -712,6 +747,7 @@ def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
         # Wird vom Dashboard als Vorgabe fuer den Faecherfilter benutzt, damit
         # die Liste nur an einer Stelle gepflegt werden muss.
         "nichtBelegteFaecher": NICHT_BELEGTE_FAECHER,
+        "nichtBelegteGruppen": NICHT_BELEGTE_GRUPPEN,
         "geprueftAm": geprueft_am,
         "fensterVon": fenster[0],
         "fensterBis": fenster[1],
@@ -775,8 +811,9 @@ def main():
         #
         # Eine Ausnahme: wurde NICHT_BELEGTE_FAECHER von Hand geaendert, muss
         # das sofort sichtbar werden und nicht erst morgen.
-        faecher_geaendert = (alter_stand.get("nichtBelegteFaecher")
-                             != NICHT_BELEGTE_FAECHER)
+        faecher_geaendert = (
+            alter_stand.get("nichtBelegteFaecher") != NICHT_BELEGTE_FAECHER
+            or alter_stand.get("nichtBelegteGruppen") != NICHT_BELEGTE_GRUPPEN)
         if faecher_geaendert:
             print("   Faecherliste wurde geaendert")
         if faecher_geaendert or stunden_seit(alter_stand.get("geschriebenAm", "")) >= 24:
@@ -788,6 +825,7 @@ def main():
             )
             alter_stand["geschriebenAm"] = jetzt
             alter_stand["nichtBelegteFaecher"] = list(NICHT_BELEGTE_FAECHER)
+            alter_stand["nichtBelegteGruppen"] = list(NICHT_BELEGTE_GRUPPEN)
             print("   Anzeigedateien aufgefrischt")
 
         stand_speichern(alter_stand)
@@ -851,9 +889,11 @@ def main():
     alte_termine = [] if erstlauf else alter_stand.get("termine", [])
     geschrieben_am = "" if erstlauf else alter_stand.get("geschriebenAm", "")
     alte_faecher = None if erstlauf else alter_stand.get("nichtBelegteFaecher")
+    alte_gruppen = None if erstlauf else alter_stand.get("nichtBelegteGruppen")
 
     if (erstlauf or aenderungen or neue_termine != alte_termine
             or alte_faecher != NICHT_BELEGTE_FAECHER
+            or alte_gruppen != NICHT_BELEGTE_GRUPPEN
             or stunden_seit(geschrieben_am) >= 24):
         anzeige_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
         geschrieben_am = jetzt
@@ -863,6 +903,7 @@ def main():
         "geprueftAm": jetzt,
         "geschriebenAm": geschrieben_am,
         "nichtBelegteFaecher": list(NICHT_BELEGTE_FAECHER),
+        "nichtBelegteGruppen": list(NICHT_BELEGTE_GRUPPEN),
         "fensterVon": fenster_von,
         "fensterBis": fenster_bis,
         "termine": neue_termine,
