@@ -17,6 +17,16 @@
 const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
                     "Donnerstag", "Freitag", "Samstag"];
 
+/* Welche Fassung dieser Datei gerade läuft.
+
+   Beim Veröffentlichen ersetzt die GitHub-Automatik das Wort "entwicklung"
+   durch die Kennung des Commits. Öffnest du index.html per Doppelklick,
+   bleibt es stehen – dort gibt es keinen Zwischenspeicher, der stören
+   könnte, und die Selbstprüfung unten macht dann nichts.
+
+   Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
+const GEBAUTE_VERSION = "entwicklung";
+
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
 
@@ -1330,4 +1340,51 @@ function datenLaden(wennFertig) {
   document.head.appendChild(skript);
 }
 
-datenLaden(starten);
+/* Merkt, wenn im Netz eine neuere Fassung liegt als die gerade laufende –
+   und lädt sich dann selbst neu.
+
+   Das Problem dahinter: GitHub Pages erlaubt dem Browser, index.html und
+   app.js zehn Minuten zu behalten, auf dem Home-Bildschirm oft länger. Man
+   sitzt dann vor einer alten Oberfläche und merkt es nicht, weil die Daten
+   darin ja frisch sind.
+
+   Die Lösung ist eine winzige Datei version.js, die beim Veröffentlichen
+   mitgeschrieben wird und nichts als die aktuelle Kennung enthält. Sie wird
+   immer mit Zeitstempel geholt, kommt also nie aus dem Zwischenspeicher.
+   Stimmt sie nicht mit der laufenden Fassung überein, lädt sich die Seite
+   einmal frisch.
+
+   Das "einmal" sichert der Vermerk in sessionStorage ab: ohne ihn könnte
+   die Seite sich in einer Schleife immer wieder neu laden, falls das
+   Nachladen aus irgendeinem Grund die alte Fassung liefert. */
+function aufNeueFassungPruefen() {
+  const ausDemNetz = location.protocol === "http:" || location.protocol === "https:";
+  if (!ausDemNetz || GEBAUTE_VERSION === "entwicklung") return;
+
+  const skript = document.createElement("script");
+  skript.src = "version.js?t=" + Date.now();
+
+  skript.onload = function () {
+    if (typeof SEITEN_VERSION === "undefined") return;
+    if (SEITEN_VERSION === GEBAUTE_VERSION) return;
+
+    let schonVersucht = "";
+    try { schonVersucht = sessionStorage.getItem("stundenplan.neugeladen") || ""; }
+    catch (fehler) { /* dann eben ohne Absicherung */ }
+    if (schonVersucht === SEITEN_VERSION) return;
+
+    try { sessionStorage.setItem("stundenplan.neugeladen", SEITEN_VERSION); }
+    catch (fehler) { /* egal */ }
+
+    location.href = location.pathname + "?frisch=" + Date.now();
+  };
+
+  // Fehlt version.js, passiert einfach nichts.
+  skript.onerror = function () {};
+  document.head.appendChild(skript);
+}
+
+datenLaden(function () {
+  starten();
+  aufNeueFassungPruefen();
+});

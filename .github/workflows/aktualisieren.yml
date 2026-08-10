@@ -84,8 +84,19 @@ jobs:
             -e "s|href=\"style.css\"|href=\"style.css?v=$VERSION\"|" \
             -e "s|src=\"app.js\"|src=\"app.js?v=$VERSION\"|" \
             veroeffentlichung/index.html
+          # Dieselbe Kennung in app.js hineinschreiben und in eine winzige
+          # Datei daneben. app.js vergleicht beides beim Start und laedt sich
+          # neu, falls es eine aeltere Fassung ist - siehe
+          # aufNeueFassungPruefen() dort.
+          sed -i \
+            "s|const GEBAUTE_VERSION = \"entwicklung\";|const GEBAUTE_VERSION = \"$VERSION\";|" \
+            veroeffentlichung/app.js
+          echo "const SEITEN_VERSION = \"$VERSION\";" > veroeffentlichung/version.js
+
           echo "Version der Anzeige-Dateien: $VERSION"
           grep -o 'v=[0-9a-f]*' veroeffentlichung/index.html
+          grep -o 'GEBAUTE_VERSION = "[0-9a-f]*"' veroeffentlichung/app.js
+          cat veroeffentlichung/version.js
 
       - name: Ergebnis hochladen
         working-directory: veroeffentlichung
