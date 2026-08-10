@@ -1,7 +1,6 @@
 {
  "etag": "\"2644a-658a12f037a80\"",
- "geprueftAm": "2026-08-10T10:56",
- "geschriebenAm": "2026-08-10T10:56",
+ "geprueftAm": "2026-08-10T10:57",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3449,33 +3448,7 @@
    "gruppe": ""
   }
  ],
- "aenderungen": [
-  {
-   "erkanntAm": "2026-08-10T10:56",
-   "anzahl": 1,
-   "eintraege": [
-    {
-     "typ": "geaendert",
-     "termin": {
-      "id": "sked.de1207973",
-      "start": "2026-08-13T08:00",
-      "ende": "2026-08-13T13:15",
-      "art": "SI",
-      "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
-      "dozent": "Gläser",
-      "raum": "CL: 6A.207",
-      "anmerkung": "",
-      "gruppe": ""
-     },
-     "felder": [
-      {
-       "feld": "Raum",
-       "vorher": "AUTOMATIK-TEST",
-       "nachher": "CL: 6A.207"
-      }
-     ]
-    }
-   ]
-  }
- ]
+ "aenderungen": [],
+ "veroeffentlichtAm": "2026-08-10T09:23",
+ "geschriebenAm": "2026-08-10T10:32"
 }
