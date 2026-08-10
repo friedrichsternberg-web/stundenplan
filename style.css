@@ -304,6 +304,16 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   z-index: 10;
 }
 
+/* Das Attribut "hidden" im HTML soll ein Element unsichtbar machen. Der
+   Browser erledigt das mit einer eingebauten Regel "display: none". Die ist
+   aber genauso spezifisch wie die Regel darüber - und bei Gleichstand
+   gewinnt, was später kommt, also unser "display: flex". Ergebnis: das
+   Fenster ließ sich nicht schließen. Diese Regel stellt das richtig.
+
+   Merksatz: wer einem Element per CSS ein display gibt, muss den Fall
+   "hidden" selbst mitdenken. */
+.filter-hintergrund[hidden] { display: none; }
+
 .filter-fenster {
   background: var(--flaeche);
   border-radius: 14px;

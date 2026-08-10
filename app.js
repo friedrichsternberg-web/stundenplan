@@ -17,8 +17,37 @@
 const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
                     "Donnerstag", "Freitag", "Samstag"];
 
-// Unter diesem Schlüssel merkt sich der Browser, welche Fächer du besuchst.
-const SPEICHER_FILTER = "stundenplan.abgewaehlteFaecher";
+/* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
+   ausgeblendet, ohne dass du erst durch den Filter klicken musst. Aus dem
+   WPF-Angebot bleiben nur "Nachhaltiges Wirtschaften (Do)" und "Social
+   Innovation" übrig; alle Nicht-WPF-Module gehören ohnehin dazu.
+
+   Die Namen müssen exakt so geschrieben sein wie im Stundenplan, sonst
+   greift der Eintrag nicht. Über den Filter im Dashboard kannst du das
+   jederzeit ändern - diese Liste ist nur der Startpunkt. */
+const NICHT_BELEGTE_FAECHER = [
+  "WPF - Angewandte Wohlfahrtsstaatentheorie",
+  "WPF - Cross Cultural Management",
+  "WPF - Ethik in Wirtschaft und Gesellschaft",
+  "WPF - IRFS Rechnungslegung",
+  "WPF - Nachhaltiges Wirtschaften (Die)",
+  "WPF - Praxisorientierte Methoden der empirischen W",
+  "WPF - Recht der Künstlichen Intelligenz",
+  "WPF - Supply Chain Management",
+  "WPF - Wirtschaftsenglisch B2 (Do)",
+  "WPF - Wirtschaftsenglisch C1 (Do)",
+  "WPF - Wirtschaftspsychologie (Die)",
+  "WPF - Wirtschaftspsychologie (Do) Kurs 1",
+];
+
+/* Unter diesem Schlüssel merkt sich der Browser deine Auswahl.
+
+   Die Zahl am Ende ist eine Versionsnummer. Sie steht dort, weil in deinem
+   Browser vom ersten Ausprobieren schon eine Auswahl gespeichert ist - die
+   würde die Voreinstellung oben überstimmen. Mit einer neuen Nummer fängt
+   der Filter einmalig frisch an. Wenn wir NICHT_BELEGTE_FAECHER später
+   ändern und das sofort greifen soll, zählen wir die Zahl einfach hoch. */
+const SPEICHER_FILTER = "stundenplan.abgewaehlteFaecher.2";
 
 // Und unter diesem, welche Änderung du zuletzt gesehen hast. Damit kann das
 // Dashboard oben einen Hinweis zeigen, wenn seitdem etwas dazugekommen ist.
@@ -112,12 +141,21 @@ function sicher(text) {
    Auswahl im Browser, nicht in einer Datei – sie gilt also pro Gerät.
    ------------------------------------------------------------------------- */
 
+/* Holt die gespeicherte Auswahl. Ist noch keine da – beim allerersten
+   Öffnen –, gilt die Voreinstellung NICHT_BELEGTE_FAECHER von oben.
+
+   Wichtig ist die Unterscheidung zwischen "nichts gespeichert" und "leere
+   Auswahl gespeichert": wer bewusst alle Fächer anhakt, speichert eine leere
+   Liste. Die soll natürlich nicht bei jedem Neuladen wieder von der
+   Voreinstellung überschrieben werden. Deshalb wird auf null geprüft und
+   nicht darauf, ob die Liste Einträge hat. */
 function filterLaden() {
   try {
     const gespeichert = localStorage.getItem(SPEICHER_FILTER);
-    return gespeichert ? new Set(JSON.parse(gespeichert)) : new Set();
+    if (gespeichert === null) return new Set(NICHT_BELEGTE_FAECHER);
+    return new Set(JSON.parse(gespeichert));
   } catch (fehler) {
-    return new Set();
+    return new Set(NICHT_BELEGTE_FAECHER);
   }
 }
 
