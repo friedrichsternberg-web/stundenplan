@@ -19,7 +19,7 @@ const STUNDENPLAN = {
   "WPF - Wirtschaftspsychologie (Die)",
   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
  ],
- "geprueftAm": "2026-08-10T10:02",
+ "geprueftAm": "2026-08-10T08:52",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
