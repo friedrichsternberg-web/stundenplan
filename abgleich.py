@@ -500,7 +500,9 @@ def aenderung_als_satz(aenderung):
     """Formuliert eine einzelne Aenderung als kurzen, lesbaren Satz."""
     termin = aenderung["termin"]
     titel = termin["titel"] or "Termin"
-    wann = datum_lesbar(termin["start"])
+    # Mit Endzeit, damit man aus der Mitteilung heraus weiss, wie lange der
+    # Termin dauert - ohne erst das Dashboard aufmachen zu muessen.
+    wann = datum_lesbar(termin["start"]) + "-" + termin["ende"][11:16]
 
     if aenderung["typ"] == "neu":
         return "NEU: " + titel + " am " + wann

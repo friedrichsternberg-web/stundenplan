@@ -29,6 +29,13 @@ Oben rechts schaltest du um; die Wahl bleibt im Browser gespeichert.
   Kästchens entspricht der Dauer, dadurch sieht man Lücken und lange Blöcke
   sofort. Ein roter Strich zeigt „jetzt".
 
+In **jedem** Kästchen steht die Uhrzeit, und zwar als erste Zeile. Das war
+zwischenzeitlich anders — die Idee war, den knappen Platz lieber dem Raum zu
+geben, weil man die Zeit ja an der Achse ablese. Stimmt aber nicht: die
+Rasterlinien liegen im Stundentakt, und ob ein Termin um 9:45 oder 10:00
+beginnt, sieht man daran nicht. Die Mindesthöhe eines Kästchens ist deshalb
+so gewählt, dass Uhrzeit und Titel immer hineinpassen.
+
 Beide zeigen dieselbe Woche; die Pfeile gelten für beide.
 
 **Gleichzeitige Termine** stehen im Kalender nebeneinander statt

@@ -516,20 +516,21 @@ function kalenderBauen(tage) {
 
       const oben = beginn * proMinute;
       // Zwei Bildpunkte Luft nach unten, damit sich Termine optisch nicht
-      // berühren. Nach unten begrenzt, damit auch ein 30-Minuten-Termin
-      // noch lesbar bleibt.
-      const kastenHoehe = Math.max(dauer * proMinute - 2, 20);
+      // berühren. Die Untergrenze ist so gewählt, dass immer zwei Zeilen
+      // hineinpassen – Uhrzeit und Titel.
+      const kastenHoehe = Math.max(dauer * proMinute - 2, 28);
       const breite = 100 / platz.spaltenGesamt;
       const links = platz.spalte * breite;
 
-      // In einem flachen Kästchen ist neben dem Titel für nichts mehr Platz.
-      // Die Grenzen wachsen mit dem Maßstab mit, damit sie auf dem Handy und
-      // am großen Bildschirm gleich sinnvoll greifen.
+      // Die Uhrzeit steht in JEDEM Kästchen, und zwar zuerst.
       //
-      // Reihenfolge nach Nützlichkeit: Titel, dann Raum, dann Anmerkung, und
-      // die Uhrzeit zuletzt – die liest man ohnehin an der Zeitachse ab.
+      // Das war zwischenzeitlich anders: die Idee war, dass man die Zeit an
+      // der Zeitachse abliest und der Platz besser dem Raum gehört. Das
+      // stimmt aber nicht – die Rasterlinien liegen im Stundentakt, und ob
+      // ein Kästchen bei 9:45 oder 10:00 anfängt, sieht man daran eben nicht.
+      //
+      // Was darunter noch Platz findet, hängt von der Höhe ab.
       const knapp = kastenHoehe < stundeHoehe * 0.8;
-      const geraeumig = kastenHoehe >= stundeHoehe * 1.6;
 
       return `
         <div class="kalender-termin ${termin.anmerkung ? "kalender-termin-hinweis" : ""}"
@@ -537,11 +538,11 @@ function kalenderBauen(tage) {
              title="${sicher(uhrzeit(termin.start) + "–" + uhrzeit(termin.ende) + " " + termin.titel
                             + (termin.raum ? " · " + termin.raum : "")
                             + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
+          <div class="kalender-termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
           <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
-            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}
-            ${geraeumig ? `<div class="kalender-termin-zeile">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>` : ""}`}
+            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}`}
         </div>`;
     }).join("");
 
@@ -667,7 +668,7 @@ function eintragZeichnen(eintrag) {
       <span class="marke marke-${eintrag.typ}">${beschriftung[eintrag.typ]}</span>
       <span>
         <strong>${sicher(termin.titel)}</strong>
-        – ${sicher(zeitpunktLesbar(termin.start))}
+        – ${sicher(zeitpunktLesbar(termin.start) + "–" + uhrzeit(termin.ende))}
         ${detail ? `<div class="verlauf-detail">${detail}</div>` : ""}
       </span>
     </div>`;
