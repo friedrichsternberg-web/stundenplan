@@ -3,6 +3,22 @@
 Zeigt den HWR-Stundenplan (Tourismus, Semester 5, Kurs) als Dashboard und
 meldet sich per macOS-Mitteilung, sobald sich etwas ändert.
 
+## Wo das Projekt liegt — und warum nicht in „Dokumente"
+
+Der Ordner liegt unter `~/stundenplan-dashboard`. In `~/Documents` liegt nur
+eine Verknüpfung darauf.
+
+Das hat einen Grund: macOS schützt `Dokumente`, `Schreibtisch` und
+`Downloads`. Ein Programm, das *du* startest, darf dort lesen — ein
+Hintergrund-Job, den launchd startet, nicht. Lag das Projekt in `Dokumente`,
+scheiterte der Job mit `Operation not permitted`. Die Alternative wäre,
+`/usr/bin/python3` pauschal Festplattenvollzugriff zu geben — ein deutlich
+zu großer Hammer für einen Stundenplan.
+
+Wenn du den Ordner verschiebst, danach einmal
+`bash benachrichtigung-einschalten.sh` neu ausführen: der Hintergrund-Job
+merkt sich den vollen Pfad.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
