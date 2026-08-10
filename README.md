@@ -1,7 +1,19 @@
-# Stundenplan-Dashboard
+# Uni-Dashboard
 
-Zeigt den HWR-Stundenplan (Tourismus, Semester 5, Kurs) als Dashboard und
-meldet sich per macOS-Mitteilung, sobald sich etwas ändert.
+Übersichts-App zum Studium: HWR-Stundenplan (Tourismus, Semester 5, Kurs),
+eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
+etwas ändert.
+
+## Die drei Bereiche
+
+| Reiter | zeigt |
+|---|---|
+| **Plan** | „Als Nächstes", die Woche als Liste oder Kalender |
+| **To-dos** | deine Notizen zum Abhaken, dazu Hinweise aus dem HWR-Plan |
+| **Änderungen** | was sich am Stundenplan geändert hat |
+
+An „To-dos" und „Änderungen" steht eine Zahl, sobald dort etwas Offenes
+liegt. Deshalb sieht man schon beim Öffnen, ob überhaupt etwas ansteht.
 
 ## Wo das Projekt liegt — und warum nicht in „Dokumente"
 
@@ -48,13 +60,27 @@ tritt der Fall wieder auf, und ohne die Aufteilung läge ein Termin unsichtbar
 unter dem anderen. Geprüft wird sie mit erfundenen Terminen, nicht mit dem
 echten Plan — sonst würde der Test stillschweigend nichts mehr messen.
 
-## Eigene Notizen
+## Eigene Notizen und To-dos
 
-In der Listenansicht hat jeder Termin einen Knopf „+ Notiz". Dort passt
-alles hinein, was nicht im HWR-System steht: „heute online", „Abgabe bis
-Freitag", „fällt aus". Im Kalender steht bei solchen Terminen ein ✎ — der
-Text selbst wird in der Liste geschrieben und gelesen, im Raster ist dafür
-kein Platz.
+Zu jedem Termin lässt sich ein kurzer Text hinterlegen: „heute online",
+„Abgabe bis Freitag", „fällt aus" — alles, was nicht im HWR-System steht.
+
+**Angelegt** werden sie im Plan über den Knopf **Bearbeiten**. Erst dann
+erscheinen die „+ Notiz"-Knöpfe. Das ist Absicht: bei 133 Terminen stünden
+sonst über hundert Knöpfe herum, für eine Handvoll Notizen. Vorhandene
+Notizen sind immer sichtbar und immer anklickbar, auch ohne Bearbeiten-Modus.
+
+**Gesammelt** werden sie im Reiter **To-dos**: offene oben, abgehakte
+darunter. Ein Termin, der schon vorbei ist und dessen Notiz noch offen steht,
+wird rot als „vorbei" markiert. Bearbeiten geht dort genauso wie im Plan.
+
+Darunter stehen die **Hinweise aus dem Stundenplan** — Termine, bei denen die
+HWR selbst etwas vermerkt hat (ONLINE, Klausur, Exkursion). Die sind
+zusammengefasst: der 4. September besteht aus sechs Zeitblöcken, die alle
+„online" sind, und steht deshalb als **eine** Zeile da statt als sechs.
+
+Im Kalender steht bei Terminen mit Notiz nur ein ✎ — für den Text ist im
+Raster kein Platz.
 
 Gespeichert wird nach der **Termin-Kennung** (`sked.de1200291`), nicht nach
 Datum und Uhrzeit. Dadurch bleibt die Notiz am Termin kleben, auch wenn der
