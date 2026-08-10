@@ -1,5 +1,8 @@
-# Erzeugte Daten – gehören nicht in die Versionsverwaltung.
+# Der Arbeitsstand für den Vergleich – wird bei jedem Lauf neu geschrieben
+# und muss nicht ins Netz.
 daten/stand.json
-daten/plan.js
 daten/protokoll.log
 .DS_Store
+
+# Bewusst NICHT ignoriert: daten/plan.js und daten/meine-termine.ics.
+# Die beiden sind es ja gerade, die auf dem Handy ankommen sollen.

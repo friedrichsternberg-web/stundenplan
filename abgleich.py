@@ -17,6 +17,7 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 # ===========================================================================
@@ -79,8 +80,19 @@ DATEI_STAND = os.path.join(DATENORDNER, "stand.json")
 # lokal geoeffnete Seite Dateien nachlaedt - ein <script>-Tag darf es aber.)
 DATEI_DASHBOARD = os.path.join(DATENORDNER, "plan.js")
 
+# Eine Kalenderdatei mit NUR deinen Faechern, zum Abonnieren auf dem iPhone.
+# Der Originalplan der HWR enthaelt alle 23 Faecher des Semesters - den wollte
+# man sich nicht in den Kalender legen.
+DATEI_KALENDER = os.path.join(DATENORDNER, "meine-termine.ics")
+
 # Wie viele vergangene Aenderungen im Verlauf aufgehoben werden.
 MAXIMALE_ANZAHL_AENDERUNGEN = 300
+
+# Alle Zeiten im Plan sind Berliner Ortszeit. Fuer die Kalenderdatei rechnen
+# wir sie in Weltzeit (UTC) um - dann muss die Datei keine eigenen
+# Zeitzonenregeln mitliefern, und Sommer-/Winterzeit stimmt automatisch.
+ZEITZONE_BERLIN = ZoneInfo("Europe/Berlin")
+ZEITZONE_UTC = ZoneInfo("UTC")
 
 
 # ===========================================================================
@@ -500,6 +512,43 @@ def ueber_aenderungen_benachrichtigen(aenderungen):
 # 6. Ergebnisse speichern
 # ===========================================================================
 
+def veroeffentlichen():
+    """
+    Ruft veroeffentlichen.sh auf, das den neuen Stand zu GitHub schiebt.
+
+    Schlaegt das fehl - kein Netz, Anmeldung abgelaufen -, ist das kein Grund
+    abzubrechen: am Mac stimmt alles, nur das Handy hinkt dann hinterher.
+    Deshalb wird der Fehler nur ins Protokoll geschrieben.
+    """
+    skript = os.path.join(PROJEKTORDNER, "veroeffentlichen.sh")
+    if not os.path.exists(skript):
+        return
+    try:
+        ergebnis = subprocess.run(
+            ["bash", skript], cwd=PROJEKTORDNER, timeout=120,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        ausgabe = ergebnis.stdout.decode("utf-8", errors="replace").strip()
+        if ausgabe:
+            for zeile in ausgabe.split("\n"):
+                print("   [veroeffentlichen] " + zeile)
+    except Exception as fehler:
+        print("   [veroeffentlichen] fehlgeschlagen: " + str(fehler))
+
+
+def stunden_seit(zeitangabe):
+    """
+    Wie viele Stunden ist ein Zeitpunkt her? Bei unbekanntem oder unlesbarem
+    Wert kommt eine sehr grosse Zahl zurueck - dann gilt es als "lange her".
+    """
+    if not zeitangabe:
+        return 1e9
+    try:
+        moment = datetime.strptime(zeitangabe, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return 1e9
+    return (datetime.now() - moment).total_seconds() / 3600
+
+
 def stand_laden():
     """Liest den zuletzt gespeicherten Stand. Beim ersten Lauf gibt es keinen."""
     if not os.path.exists(DATEI_STAND):
@@ -516,6 +565,122 @@ def stand_laden():
 def stand_speichern(daten):
     with open(DATEI_STAND, "w", encoding="utf-8") as datei:
         json.dump(daten, datei, ensure_ascii=False, indent=1)
+
+
+def ical_text(wert):
+    """
+    Maskiert Sonderzeichen fuer ein iCal-Textfeld. Komma, Semikolon und
+    Backslash haben im Format eine eigene Bedeutung und muessen deshalb mit
+    einem Backslash entwertet werden.
+    """
+    return (wert.replace("\\", "\\\\")
+                .replace(";", "\\;")
+                .replace(",", "\\,")
+                .replace("\n", "\\n"))
+
+
+def ical_zeile_falten(zeile):
+    """
+    Bricht eine zu lange Zeile nach den Regeln des iCal-Formats um.
+
+    Erlaubt sind 75 Zeichen pro Zeile - genauer: 75 Bytes, und Umlaute
+    brauchen zwei davon. Fortsetzungszeilen beginnen mit einem Leerzeichen.
+    Genau dieses Umbrechen haben wir beim Einlesen in zeilen_entfalten()
+    rueckgaengig gemacht; hier ist die Gegenrichtung.
+    """
+    if len(zeile.encode("utf-8")) <= 73:
+        return zeile
+
+    teile = []
+    aktuell = b""
+    for zeichen in zeile:
+        zeichen_bytes = zeichen.encode("utf-8")
+        # Die erste Zeile darf etwas laenger sein: bei den Folgezeilen geht
+        # ein Byte fuer das fuehrende Leerzeichen drauf.
+        grenze = 73 if not teile else 72
+        if len(aktuell) + len(zeichen_bytes) > grenze:
+            teile.append(aktuell)
+            aktuell = b""
+        aktuell += zeichen_bytes
+    teile.append(aktuell)
+
+    return "\r\n ".join(teil.decode("utf-8") for teil in teile)
+
+
+def als_utc(zeitangabe):
+    """
+    Rechnet "2026-08-10T08:00" (Berliner Zeit) in die iCal-Schreibweise in
+    Weltzeit um: "20260810T060000Z". Das Z am Ende heisst "UTC".
+    Sommer- und Winterzeit werden dabei automatisch beruecksichtigt.
+    """
+    moment = datetime.strptime(zeitangabe, "%Y-%m-%dT%H:%M")
+    moment = moment.replace(tzinfo=ZEITZONE_BERLIN)
+    return moment.astimezone(ZEITZONE_UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def kalender_schreiben(termine):
+    """
+    Schreibt eine Kalenderdatei mit nur den Faechern, die du belegst - zum
+    Abonnieren in der iPhone-Kalender-App.
+
+    Die Kennung (UID) jedes Termins wird aus dem Originalplan uebernommen.
+    Dadurch erkennt der Kalender bei einer Aktualisierung, dass es sich um
+    denselben Termin handelt, und verschiebt ihn, statt einen zweiten
+    daneben anzulegen.
+    """
+    meine_termine = [t for t in termine if t["titel"] not in NICHT_BELEGTE_FAECHER]
+    erzeugt_am = datetime.now(ZEITZONE_UTC).strftime("%Y%m%dT%H%M%SZ")
+
+    zeilen = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//stundenplan-dashboard//HWR Berlin//DE",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:" + ical_text(
+            FACHRICHTUNG.capitalize() + " " + SEMESTER.replace("semester", "Sem. ")),
+        "X-WR-TIMEZONE:Europe/Berlin",
+        # Beide Angaben sagen dasselbe: bitte stuendlich neu laden. Die eine
+        # versteht Apple, die andere ist die offizielle Schreibweise.
+        "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+        "X-PUBLISHED-TTL:PT1H",
+    ]
+
+    for termin in meine_termine:
+        # Eine Anmerkung wie "ONLINE" oder "Klausur" gehoert in den Titel -
+        # im Kalender sieht man oft nur den.
+        titel = termin["titel"]
+        if termin["anmerkung"]:
+            titel += " · " + termin["anmerkung"]
+
+        beschreibung = []
+        if termin["dozent"]:
+            beschreibung.append("Dozent: " + termin["dozent"])
+        if termin["art"]:
+            beschreibung.append("Art: " + termin["art"])
+        if termin["anmerkung"]:
+            beschreibung.append("Anmerkung: " + termin["anmerkung"])
+
+        zeilen.extend([
+            "BEGIN:VEVENT",
+            "UID:" + termin["id"],
+            "DTSTAMP:" + erzeugt_am,
+            "DTSTART:" + als_utc(termin["start"]),
+            "DTEND:" + als_utc(termin["ende"]),
+            "SUMMARY:" + ical_text(titel),
+            "LOCATION:" + ical_text(termin["raum"]),
+            "DESCRIPTION:" + ical_text("\n".join(beschreibung)),
+            "END:VEVENT",
+        ])
+
+    zeilen.append("END:VCALENDAR")
+
+    # Das iCal-Format schreibt Windows-Zeilenenden vor (CRLF).
+    inhalt = "\r\n".join(ical_zeile_falten(z) for z in zeilen) + "\r\n"
+    with open(DATEI_KALENDER, "w", encoding="utf-8", newline="") as datei:
+        datei.write(inhalt)
+
+    return len(meine_termine)
 
 
 def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
@@ -580,7 +745,17 @@ def main():
             jetzt,
             (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
         )
+        kalender_schreiben(alter_stand.get("termine", []))
         print(jetzt + "  unveraendert (Server meldet 304)")
+
+        # Auch wenn sich nichts geaendert hat, soll auf dem Handy nicht
+        # tagelang "Stand: vorletzte Woche" stehen. Deshalb einmal am Tag
+        # ein Lebenszeichen hochladen - aber eben nicht alle 30 Minuten,
+        # sonst waere die Versionsgeschichte voller sinnloser Eintraege.
+        if stunden_seit(alter_stand.get("veroeffentlichtAm", "")) >= 24:
+            veroeffentlichen()
+            alter_stand["veroeffentlichtAm"] = jetzt
+            stand_speichern(alter_stand)
         return 0
 
     neue_termine, fenster_von, fenster_bis = kalender_zerlegen(text)
@@ -632,15 +807,34 @@ def main():
             # der Plan neu erzeugt wurde, ohne dass sich etwas geaendert hat.
             print(jetzt + "  neue Datei, aber keine inhaltliche Aenderung")
 
+    dashboard_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
+    kalender_schreiben(neue_termine)
+
+    # Hochladen lohnt nur, wenn sich am Inhalt wirklich etwas getan hat.
+    #
+    # Der Vergleich prueft die Terminliste selbst und nicht bloss, ob es
+    # Aenderungen zu melden gab: an den Raendern des Zeitfensters kommen und
+    # gehen Termine, ohne dass das eine Meldung wert waere - auf dem Handy
+    # sollen sie aber trotzdem stimmen.
+    alte_termine = [] if erstlauf else alter_stand.get("termine", [])
+    veroeffentlicht_am = "" if erstlauf else alter_stand.get("veroeffentlichtAm", "")
+
+    if erstlauf or aenderungen or neue_termine != alte_termine:
+        veroeffentlichen()
+        veroeffentlicht_am = jetzt
+    elif stunden_seit(veroeffentlicht_am) >= 24:
+        veroeffentlichen()
+        veroeffentlicht_am = jetzt
+
     stand_speichern({
         "etag": etag,
         "geprueftAm": jetzt,
+        "veroeffentlichtAm": veroeffentlicht_am,
         "fensterVon": fenster_von,
         "fensterBis": fenster_bis,
         "termine": neue_termine,
         "aenderungen": verlauf,
     })
-    dashboard_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
     return 0
 
 

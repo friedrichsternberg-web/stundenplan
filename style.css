@@ -45,12 +45,23 @@
 
 body {
   margin: 0;
-  padding: 0 16px 48px;
+  /* env(safe-area-inset-*) ist der Platz, den das iPhone für Kamera-
+     Aussparung und den Balken unten braucht. Am Mac und auf Geräten ohne
+     solche Ecken sind die Werte 0, dort ändert sich also nichts. */
+  padding:
+    0
+    calc(16px + env(safe-area-inset-right))
+    calc(48px + env(safe-area-inset-bottom))
+    calc(16px + env(safe-area-inset-left));
   background: var(--hintergrund);
   color: var(--schrift);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+
+  /* Verhindert, dass iOS die Schrift beim Drehen ins Querformat
+     eigenmächtig vergrößert. */
+  -webkit-text-size-adjust: 100%;
 }
 
 main { max-width: 900px; margin: 0 auto; }
@@ -64,7 +75,7 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .kopf {
   max-width: 900px;
   margin: 0 auto;
-  padding: 20px 0 16px;
+  padding: calc(20px + env(safe-area-inset-top)) 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -364,6 +375,33 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 @media (max-width: 520px) {
   .termin { flex-direction: column; gap: 2px; }
-  .termin-zeit { flex: none; }
+  .termin-zeit { flex: none; font-weight: 600; color: var(--schrift); }
   .wochen-titel { font-size: 14px; }
+
+  /* Apple empfiehlt mindestens 44 Punkt Kantenlänge für alles, was mit dem
+     Finger getroffen werden soll. Am Mausrand darf es kleiner sein, mit dem
+     Daumen trifft man sonst daneben. */
+  .knopf-schlicht { padding: 11px 15px; font-size: 14px; }
+  .knopf-pfeil { width: 44px; height: 44px; }
+  .filter-zeile { padding: 12px 0; }
+  .filter-zeile input { width: 22px; height: 22px; }
+
+  /* Auf dem Handy soll der Filter den Bildschirm füllen statt als kleines
+     Kästchen in der Mitte zu schweben. */
+  .filter-hintergrund { padding: 0; align-items: flex-end; }
+  .filter-fenster {
+    max-width: none;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* Der Kopf klebt beim Scrollen der langen Fächerliste oben fest, damit
+     "Fertig" immer erreichbar bleibt. */
+  .filter-kopf {
+    position: sticky;
+    top: 0;
+    background: var(--flaeche);
+    padding-bottom: 8px;
+  }
 }

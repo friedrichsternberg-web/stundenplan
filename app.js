@@ -26,12 +26,9 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    oder später auseinanderlaufen – und du bekämst Mitteilungen für Fächer,
    die das Dashboard gar nicht anzeigt. Ändern also in abgleich.py.
 
-   Das umständliche "typeof" ist Absicht: solange abgleich.py noch nie lief,
-   gibt es daten/plan.js nicht und STUNDENPLAN ist unbekannt. Ein direkter
-   Zugriff würde die Datei hier sofort abbrechen lassen – noch bevor starten()
-   unten den freundlichen Hinweis anzeigen kann. */
-const NICHT_BELEGTE_FAECHER =
-  (typeof STUNDENPLAN !== "undefined" && STUNDENPLAN.nichtBelegteFaecher) || [];
+   Der Wert wird erst in starten() gesetzt, weil die Daten zu diesem
+   Zeitpunkt noch gar nicht geladen sind – siehe datenLaden() ganz unten. */
+let NICHT_BELEGTE_FAECHER = [];
 
 /* Unter diesem Schlüssel merkt sich der Browser deine Auswahl.
 
@@ -49,8 +46,9 @@ const SPEICHER_GESEHEN = "stundenplan.zuletztGesehen";
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
-// Die Fächer, die du abgewählt hast.
-let abgewaehlteFaecher = filterLaden();
+// Die Fächer, die du abgewählt hast. Wird in starten() gefüllt, sobald die
+// Voreinstellung aus den Daten bekannt ist.
+let abgewaehlteFaecher = new Set();
 
 
 /* -------------------------------------------------------------------------
@@ -497,10 +495,44 @@ function starten() {
     </p>`;
     return;
   }
+
+  // Erst jetzt sind die Daten da – also erst jetzt die Voreinstellung setzen
+  // und die gespeicherte Auswahl laden.
+  NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
+  abgewaehlteFaecher = filterLaden();
+
   kopfZeichnen();
   knoepfeVerbinden();
   hinweisZeichnen();
   allesZeichnen();
 }
 
-starten();
+/* Lädt daten/plan.js nach und ruft danach starten() auf.
+
+   Warum nicht einfach ein <script>-Tag in der index.html? Wegen des
+   Zwischenspeichers: GitHub Pages sagt dem Browser "diese Datei darfst du
+   zehn Minuten behalten". Nach einer Raumänderung würde dein Handy also noch
+   eine Weile den alten Stand zeigen. Hängt man einen Zeitstempel an die
+   Adresse, sieht der Browser jedes Mal eine neue Datei und holt sie frisch.
+
+   Der Zeitstempel kommt aber nur dran, wenn die Seite aus dem Netz kommt.
+   Öffnest du index.html per Doppelklick, ist die Adresse eine file-Adresse -
+   und dort verwirrt ein angehängtes "?..." den Browser, die Datei würde
+   gar nicht gefunden. */
+function datenLaden(wennFertig) {
+  const ausDemNetz = location.protocol === "http:" || location.protocol === "https:";
+  const skript = document.createElement("script");
+  skript.src = "daten/plan.js" + (ausDemNetz ? "?stand=" + Date.now() : "");
+
+  skript.onload = wennFertig;
+  skript.onerror = function () {
+    document.querySelector("main").innerHTML = `<p class="leer-text">
+      Die Datei <code>daten/plan.js</code> ließ sich nicht laden.
+      Führe einmal <code>python3 abgleich.py</code> aus.
+    </p>`;
+  };
+
+  document.head.appendChild(skript);
+}
+
+datenLaden(starten);

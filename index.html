@@ -2,7 +2,26 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- viewport-fit=cover lässt die Seite bis in die Ecken laufen. Damit dann
+     nichts unter der Kamera-Aussparung des iPhones verschwindet, hält das
+     CSS über env(safe-area-inset-*) Abstand. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- Legst du die Seite auf den Home-Bildschirm, öffnet sie sich ohne
+     Adressleiste wie eine App. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stundenplan">
+
+<!-- Farbe der Statusleiste, passend zu hell und dunkel. -->
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
+
+<link rel="apple-touch-icon" href="symbol.png">
+<link rel="icon" href="symbol.png">
+
 <title>Stundenplan</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -66,8 +85,8 @@
   </div>
 </div>
 
-<!-- Zuerst die Daten, dann die Logik: app.js braucht STUNDENPLAN. -->
-<script src="daten/plan.js"></script>
+<!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
+     Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
 <script src="app.js"></script>
 
 </body>

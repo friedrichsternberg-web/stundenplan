@@ -37,6 +37,38 @@ bash benachrichtigung-einschalten.sh
 
 Wieder abschalten mit `benachrichtigung-ausschalten.sh`.
 
+## Aufs Handy
+
+Zwei Wege, die sich ergänzen — beide brauchen, dass die Dateien im Netz
+liegen (siehe „Veröffentlichen" unten):
+
+**Dashboard als Web-App.** Die GitHub-Pages-Adresse in Safari öffnen →
+Teilen-Knopf → *Zum Home-Bildschirm*. Sie startet dann ohne Adressleiste,
+mit eigenem Symbol.
+
+**Termine im iPhone-Kalender.** Einstellungen → Kalender → Accounts →
+Account hinzufügen → Andere → *Kalenderabo hinzufügen*, dann die Adresse von
+`daten/meine-termine.ics` eintragen. Diese Datei enthält nur die Fächer, die
+du belegst — nicht alle 23 des Semesters.
+
+## Veröffentlichen
+
+`veroeffentlichen.sh` schiebt `daten/plan.js` und `daten/meine-termine.ics`
+zu GitHub. `abgleich.py` ruft es selbst auf, und zwar:
+
+- sobald sich am Inhalt etwas geändert hat
+- sonst höchstens einmal am Tag, damit auf dem Handy nicht „Stand: letzte
+  Woche" steht, ohne dass die Versionsgeschichte mit sinnlosen Einträgen
+  volläuft
+
+Ohne hinterlegtes GitHub-Repository tut das Skript nichts und meldet das —
+am Mac funktioniert dann trotzdem alles.
+
+**Einmal von Hand `git push` ausführen**, bevor der Hintergrund-Job das tut:
+Die Anmeldung bei GitHub läuft beim ersten Mal über eine Rückfrage im
+Terminal, und die kann ein Hintergrund-Job nicht beantworten. Danach liegt
+die Anmeldung im Schlüsselbund und es geht von allein.
+
 ## Woher die Daten kommen
 
 Die Moodle-Seite `fb2-stundenplan/stundenplan.php` ist nur ein Auswahlmenü.
@@ -75,6 +107,9 @@ Plan als „entfallen" gemeldet wird.
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |
 | `benachrichtigung-*.sh` | Hintergrund-Job ein-/ausschalten |
+| `veroeffentlichen.sh` | schiebt den Stand zu GitHub |
+| `daten/meine-termine.ics` | Kalenderdatei fürs iPhone, nur belegte Fächer (erzeugt) |
+| `symbol.png` | Symbol für den Home-Bildschirm |
 
 `daten/plan.js` ist bewusst eine `.js`- und keine `.json`-Datei: so kann
 `index.html` per Doppelklick geöffnet werden. Browser verbieten aus
