@@ -1,6 +1,25 @@
 {
- "etag": "\"2644a-658a12f037a80\"",
- "geprueftAm": "2026-08-10T20:35",
+ "etag": "\"2644a-658b54d54ec80\"",
+ "geprueftAm": "2026-08-10T23:23",
+ "geschriebenAm": "2026-08-10T14:06",
+ "nichtBelegteFaecher": [
+  "Personalmanagement- und -entwicklung",
+  "WPF - Angewandte Wohlfahrtsstaatentheorie",
+  "WPF - Cross Cultural Management",
+  "WPF - Ethik in Wirtschaft und Gesellschaft",
+  "WPF - IRFS Rechnungslegung",
+  "WPF - Nachhaltiges Wirtschaften (Die)",
+  "WPF - Praxisorientierte Methoden der empirischen W",
+  "WPF - Recht der Künstlichen Intelligenz",
+  "WPF - Supply Chain Management",
+  "WPF - Wirtschaftsenglisch B2 (Do)",
+  "WPF - Wirtschaftsenglisch C1 (Do)",
+  "WPF - Wirtschaftspsychologie (Die)",
+  "WPF - Wirtschaftspsychologie (Do) Kurs 1"
+ ],
+ "nichtBelegteGruppen": [
+  "TM+HD"
+ ],
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3448,25 +3467,5 @@
    "gruppe": ""
   }
  ],
- "aenderungen": [],
- "veroeffentlichtAm": "2026-08-10T09:23",
- "geschriebenAm": "2026-08-10T14:06",
- "nichtBelegteFaecher": [
-  "Personalmanagement- und -entwicklung",
-  "WPF - Angewandte Wohlfahrtsstaatentheorie",
-  "WPF - Cross Cultural Management",
-  "WPF - Ethik in Wirtschaft und Gesellschaft",
-  "WPF - IRFS Rechnungslegung",
-  "WPF - Nachhaltiges Wirtschaften (Die)",
-  "WPF - Praxisorientierte Methoden der empirischen W",
-  "WPF - Recht der Künstlichen Intelligenz",
-  "WPF - Supply Chain Management",
-  "WPF - Wirtschaftsenglisch B2 (Do)",
-  "WPF - Wirtschaftsenglisch C1 (Do)",
-  "WPF - Wirtschaftspsychologie (Die)",
-  "WPF - Wirtschaftspsychologie (Do) Kurs 1"
- ],
- "nichtBelegteGruppen": [
-  "TM+HD"
- ]
+ "aenderungen": []
 }
