@@ -291,7 +291,12 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 /* --- Kalenderraster ---------------------------------------------------- */
 
-:root { --zeitspalte: 46px; }
+:root {
+  --zeitspalte: 46px;
+  /* Mindestbreite einer Tagesspalte. Am großen Bildschirm sorgt sie für
+     lesbare Spalten und notfalls seitliches Scrollen. */
+  --tagspalte: 96px;
+}
 
 /* Auf schmalen Bildschirmen passen fünf Tagesspalten nicht nebeneinander.
    Statt sie unlesbar zu quetschen, darf das Raster hier seitlich scrollen –
@@ -552,10 +557,28 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   .kopf-knoepfe { justify-content: space-between; }
   .schalter button { padding: 9px 16px; font-size: 14px; }
 
-  /* Im Kalender wird es eng – etwas kleiner und knapper. */
-  :root { --zeitspalte: 38px; }
-  .kalender-termin { font-size: 10px; padding: 2px 4px; }
-  .kalender-termin-titel { font-size: 10.5px; }
+  /* Hochkant soll eine ganze Woche auf einen Blick draufpassen.
+     Dafür darf keine Mindestbreite mehr gelten: die fünf Tage teilen sich
+     einfach, was da ist (bei 390 px Gerätebreite rund 72 px je Tag).
+     Die Stundenhöhe wird passend dazu in app.js kleiner gewählt. */
+  :root {
+    --zeitspalte: 30px;
+    --tagspalte: 0px;
+  }
+
+  .kalender-rahmen { overflow-x: hidden; }
+  .kalender { min-width: 0; }
+
+  .kalender-termin { font-size: 9.5px; padding: 2px 3px; border-radius: 4px; }
+  .kalender-termin-titel { font-size: 10px; line-height: 1.15; }
+  .kalender-termin-zeile { font-size: 9px; }
+
+  /* Tageskopf einzeilig, das spart Höhe für das Raster darunter. */
+  .kalender-tagkopf { padding: 5px 2px; }
+  .kalender-tagname { font-size: 9px; }
+  .kalender-tagzahl { font-size: 12px; }
+
+  .kalender-stunde { font-size: 9px; right: 4px; }
 
   /* Apple empfiehlt mindestens 44 Punkt Kantenlänge für alles, was mit dem
      Finger getroffen werden soll. Am Mausrand darf es kleiner sein, mit dem
