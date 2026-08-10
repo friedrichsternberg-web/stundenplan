@@ -6,6 +6,7 @@ const STUNDENPLAN = {
  "kurs": "kurs",
  "quelle": "https://moodle.hwr-berlin.de/fb2-stundenplan/fb2-stundenplaene/tourismus/semester5/kurs.ics",
  "nichtBelegteFaecher": [
+  "Personalmanagement- und -entwicklung",
   "WPF - Angewandte Wohlfahrtsstaatentheorie",
   "WPF - Cross Cultural Management",
   "WPF - Ethik in Wirtschaft und Gesellschaft",
@@ -19,7 +20,7 @@ const STUNDENPLAN = {
   "WPF - Wirtschaftspsychologie (Die)",
   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
  ],
- "geprueftAm": "2026-08-10T10:32",
+ "geprueftAm": "2026-08-10T11:25",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [

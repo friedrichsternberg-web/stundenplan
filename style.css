@@ -255,6 +255,175 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 }
 
 
+/* --- Umschalter Liste / Kalender -------------------------------------- */
+
+.kopf-knoepfe { display: flex; align-items: center; gap: 8px; }
+
+.schalter {
+  display: flex;
+  background: var(--flaeche-gedaempft);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  padding: 2px;
+  gap: 2px;
+}
+
+.schalter button {
+  background: transparent;
+  color: var(--schrift-leise);
+  border: 0;
+  border-radius: calc(var(--rundung) - 3px);
+  padding: 6px 13px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.schalter button:hover { color: var(--schrift); }
+
+.schalter .schalter-aktiv {
+  background: var(--flaeche);
+  color: var(--schrift);
+  font-weight: 600;
+  box-shadow: var(--schatten);
+}
+
+
+/* --- Kalenderraster ---------------------------------------------------- */
+
+:root { --zeitspalte: 46px; }
+
+/* Auf schmalen Bildschirmen passen fünf Tagesspalten nicht nebeneinander.
+   Statt sie unlesbar zu quetschen, darf das Raster hier seitlich scrollen –
+   die Seite selbst bleibt davon unberührt. */
+.kalender-rahmen {
+  overflow-x: auto;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  -webkit-overflow-scrolling: touch;
+}
+
+.kalender {
+  display: grid;
+  /* Die Spaltenaufteilung kommt aus app.js: sie hängt davon ab, wie viele
+     Tage die Woche zeigt. */
+  min-width: min-content;
+}
+
+.kalender-ecke {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  background: var(--flaeche-gedaempft);
+  border-bottom: 1px solid var(--linie);
+  border-right: 1px solid var(--linie);
+}
+
+.kalender-tagkopf {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--flaeche-gedaempft);
+  border-bottom: 1px solid var(--linie);
+  border-left: 1px solid var(--linie);
+  padding: 7px 4px;
+  text-align: center;
+}
+
+.kalender-tagname {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--schrift-leise);
+}
+
+.kalender-tagzahl { font-size: 14px; font-weight: 600; }
+
+.kalender-tagkopf-heute { background: var(--akzent); }
+.kalender-tagkopf-heute .kalender-tagname,
+.kalender-tagkopf-heute .kalender-tagzahl { color: var(--akzent-schrift); }
+
+/* Die Zeitachse bleibt beim seitlichen Scrollen stehen. */
+.kalender-zeitachse {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--flaeche);
+  border-right: 1px solid var(--linie);
+}
+
+.kalender-stunde {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--schrift-leise);
+}
+
+/* Der erste Wert 0 verhindert, dass die Uhrzeit oben aus dem Kasten ragt. */
+.kalender-stunde:first-child { transform: translateY(0); }
+
+.kalender-spalte {
+  position: relative;
+  border-left: 1px solid var(--linie);
+}
+
+.kalender-spalte-heute { background: color-mix(in srgb, var(--akzent) 7%, transparent); }
+
+.kalender-linie {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--linie);
+  pointer-events: none;
+}
+
+/* Wo gerade "jetzt" ist. */
+.kalender-jetzt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--entfallen);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.kalender-termin {
+  position: absolute;
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  border-radius: 6px;
+  padding: 3px 5px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  z-index: 1;
+}
+
+.kalender-termin-hinweis {
+  /* Termine mit Anmerkung (ONLINE, Exkursion, Klausur) heben sich ab. */
+  background: var(--geaendert);
+}
+
+.kalender-termin-titel {
+  font-weight: 600;
+  font-size: 11.5px;
+  /* Lange Modulnamen dürfen umbrechen, aber nicht den Kasten sprengen. */
+  overflow-wrap: anywhere;
+}
+
+.kalender-termin-zeile {
+  opacity: .9;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+
 /* --- Änderungsverlauf ------------------------------------------------- */
 
 .verlauf-block {
@@ -377,6 +546,16 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   .termin { flex-direction: column; gap: 2px; }
   .termin-zeit { flex: none; font-weight: 600; color: var(--schrift); }
   .wochen-titel { font-size: 14px; }
+
+  /* Kopfzeile: Titel oben, Knöpfe darunter über die volle Breite. */
+  .kopf { flex-direction: column; align-items: stretch; gap: 10px; }
+  .kopf-knoepfe { justify-content: space-between; }
+  .schalter button { padding: 9px 16px; font-size: 14px; }
+
+  /* Im Kalender wird es eng – etwas kleiner und knapper. */
+  :root { --zeitspalte: 38px; }
+  .kalender-termin { font-size: 10px; padding: 2px 4px; }
+  .kalender-termin-titel { font-size: 10.5px; }
 
   /* Apple empfiehlt mindestens 44 Punkt Kantenlänge für alles, was mit dem
      Finger getroffen werden soll. Am Mausrand darf es kleiner sein, mit dem

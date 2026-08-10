@@ -37,14 +37,20 @@ let NICHT_BELEGTE_FAECHER = [];
    würde die Voreinstellung oben überstimmen. Mit einer neuen Nummer fängt
    der Filter einmalig frisch an. Wenn wir NICHT_BELEGTE_FAECHER später
    ändern und das sofort greifen soll, zählen wir die Zahl einfach hoch. */
-const SPEICHER_FILTER = "stundenplan.abgewaehlteFaecher.2";
+const SPEICHER_FILTER = "stundenplan.abgewaehlteFaecher.3";
 
 // Und unter diesem, welche Änderung du zuletzt gesehen hast. Damit kann das
 // Dashboard oben einen Hinweis zeigen, wenn seitdem etwas dazugekommen ist.
 const SPEICHER_GESEHEN = "stundenplan.zuletztGesehen";
 
+// Und unter diesem, welche der beiden Ansichten du zuletzt benutzt hast.
+const SPEICHER_ANSICHT = "stundenplan.ansicht";
+
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
+
+// "liste" oder "kalender".
+let ansicht = "liste";
 
 // Die Fächer, die du abgewählt hast. Wird in starten() gefüllt, sobald die
 // Voreinstellung aus den Daten bekannt ist.
@@ -255,6 +261,8 @@ function naechstenZeichnen() {
    4. Wochenansicht
    ------------------------------------------------------------------------- */
 
+/* Beide Ansichten zeigen dieselbe Woche, nur anders aufbereitet. Diese
+   Funktion bereitet vor, was beide brauchen, und übergibt dann. */
 function wocheZeichnen() {
   const montag = angezeigterMontag;
   const sonntag = tageDazu(montag, 6);
@@ -271,17 +279,38 @@ function wocheZeichnen() {
     nachTag.get(schluessel).push(termin);
   }
 
-  // Samstag und Sonntag werden nur gezeigt, wenn dort etwas stattfindet –
-  // an der HWR ist das die Ausnahme, und leere Kästen stören nur.
-  const stuecke = [];
+  // Welche Tage überhaupt gezeigt werden. Samstag und Sonntag nur, wenn dort
+  // etwas stattfindet – an der HWR ist das die Ausnahme, und leere Spalten
+  // stören nur.
+  const tage = [];
   for (let versatz = 0; versatz < 7; versatz++) {
     const tag = tageDazu(montag, versatz);
     const schluessel = tagesSchluessel(tag);
     const termineDesTages = nachTag.get(schluessel) || [];
-
     if (versatz >= 5 && termineDesTages.length === 0) continue;
+    tage.push({
+      datum: tag,
+      termine: termineDesTages,
+      istHeute: schluessel === heuteSchluessel,
+    });
+  }
 
-    const istHeute = schluessel === heuteSchluessel;
+  document.getElementById("tage").innerHTML =
+    ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
+}
+
+
+/* --- Ansicht 1: Liste ---------------------------------------------------
+   Ein Kasten je Tag, Termine untereinander. Gut auf schmalen Bildschirmen
+   und beim schnellen Nachschauen. */
+
+function listeBauen(tage) {
+  const stuecke = [];
+  for (const eintrag of tage) {
+    const tag = eintrag.datum;
+    const termineDesTages = eintrag.termine;
+    const istHeute = eintrag.istHeute;
+
     const kopfZusatz = termineDesTages.length === 0
       ? "frei"
       : uhrzeit(termineDesTages[0].start) + "–"
@@ -298,8 +327,7 @@ function wocheZeichnen() {
           : termineDesTages.map(terminZeichnen).join("")}
       </div>`);
   }
-
-  document.getElementById("tage").innerHTML = stuecke.join("");
+  return stuecke.join("");
 }
 
 function terminZeichnen(termin) {
@@ -314,6 +342,182 @@ function terminZeichnen(termin) {
         ${termin.anmerkung
           ? `<div class="termin-anmerkung">${sicher(termin.anmerkung)}</div>`
           : ""}
+      </div>
+    </div>`;
+}
+
+
+/* --- Ansicht 2: Kalenderraster ------------------------------------------
+
+   Tage als Spalten, die Uhrzeit läuft senkrecht. Ein Termin ist ein Kästchen,
+   dessen Höhe seiner Dauer entspricht – so sieht man Lücken und lange Blöcke
+   auf einen Blick.
+   ---------------------------------------------------------------------- */
+
+// Wie viele Bildpunkte eine Stunde hoch ist. Größer = luftiger, aber man
+// muss mehr scrollen.
+const STUNDE_HOEHE = 58;
+
+// Zeigt der Kalender keine Termine, wird trotzdem dieser Bereich dargestellt –
+// ein Raster ganz ohne Zeitachse wäre verwirrend.
+const STANDARD_VON = 8;
+const STANDARD_BIS = 19;
+
+/* Rechnet "2026-08-10T08:45" in Minuten seit Mitternacht um: 525. Damit
+   lässt sich einfach rechnen, wo ein Termin sitzt und wie hoch er ist. */
+function minutenAmTag(zeitangabe) {
+  return Number(zeitangabe.slice(11, 13)) * 60 + Number(zeitangabe.slice(14, 16));
+}
+
+/* Verteilt gleichzeitig laufende Termine auf nebeneinanderliegende Spalten.
+
+   Ohne das läge bei dir donnerstags Personalmanagement unsichtbar unter
+   Nachhaltigem Wirtschaften – beide gehen von 8 Uhr bis nach 13 Uhr.
+
+   Vorgehen in zwei Schritten:
+   1. Termine zu Gruppen zusammenfassen, die sich zeitlich berühren.
+   2. Innerhalb einer Gruppe jeden Termin in die erste Spalte legen, die zu
+      seiner Startzeit schon wieder frei ist.
+
+   Zurück kommt je Termin, in welcher Spalte er liegt und wie viele Spalten
+   die Gruppe insgesamt breit ist. */
+function spaltenVerteilen(termine) {
+  const sortiert = [...termine].sort((a, b) => a.start.localeCompare(b.start));
+  const ergebnis = [];
+
+  let gruppe = [];
+  let gruppenEnde = "";
+
+  function gruppeAbschliessen() {
+    if (gruppe.length === 0) return;
+    // Je Spalte merken wir uns, wann der bisher letzte Termin darin endet.
+    const spaltenEnde = [];
+    const zuordnung = [];
+    for (const termin of gruppe) {
+      let spalte = spaltenEnde.findIndex(ende => ende <= termin.start);
+      if (spalte < 0) {
+        spaltenEnde.push(termin.ende);
+        spalte = spaltenEnde.length - 1;
+      } else {
+        spaltenEnde[spalte] = termin.ende;
+      }
+      zuordnung.push({ termin: termin, spalte: spalte });
+    }
+    for (const eintrag of zuordnung) {
+      eintrag.spaltenGesamt = spaltenEnde.length;
+      ergebnis.push(eintrag);
+    }
+    gruppe = [];
+    gruppenEnde = "";
+  }
+
+  for (const termin of sortiert) {
+    // Beginnt der Termin erst, nachdem alles Bisherige vorbei ist, fängt
+    // eine neue Gruppe an.
+    if (gruppe.length > 0 && termin.start >= gruppenEnde) gruppeAbschliessen();
+    gruppe.push(termin);
+    if (termin.ende > gruppenEnde) gruppenEnde = termin.ende;
+  }
+  gruppeAbschliessen();
+
+  return ergebnis;
+}
+
+function kalenderBauen(tage) {
+  const alleTermine = tage.reduce((liste, t) => liste.concat(t.termine), []);
+
+  // Der gezeigte Zeitbereich richtet sich nach der Woche, bleibt aber
+  // mindestens beim Standard – sonst springt das Raster jede Woche.
+  let vonStunde = STANDARD_VON;
+  let bisStunde = STANDARD_BIS;
+  for (const termin of alleTermine) {
+    vonStunde = Math.min(vonStunde, Math.floor(minutenAmTag(termin.start) / 60));
+    bisStunde = Math.max(bisStunde, Math.ceil(minutenAmTag(termin.ende) / 60));
+  }
+
+  const startMinute = vonStunde * 60;
+  const hoehe = (bisStunde - vonStunde) * STUNDE_HOEHE;
+
+  // Die Zeitachse links.
+  const stundenBeschriftung = [];
+  const rasterLinien = [];
+  for (let stunde = vonStunde; stunde <= bisStunde; stunde++) {
+    const oben = (stunde - vonStunde) * STUNDE_HOEHE;
+    if (stunde < bisStunde) {
+      stundenBeschriftung.push(
+        `<div class="kalender-stunde" style="top:${oben}px">
+           ${String(stunde).padStart(2, "0")}:00
+         </div>`);
+    }
+    rasterLinien.push(`<div class="kalender-linie" style="top:${oben}px"></div>`);
+  }
+
+  // Der rote Strich für "jetzt", aber nur wenn die aktuelle Woche gezeigt wird.
+  const jetzt = new Date();
+  const heuteSchluessel = tagesSchluessel(jetzt);
+  const jetztMinute = jetzt.getHours() * 60 + jetzt.getMinutes();
+  const jetztSichtbar = jetztMinute >= startMinute && jetztMinute <= bisStunde * 60;
+  const jetztOben = (jetztMinute - startMinute) * (STUNDE_HOEHE / 60);
+
+  const kopfSpalten = tage.map(eintrag => `
+    <div class="kalender-tagkopf ${eintrag.istHeute ? "kalender-tagkopf-heute" : ""}">
+      <div class="kalender-tagname">${WOCHENTAGE[eintrag.datum.getDay()].slice(0, 2)}</div>
+      <div class="kalender-tagzahl">${String(eintrag.datum.getDate()).padStart(2, "0")}.${String(eintrag.datum.getMonth() + 1).padStart(2, "0")}.</div>
+    </div>`).join("");
+
+  const tagSpalten = tage.map(eintrag => {
+    const istHeuteSpalte = tagesSchluessel(eintrag.datum) === heuteSchluessel;
+
+    const kaesten = spaltenVerteilen(eintrag.termine).map(platz => {
+      const termin = platz.termin;
+      const beginn = minutenAmTag(termin.start) - startMinute;
+      const dauer = minutenAmTag(termin.ende) - minutenAmTag(termin.start);
+
+      const oben = beginn * (STUNDE_HOEHE / 60);
+      // Zwei Bildpunkte Luft nach unten, damit sich Termine optisch nicht
+      // berühren. Nach unten begrenzt, damit auch ein 30-Minuten-Termin
+      // noch lesbar bleibt.
+      const kastenHoehe = Math.max(dauer * (STUNDE_HOEHE / 60) - 2, 22);
+      const breite = 100 / platz.spaltenGesamt;
+      const links = platz.spalte * breite;
+
+      // In einem schmalen Kästchen ist für Raum und Uhrzeit kein Platz.
+      const knapp = kastenHoehe < 44;
+
+      return `
+        <div class="kalender-termin ${termin.anmerkung ? "kalender-termin-hinweis" : ""}"
+             style="top:${oben}px; height:${kastenHoehe}px; left:${links}%; width:calc(${breite}% - 2px)"
+             title="${sicher(uhrzeit(termin.start) + "–" + uhrzeit(termin.ende) + " " + termin.titel
+                            + (termin.raum ? " · " + termin.raum : "")
+                            + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
+          <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
+          ${knapp ? "" : `
+            <div class="kalender-termin-zeile">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
+            ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
+            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}`}
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="kalender-spalte ${istHeuteSpalte ? "kalender-spalte-heute" : ""}">
+        ${rasterLinien.join("")}
+        ${istHeuteSpalte && jetztSichtbar
+          ? `<div class="kalender-jetzt" style="top:${jetztOben}px"></div>` : ""}
+        ${kaesten}
+      </div>`;
+  }).join("");
+
+  const spaltenVorlage = "var(--zeitspalte) repeat(" + tage.length + ", minmax(96px, 1fr))";
+
+  return `
+    <div class="kalender-rahmen">
+      <div class="kalender" style="grid-template-columns:${spaltenVorlage}">
+        <div class="kalender-ecke"></div>
+        ${kopfSpalten}
+        <div class="kalender-zeitachse" style="height:${hoehe}px">
+          ${stundenBeschriftung.join("")}
+        </div>
+        ${tagSpalten}
       </div>
     </div>`;
 }
@@ -441,7 +645,28 @@ function kopfZeichnen() {
     + " · " + STUNDENPLAN.termine.length + " Termine";
 }
 
+/* Schaltet zwischen Liste und Kalender um und hebt den aktiven Knopf hervor. */
+function ansichtSetzen(neueAnsicht) {
+  ansicht = neueAnsicht;
+  try { localStorage.setItem(SPEICHER_ANSICHT, ansicht); }
+  catch (fehler) { /* dann gilt die Wahl nur bis zum Neuladen */ }
+
+  for (const knopf of document.querySelectorAll("[data-ansicht]")) {
+    const aktiv = knopf.getAttribute("data-ansicht") === ansicht;
+    knopf.classList.toggle("schalter-aktiv", aktiv);
+    knopf.setAttribute("aria-pressed", aktiv ? "true" : "false");
+  }
+
+  wocheZeichnen();
+}
+
 function knoepfeVerbinden() {
+  for (const knopf of document.querySelectorAll("[data-ansicht]")) {
+    knopf.addEventListener("click", () => {
+      ansichtSetzen(knopf.getAttribute("data-ansicht"));
+    });
+  }
+
   document.getElementById("wocheZurueck").addEventListener("click", () => {
     angezeigterMontag = tageDazu(angezeigterMontag, -7);
     wocheZeichnen();
@@ -501,10 +726,19 @@ function starten() {
   NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
   abgewaehlteFaecher = filterLaden();
 
+  try {
+    const gemerkt = localStorage.getItem(SPEICHER_ANSICHT);
+    if (gemerkt === "kalender" || gemerkt === "liste") ansicht = gemerkt;
+  } catch (fehler) { /* dann bleibt es bei der Liste */ }
+
   kopfZeichnen();
   knoepfeVerbinden();
   hinweisZeichnen();
-  allesZeichnen();
+  naechstenZeichnen();
+  verlaufZeichnen();
+  // Setzt die gemerkte Ansicht, hebt den richtigen Knopf hervor und zeichnet
+  // die Woche – deshalb hier kein zusätzliches wocheZeichnen().
+  ansichtSetzen(ansicht);
 }
 
 /* Lädt daten/plan.js nach und ruft danach starten() auf.
