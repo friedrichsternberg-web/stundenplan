@@ -19,7 +19,7 @@ const STUNDENPLAN = {
   "WPF - Wirtschaftspsychologie (Die)",
   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
  ],
- "geprueftAm": "2026-08-10T08:52",
+ "geprueftAm": "2026-08-10T10:56",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3467,5 +3467,33 @@ const STUNDENPLAN = {
    "gruppe": ""
   }
  ],
- "aenderungen": []
+ "aenderungen": [
+  {
+   "erkanntAm": "2026-08-10T10:56",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207973",
+      "start": "2026-08-13T08:00",
+      "ende": "2026-08-13T13:15",
+      "art": "SI",
+      "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
+      "dozent": "Gläser",
+      "raum": "CL: 6A.207",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "AUTOMATIK-TEST",
+       "nachher": "CL: 6A.207"
+      }
+     ]
+    }
+   ]
+  }
+ ]
 };
