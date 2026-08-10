@@ -1,0 +1,5 @@
+# Erzeugte Daten – gehören nicht in die Versionsverwaltung.
+daten/stand.json
+daten/plan.js
+daten/protokoll.log
+.DS_Store

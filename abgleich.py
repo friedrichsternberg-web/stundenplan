@@ -1,0 +1,599 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Holt den Stundenplan der HWR Berlin, vergleicht ihn mit dem zuletzt
+gespeicherten Stand und meldet jede Aenderung als macOS-Mitteilung.
+
+Aufruf:  python3 abgleich.py
+
+Das Skript braucht keine zusaetzlichen Bibliotheken. Alles, was es benutzt,
+ist in Python selbst schon eingebaut.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime
+
+
+# ===========================================================================
+# 1. Einstellungen
+# ===========================================================================
+
+# Welcher Stundenplan soll geholt werden? Diese drei Werte ergeben zusammen
+# die Adresse der Kalenderdatei. Das Namensschema stammt von der Moodle-Seite
+# des Fachbereichs 2. Wenn du ins naechste Semester wechselst, aenderst du
+# hier einfach "semester5" auf "semester6" - sonst nichts.
+FACHRICHTUNG = "tourismus"
+SEMESTER = "semester5"
+KURS = "kurs"
+
+STUNDENPLAN_URL = (
+    "https://moodle.hwr-berlin.de/fb2-stundenplan/fb2-stundenplaene/"
+    + FACHRICHTUNG + "/" + SEMESTER + "/" + KURS + ".ics"
+)
+
+# Alle Dateien, die das Skript schreibt, liegen neben dem Skript im Ordner
+# "daten". So funktioniert der Aufruf unabhaengig davon, aus welchem
+# Verzeichnis heraus du das Skript startest.
+PROJEKTORDNER = os.path.dirname(os.path.abspath(__file__))
+DATENORDNER = os.path.join(PROJEKTORDNER, "daten")
+
+# Der zuletzt gesehene Stand. Damit wird beim naechsten Lauf verglichen.
+DATEI_STAND = os.path.join(DATENORDNER, "stand.json")
+
+# Die Daten fuer das Dashboard. Bewusst eine .js-Datei und keine .json:
+# so laesst sich index.html per Doppelklick oeffnen, ohne dass ein Webserver
+# laufen muss. (Der Browser verbietet aus Sicherheitsgruenden, dass eine
+# lokal geoeffnete Seite Dateien nachlaedt - ein <script>-Tag darf es aber.)
+DATEI_DASHBOARD = os.path.join(DATENORDNER, "plan.js")
+
+# Wie viele vergangene Aenderungen im Verlauf aufgehoben werden.
+MAXIMALE_ANZAHL_AENDERUNGEN = 300
+
+
+# ===========================================================================
+# 2. Die Kalenderdatei holen
+# ===========================================================================
+
+def kalender_herunterladen(bekanntes_etag):
+    """
+    Laedt die iCal-Datei vom HWR-Server.
+
+    Der Server schickt bei jeder Datei ein sogenanntes ETag mit - eine Art
+    Fingerabdruck des Inhalts. Wenn wir ihm beim Anfragen unser zuletzt
+    gesehenes ETag mitgeben und sich nichts geaendert hat, antwortet er nur
+    kurz mit "304 Not Modified" und schickt die 150 KB gar nicht erst.
+    Das spart Datenverkehr und macht haeufiges Nachschauen billig.
+
+    Rueckgabe: (text, etag, unveraendert)
+    Bei "unveraendert = True" ist "text" leer.
+    """
+    anfrage = urllib.request.Request(STUNDENPLAN_URL)
+    anfrage.add_header("User-Agent", "stundenplan-dashboard/1.0")
+    if bekanntes_etag:
+        anfrage.add_header("If-None-Match", bekanntes_etag)
+
+    try:
+        with urllib.request.urlopen(anfrage, timeout=60) as antwort:
+            rohdaten = antwort.read()
+            etag = antwort.headers.get("ETag", "")
+    except urllib.error.HTTPError as fehler:
+        if fehler.code == 304:
+            # Der Server sagt: unveraendert seit dem letzten Mal.
+            return "", bekanntes_etag, True
+        raise
+
+    # Die Datei ist UTF-8 und beginnt mit einem unsichtbaren Steuerzeichen
+    # (dem "Byte Order Mark"). "utf-8-sig" entfernt das automatisch.
+    return rohdaten.decode("utf-8-sig", errors="replace"), etag, False
+
+
+# ===========================================================================
+# 3. Die Kalenderdatei auseinandernehmen
+# ===========================================================================
+
+def zeilen_entfalten(text):
+    """
+    Im iCal-Format werden lange Zeilen umgebrochen. Eine Zeile, die mit einem
+    Leerzeichen oder einem Tabulator beginnt, ist keine neue Angabe, sondern
+    die Fortsetzung der vorherigen. Diese Funktion klebt sie wieder zusammen.
+    """
+    ergebnis = []
+    for zeile in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if zeile.startswith(" ") or zeile.startswith("\t"):
+            if ergebnis:
+                ergebnis[-1] += zeile[1:]
+        else:
+            ergebnis.append(zeile)
+    return ergebnis
+
+
+def text_entschluesseln(wert):
+    """
+    iCal maskiert Sonderzeichen mit einem Backslash: "\\n" steht fuer einen
+    Zeilenumbruch, "\\;" fuer ein Semikolon. Diese Funktion macht das
+    rueckgaengig.
+    """
+    ergebnis = []
+    index = 0
+    while index < len(wert):
+        zeichen = wert[index]
+        if zeichen == "\\" and index + 1 < len(wert):
+            naechstes = wert[index + 1]
+            if naechstes in ("n", "N"):
+                ergebnis.append("\n")
+            elif naechstes in (";", ",", "\\"):
+                ergebnis.append(naechstes)
+            else:
+                ergebnis.append(naechstes)
+            index += 2
+        else:
+            ergebnis.append(zeichen)
+            index += 1
+    return "".join(ergebnis)
+
+
+def zeile_zerlegen(zeile):
+    """
+    Zerlegt eine iCal-Zeile in Name und Wert.
+
+    Beispiel: "DTSTART;TZID=Europe/Berlin:20260810T080000"
+    ergibt    ("DTSTART", "20260810T080000")
+
+    Der Name kann Zusatzangaben nach einem Semikolon enthalten (hier die
+    Zeitzone). Die brauchen wir nicht - alle Zeiten sind Berliner Zeit.
+    """
+    doppelpunkt = zeile.find(":")
+    if doppelpunkt < 0:
+        return "", ""
+    name_mit_zusatz = zeile[:doppelpunkt]
+    wert = zeile[doppelpunkt + 1:]
+    name = name_mit_zusatz.split(";")[0].upper()
+    return name, wert
+
+
+def zeitpunkt_lesen(wert):
+    """
+    Wandelt "20260810T080000" in "2026-08-10T08:00" um - lesbar und
+    gut sortierbar. Alle Zeiten im Plan sind Berliner Ortszeit, deshalb ist
+    kein Umrechnen noetig.
+    """
+    if len(wert) < 15:
+        return wert
+    return (wert[0:4] + "-" + wert[4:6] + "-" + wert[6:8]
+            + "T" + wert[9:11] + ":" + wert[11:13])
+
+
+def beschreibung_zerlegen(beschreibung):
+    """
+    Das Feld DESCRIPTION enthaelt die Einzelangaben als Liste, eine pro
+    Zeile, im Format "Schluessel: Wert":
+
+        Art: SU
+        Veranstaltung: Nationale und internationale Leistungsanbieter I
+        Dozent: Nabi
+        Raum: CL: 6A.206
+        Anmerkung: -
+
+    Achtung beim Raum: der Wert enthaelt selbst einen Doppelpunkt. Deshalb
+    wird nur am *ersten* Doppelpunkt getrennt.
+    """
+    felder = {}
+    for zeile in beschreibung.split("\n"):
+        trennstelle = zeile.find(":")
+        if trennstelle < 0:
+            continue
+        schluessel = zeile[:trennstelle].strip()
+        wert = zeile[trennstelle + 1:].strip()
+        # Ein einzelner Bindestrich heisst in diesem Plan "nichts angegeben".
+        if wert == "-":
+            wert = ""
+        felder[schluessel] = wert
+    return felder
+
+
+def kalender_zerlegen(text):
+    """
+    Liest die komplette Kalenderdatei und gibt zwei Dinge zurueck:
+
+    1. die Liste der Termine
+    2. das Zeitfenster, das die Datei abdeckt
+
+    Das Zeitfenster ist wichtig: der HWR-Server liefert immer nur die
+    naechsten rund zwoelf Wochen. Termine ausserhalb dieses Fensters fehlen
+    in der Datei - obwohl sie nicht abgesagt sind. Ohne diese Information
+    wuerde der Vergleich staendig falschen Alarm schlagen.
+    """
+    termine = []
+    fenster_von = ""
+    fenster_bis = ""
+
+    # "in_termin" merkt sich, ob wir gerade innerhalb eines VEVENT-Blocks
+    # sind. Das ist noetig, weil die Datei auch einen VTIMEZONE-Block
+    # enthaelt, der ebenfalls DTSTART-Zeilen hat (mit Datum 1996!) - die
+    # sind aber Zeitzonen-Regeln und keine Vorlesungen.
+    in_termin = False
+    aktueller_termin = {}
+
+    for zeile in zeilen_entfalten(text):
+        name, wert = zeile_zerlegen(zeile)
+
+        if name == "BEGIN" and wert == "VEVENT":
+            in_termin = True
+            aktueller_termin = {}
+            continue
+
+        if name == "END" and wert == "VEVENT":
+            in_termin = False
+            termin = termin_aufbereiten(aktueller_termin)
+            if termin:
+                termine.append(termin)
+            continue
+
+        if not in_termin:
+            # Ausserhalb der Termine interessiert uns nur das Zeitfenster.
+            if name == "X-SKED-SYNC-DTSTART":
+                fenster_von = zeitpunkt_lesen(wert)
+            elif name == "X-SKED-SYNC-DTEND":
+                fenster_bis = zeitpunkt_lesen(wert)
+            continue
+
+        aktueller_termin[name] = wert
+
+    # Falls der Server das Zeitfenster mal nicht mitliefert, leiten wir es
+    # ersatzweise aus den Terminen selbst ab.
+    if termine and not fenster_von:
+        fenster_von = min(t["start"] for t in termine)
+    if termine and not fenster_bis:
+        fenster_bis = max(t["start"] for t in termine)
+
+    termine.sort(key=lambda t: (t["start"], t["titel"]))
+    return termine, fenster_von, fenster_bis
+
+
+def termin_aufbereiten(rohfelder):
+    """
+    Macht aus den rohen iCal-Feldern einen aufgeraeumten Termin.
+    Gibt None zurueck, wenn der Eintrag unbrauchbar ist.
+    """
+    if "DTSTART" not in rohfelder or "UID" not in rohfelder:
+        return None
+
+    beschreibung = text_entschluesseln(rohfelder.get("DESCRIPTION", ""))
+    felder = beschreibung_zerlegen(beschreibung)
+
+    return {
+        "id": rohfelder["UID"],
+        "start": zeitpunkt_lesen(rohfelder["DTSTART"]),
+        "ende": zeitpunkt_lesen(rohfelder.get("DTEND", rohfelder["DTSTART"])),
+        "art": felder.get("Art", ""),
+        "titel": felder.get("Veranstaltung", ""),
+        "dozent": felder.get("Dozent", ""),
+        "raum": text_entschluesseln(rohfelder.get("LOCATION", "")),
+        "anmerkung": felder.get("Anmerkung", ""),
+        "gruppe": felder.get("Veranstaltungsuntergruppe", ""),
+    }
+
+
+# ===========================================================================
+# 4. Alten und neuen Stand vergleichen
+# ===========================================================================
+
+# Diese Felder werden auf Aenderungen geprueft. Der Name links ist der
+# technische, der Text rechts der, den du in der Meldung liest.
+VERGLICHENE_FELDER = [
+    ("start", "Beginn"),
+    ("ende", "Ende"),
+    ("titel", "Veranstaltung"),
+    ("dozent", "Dozent"),
+    ("raum", "Raum"),
+    ("art", "Art"),
+    ("anmerkung", "Anmerkung"),
+]
+
+
+def plaene_vergleichen(alte_termine, neue_termine,
+                       altes_fenster_bis, neues_fenster_von):
+    """
+    Vergleicht zwei Staende und gibt eine Liste der Aenderungen zurueck.
+
+    Jeder Termin hat eine feste Kennung (UID), die sich nicht aendert.
+    Dadurch koennen wir sauber unterscheiden:
+
+    - neu:       Kennung ist dazugekommen
+    - entfallen: Kennung ist verschwunden
+    - geaendert: Kennung gibt es noch, aber ein Feld ist anders
+
+    Die beiden Zeitfenster-Angaben verhindern Fehlalarm an den Raendern:
+    Termine, die nur deshalb neu sind, weil das Fenster nach vorn gerueckt
+    ist, und Termine, die nur deshalb fehlen, weil sie hinten herausgefallen
+    sind, werden nicht gemeldet.
+    """
+    alte_nach_id = {}
+    for termin in alte_termine:
+        alte_nach_id[termin["id"]] = termin
+
+    neue_nach_id = {}
+    for termin in neue_termine:
+        neue_nach_id[termin["id"]] = termin
+
+    aenderungen = []
+
+    # --- Neu hinzugekommen ---------------------------------------------
+    for kennung, termin in neue_nach_id.items():
+        if kennung in alte_nach_id:
+            continue
+        # Lag der Termin schon im alten Zeitfenster? Wenn nicht, ist er
+        # nicht wirklich neu - wir haben ihn vorher nur nicht gesehen.
+        if altes_fenster_bis and termin["start"] > altes_fenster_bis:
+            continue
+        aenderungen.append({
+            "typ": "neu",
+            "termin": termin,
+            "felder": [],
+        })
+
+    # --- Entfallen ------------------------------------------------------
+    for kennung, termin in alte_nach_id.items():
+        if kennung in neue_nach_id:
+            continue
+        # Faellt der Termin nur hinten aus dem Zeitfenster? Dann schweigen.
+        if neues_fenster_von and termin["start"] < neues_fenster_von:
+            continue
+        aenderungen.append({
+            "typ": "entfallen",
+            "termin": termin,
+            "felder": [],
+        })
+
+    # --- Geaendert ------------------------------------------------------
+    for kennung, neuer_termin in neue_nach_id.items():
+        alter_termin = alte_nach_id.get(kennung)
+        if not alter_termin:
+            continue
+        unterschiede = []
+        for feldname, anzeigename in VERGLICHENE_FELDER:
+            vorher = alter_termin.get(feldname, "")
+            nachher = neuer_termin.get(feldname, "")
+            if vorher != nachher:
+                unterschiede.append({
+                    "feld": anzeigename,
+                    "vorher": vorher,
+                    "nachher": nachher,
+                })
+        if unterschiede:
+            aenderungen.append({
+                "typ": "geaendert",
+                "termin": neuer_termin,
+                "felder": unterschiede,
+            })
+
+    aenderungen.sort(key=lambda a: a["termin"]["start"])
+    return aenderungen
+
+
+# ===========================================================================
+# 5. Benachrichtigen
+# ===========================================================================
+
+def applescript_text(wert):
+    """
+    Verpackt einen Text so, dass AppleScript ihn als Zeichenkette versteht.
+    Anfuehrungszeichen und Backslashes muessen maskiert werden, sonst bricht
+    ein Termintitel mit Anfuehrungszeichen das Skript.
+    """
+    sicher = wert.replace("\\", "\\\\").replace('"', '\\"')
+    return '"' + sicher + '"'
+
+
+def mitteilung_senden(titel, untertitel, text):
+    """
+    Zeigt eine macOS-Mitteilung an. "osascript" ist bei macOS dabei, es wird
+    also nichts zusaetzlich installiert.
+    """
+    befehl = (
+        "display notification " + applescript_text(text)
+        + " with title " + applescript_text(titel)
+        + " subtitle " + applescript_text(untertitel)
+        + ' sound name "Glass"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", befehl], check=False, timeout=20)
+    except Exception as fehler:
+        print("Mitteilung konnte nicht gesendet werden: " + str(fehler))
+
+
+def datum_lesbar(zeitpunkt):
+    """Macht aus "2026-08-10T08:00" die Anzeige "Mo 10.08. 08:00"."""
+    try:
+        moment = datetime.strptime(zeitpunkt, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return zeitpunkt
+    wochentage = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    return (wochentage[moment.weekday()] + " "
+            + moment.strftime("%d.%m. %H:%M"))
+
+
+def aenderung_als_satz(aenderung):
+    """Formuliert eine einzelne Aenderung als kurzen, lesbaren Satz."""
+    termin = aenderung["termin"]
+    titel = termin["titel"] or "Termin"
+    wann = datum_lesbar(termin["start"])
+
+    if aenderung["typ"] == "neu":
+        return "NEU: " + titel + " am " + wann
+
+    if aenderung["typ"] == "entfallen":
+        return "ENTFAELLT: " + titel + " am " + wann
+
+    teile = []
+    for unterschied in aenderung["felder"]:
+        vorher = unterschied["vorher"] or "(leer)"
+        nachher = unterschied["nachher"] or "(leer)"
+        if unterschied["feld"] in ("Beginn", "Ende"):
+            vorher = datum_lesbar(vorher)
+            nachher = datum_lesbar(nachher)
+        teile.append(unterschied["feld"] + ": " + vorher + " -> " + nachher)
+    return titel + " (" + wann + ") - " + "; ".join(teile)
+
+
+def ueber_aenderungen_benachrichtigen(aenderungen):
+    """
+    Fasst die Aenderungen zu einer Mitteilung zusammen. Mitteilungen sind
+    kurz, deshalb kommen nur die ersten paar in den Text - der Rest steht
+    im Dashboard.
+    """
+    anzahl = len(aenderungen)
+    if anzahl == 1:
+        untertitel = "1 Aenderung"
+    else:
+        untertitel = str(anzahl) + " Aenderungen"
+
+    saetze = [aenderung_als_satz(a) for a in aenderungen[:3]]
+    if anzahl > 3:
+        saetze.append("... und " + str(anzahl - 3) + " weitere")
+
+    mitteilung_senden("Stundenplan geaendert", untertitel, "\n".join(saetze))
+
+
+# ===========================================================================
+# 6. Ergebnisse speichern
+# ===========================================================================
+
+def stand_laden():
+    """Liest den zuletzt gespeicherten Stand. Beim ersten Lauf gibt es keinen."""
+    if not os.path.exists(DATEI_STAND):
+        return None
+    try:
+        with open(DATEI_STAND, "r", encoding="utf-8") as datei:
+            return json.load(datei)
+    except (ValueError, OSError) as fehler:
+        print("Alter Stand nicht lesbar (" + str(fehler)
+              + ") - wird als Erstlauf behandelt.")
+        return None
+
+
+def stand_speichern(daten):
+    with open(DATEI_STAND, "w", encoding="utf-8") as datei:
+        json.dump(daten, datei, ensure_ascii=False, indent=1)
+
+
+def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
+    """
+    Schreibt die Datei, die das Dashboard einliest. Es ist gueltiges
+    JavaScript: eine einzige Zuweisung an eine Variable.
+    """
+    inhalt = {
+        "fachrichtung": FACHRICHTUNG,
+        "semester": SEMESTER,
+        "kurs": KURS,
+        "quelle": STUNDENPLAN_URL,
+        "geprueftAm": geprueft_am,
+        "fensterVon": fenster[0],
+        "fensterBis": fenster[1],
+        "termine": termine,
+        "aenderungen": aenderungsverlauf,
+    }
+    with open(DATEI_DASHBOARD, "w", encoding="utf-8") as datei:
+        datei.write("// Diese Datei wird von abgleich.py erzeugt.\n")
+        datei.write("// Nicht von Hand aendern - beim naechsten Lauf wird sie ueberschrieben.\n")
+        datei.write("const STUNDENPLAN = ")
+        json.dump(inhalt, datei, ensure_ascii=False, indent=1)
+        datei.write(";\n")
+
+
+# ===========================================================================
+# 7. Ablauf
+# ===========================================================================
+
+def main():
+    if not os.path.isdir(DATENORDNER):
+        os.makedirs(DATENORDNER)
+
+    jetzt = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    alter_stand = stand_laden()
+    erstlauf = alter_stand is None
+
+    bekanntes_etag = ""
+    if alter_stand:
+        bekanntes_etag = alter_stand.get("etag", "")
+
+    try:
+        text, etag, unveraendert = kalender_herunterladen(bekanntes_etag)
+    except Exception as fehler:
+        # Kein Netz, Server weg, Uni-Wartung: kein Grund zur Panik. Wir
+        # brechen still ab, damit der naechste Lauf es erneut versucht.
+        print("Abruf fehlgeschlagen: " + str(fehler))
+        return 1
+
+    if unveraendert and alter_stand:
+        # Der Server sagt, die Datei ist unveraendert. Wir aktualisieren nur
+        # den Zeitstempel der letzten Pruefung.
+        alter_stand["geprueftAm"] = jetzt
+        stand_speichern(alter_stand)
+        dashboard_schreiben(
+            alter_stand.get("termine", []),
+            alter_stand.get("aenderungen", []),
+            jetzt,
+            (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
+        )
+        print(jetzt + "  unveraendert (Server meldet 304)")
+        return 0
+
+    neue_termine, fenster_von, fenster_bis = kalender_zerlegen(text)
+    if not neue_termine:
+        print("Die Datei enthielt keine Termine - alter Stand bleibt erhalten.")
+        return 1
+
+    verlauf = []
+    aenderungen = []
+
+    if erstlauf:
+        print("Erster Lauf: " + str(len(neue_termine))
+              + " Termine gespeichert. Ab jetzt wird verglichen.")
+    else:
+        aenderungen = plaene_vergleichen(
+            alter_stand.get("termine", []),
+            neue_termine,
+            alter_stand.get("fensterBis", ""),
+            fenster_von,
+        )
+        verlauf = alter_stand.get("aenderungen", [])
+
+        if aenderungen:
+            # Neueste Aenderungen kommen nach vorn.
+            eintrag = {
+                "erkanntAm": jetzt,
+                "anzahl": len(aenderungen),
+                "eintraege": aenderungen,
+            }
+            verlauf = [eintrag] + verlauf
+            verlauf = verlauf[:MAXIMALE_ANZAHL_AENDERUNGEN]
+
+            print(jetzt + "  " + str(len(aenderungen)) + " Aenderung(en):")
+            for aenderung in aenderungen:
+                print("   - " + aenderung_als_satz(aenderung))
+            ueber_aenderungen_benachrichtigen(aenderungen)
+        else:
+            # Die Datei war neu, aber inhaltlich gleich - das passiert, wenn
+            # der Plan neu erzeugt wurde, ohne dass sich etwas geaendert hat.
+            print(jetzt + "  neue Datei, aber keine inhaltliche Aenderung")
+
+    stand_speichern({
+        "etag": etag,
+        "geprueftAm": jetzt,
+        "fensterVon": fenster_von,
+        "fensterBis": fenster_bis,
+        "termine": neue_termine,
+        "aenderungen": verlauf,
+    })
+    dashboard_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

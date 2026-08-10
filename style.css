@@ -1,0 +1,359 @@
+/* =========================================================================
+   Stundenplan-Dashboard – Aussehen
+
+   Die Farben stehen als Variablen ganz oben. Wer etwas umfärben will,
+   ändert nur diese Werte und nicht dutzende Stellen weiter unten.
+   ========================================================================= */
+
+:root {
+  --hintergrund: #f4f5f7;
+  --flaeche: #ffffff;
+  --flaeche-gedaempft: #eceef1;
+  --linie: #dcdfe4;
+  --schrift: #1c1f23;
+  --schrift-leise: #6b7280;
+  --akzent: #2f6fed;
+  --akzent-schrift: #ffffff;
+  --neu: #1f9d55;
+  --entfallen: #d13c3c;
+  --geaendert: #c77700;
+  --schatten: 0 1px 3px rgba(0, 0, 0, .08);
+  --rundung: 10px;
+}
+
+/* Wenn das Betriebssystem auf dunkel steht, drehen wir die Farben um.
+   Es bleiben dieselben Variablennamen, deshalb muss unten nichts doppelt
+   geschrieben werden. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hintergrund: #16181c;
+    --flaeche: #1f2226;
+    --flaeche-gedaempft: #282c31;
+    --linie: #343941;
+    --schrift: #e7e9ec;
+    --schrift-leise: #9aa1ab;
+    --akzent: #5b8dfb;
+    --akzent-schrift: #10131a;
+    --neu: #3fbd76;
+    --entfallen: #f0706e;
+    --geaendert: #e0a13a;
+    --schatten: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 16px 48px;
+  background: var(--hintergrund);
+  color: var(--schrift);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+main { max-width: 900px; margin: 0 auto; }
+
+h1 { font-size: 20px; margin: 0; font-weight: 600; }
+h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
+
+
+/* --- Kopfbereich ------------------------------------------------------ */
+
+.kopf {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kopf-stand {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+
+/* --- Knöpfe ----------------------------------------------------------- */
+
+.knopf-schlicht {
+  background: var(--flaeche);
+  color: var(--schrift);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  padding: 7px 13px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.knopf-schlicht:hover { background: var(--flaeche-gedaempft); }
+
+.knopf-pfeil {
+  background: var(--flaeche);
+  color: var(--schrift);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.knopf-pfeil:hover { background: var(--flaeche-gedaempft); }
+
+
+/* --- "Als Nächstes" --------------------------------------------------- */
+
+.naechster { margin-bottom: 18px; }
+
+.naechster-karte {
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  border-radius: var(--rundung);
+  padding: 16px 18px;
+  box-shadow: var(--schatten);
+}
+
+.naechster-marke {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .85;
+}
+
+.naechster-titel {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 4px 0 6px;
+}
+
+.naechster-zeile { font-size: 14px; opacity: .92; }
+
+.naechster-leer {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  padding: 16px 18px;
+  color: var(--schrift-leise);
+}
+
+
+/* --- Hinweis auf neue Änderungen -------------------------------------- */
+
+.hinweis {
+  background: var(--flaeche);
+  border: 1px solid var(--geaendert);
+  border-left: 4px solid var(--geaendert);
+  border-radius: var(--rundung);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+
+.hinweis-titel { font-weight: 600; margin-bottom: 4px; }
+
+
+/* --- Wochenansicht ---------------------------------------------------- */
+
+.woche { margin-bottom: 28px; }
+
+.wochen-leiste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wochen-titel {
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+}
+
+.tag {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--schatten);
+}
+
+.tag-heute { border-color: var(--akzent); border-width: 2px; }
+
+.tag-kopf {
+  padding: 9px 14px;
+  background: var(--flaeche-gedaempft);
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.tag-kopf-zusatz {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--schrift-leise);
+}
+
+.termin {
+  display: flex;
+  gap: 14px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--linie);
+}
+
+.termin-zeit {
+  flex: 0 0 92px;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--schrift-leise);
+  padding-top: 1px;
+}
+
+.termin-inhalt { flex: 1; min-width: 0; }
+
+.termin-titel { font-weight: 600; }
+
+.termin-details {
+  font-size: 13px;
+  color: var(--schrift-leise);
+  margin-top: 2px;
+}
+
+.termin-anmerkung {
+  font-size: 13px;
+  margin-top: 4px;
+  color: var(--geaendert);
+  font-weight: 500;
+}
+
+.tag-leer {
+  padding: 12px 14px;
+  color: var(--schrift-leise);
+  font-size: 14px;
+  border-top: 1px solid var(--linie);
+}
+
+
+/* --- Änderungsverlauf ------------------------------------------------- */
+
+.verlauf-block {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+
+.verlauf-zeitpunkt {
+  font-size: 12px;
+  color: var(--schrift-leise);
+  margin-bottom: 8px;
+}
+
+.verlauf-eintrag {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 14px;
+  align-items: baseline;
+}
+
+.marke {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.marke-neu { color: var(--neu); }
+.marke-entfallen { color: var(--entfallen); }
+.marke-geaendert { color: var(--geaendert); }
+
+.verlauf-detail {
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+.leer-text { color: var(--schrift-leise); font-size: 14px; }
+
+
+/* --- Filterfenster ---------------------------------------------------- */
+
+.filter-hintergrund {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.filter-fenster {
+  background: var(--flaeche);
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-hinweis {
+  font-size: 13px;
+  color: var(--schrift-leise);
+  margin: 8px 0 12px;
+}
+
+.filter-knoepfe { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.filter-liste { overflow-y: auto; }
+
+.filter-zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--linie);
+  cursor: pointer;
+}
+
+.filter-zeile input { width: 17px; height: 17px; cursor: pointer; }
+
+.filter-anzahl {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--schrift-leise);
+}
+
+
+/* --- Schmale Bildschirme ---------------------------------------------- */
+
+@media (max-width: 520px) {
+  .termin { flex-direction: column; gap: 2px; }
+  .termin-zeit { flex: none; }
+  .wochen-titel { font-size: 14px; }
+}

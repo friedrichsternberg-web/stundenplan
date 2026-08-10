@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stundenplan</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Kopfbereich: welcher Plan, und wann wurde zuletzt nachgeschaut -->
+<header class="kopf">
+  <div class="kopf-titel">
+    <h1 id="planName">Stundenplan</h1>
+    <p class="kopf-stand" id="planStand">wird geladen …</p>
+  </div>
+  <button type="button" class="knopf-schlicht" id="filterOeffnen">
+    Fächer filtern
+  </button>
+</header>
+
+<main>
+
+  <!-- Was als Nächstes ansteht. Das ist die Information, für die man
+       normalerweise die Moodle-Seite aufmacht. -->
+  <section class="naechster" id="naechsterBereich"></section>
+
+  <!-- Meldung, falls es seit dem letzten Blick Änderungen gab -->
+  <section id="aenderungsHinweis"></section>
+
+  <!-- Wochenansicht mit Blättern -->
+  <section class="woche">
+    <div class="wochen-leiste">
+      <button type="button" class="knopf-pfeil" id="wocheZurueck" aria-label="Woche zurück">‹</button>
+      <div class="wochen-titel" id="wochenTitel"></div>
+      <button type="button" class="knopf-pfeil" id="wocheVor" aria-label="Woche vor">›</button>
+      <button type="button" class="knopf-schlicht" id="wocheHeute">Heute</button>
+    </div>
+    <div class="tage" id="tage"></div>
+  </section>
+
+  <!-- Verlauf aller erkannten Änderungen -->
+  <section class="verlauf">
+    <h2>Änderungsverlauf</h2>
+    <div id="verlauf"></div>
+  </section>
+
+</main>
+
+<!-- Der Filter liegt über der Seite und wird nur bei Bedarf gezeigt -->
+<div class="filter-hintergrund" id="filterHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Welche Fächer besuchst du?</h2>
+      <button type="button" class="knopf-schlicht" id="filterSchliessen">Fertig</button>
+    </div>
+    <p class="filter-hinweis">
+      Der Plan enthält alle Wahlpflichtfächer des Semesters. Nimm die heraus,
+      die du nicht belegst – die Auswahl bleibt in diesem Browser gespeichert.
+    </p>
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht" id="filterAlle">Alle auswählen</button>
+      <button type="button" class="knopf-schlicht" id="filterKeine">Alle abwählen</button>
+    </div>
+    <div class="filter-liste" id="filterListe"></div>
+  </div>
+</div>
+
+<!-- Zuerst die Daten, dann die Logik: app.js braucht STUNDENPLAN. -->
+<script src="daten/plan.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
