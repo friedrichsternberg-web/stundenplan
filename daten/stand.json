@@ -1,6 +1,6 @@
 {
  "etag": "\"2644a-658a12f037a80\"",
- "geprueftAm": "2026-08-10T13:34",
+ "geprueftAm": "2026-08-10T14:06",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3450,7 +3450,7 @@
  ],
  "aenderungen": [],
  "veroeffentlichtAm": "2026-08-10T09:23",
- "geschriebenAm": "2026-08-10T11:25",
+ "geschriebenAm": "2026-08-10T14:06",
  "nichtBelegteFaecher": [
   "Personalmanagement- und -entwicklung",
   "WPF - Angewandte Wohlfahrtsstaatentheorie",
@@ -3465,5 +3465,8 @@
   "WPF - Wirtschaftsenglisch C1 (Do)",
   "WPF - Wirtschaftspsychologie (Die)",
   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
+ ],
+ "nichtBelegteGruppen": [
+  "TM+HD"
  ]
 }
