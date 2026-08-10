@@ -48,6 +48,31 @@ tritt der Fall wieder auf, und ohne die Aufteilung läge ein Termin unsichtbar
 unter dem anderen. Geprüft wird sie mit erfundenen Terminen, nicht mit dem
 echten Plan — sonst würde der Test stillschweigend nichts mehr messen.
 
+## Eigene Notizen
+
+In der Listenansicht hat jeder Termin einen Knopf „+ Notiz". Dort passt
+alles hinein, was nicht im HWR-System steht: „heute online", „Abgabe bis
+Freitag", „fällt aus". Im Kalender steht bei solchen Terminen ein ✎ — der
+Text selbst wird in der Liste geschrieben und gelesen, im Raster ist dafür
+kein Platz.
+
+Gespeichert wird nach der **Termin-Kennung** (`sked.de1200291`), nicht nach
+Datum und Uhrzeit. Dadurch bleibt die Notiz am Termin kleben, auch wenn der
+Raum wechselt oder die Vorlesung verschoben wird.
+
+**Zwei Grenzen, die man kennen muss:**
+
+- Die Notizen liegen im Browser, nicht in einer Datei. Was du am Mac
+  schreibst, steht **nicht** auf dem iPhone und umgekehrt. Für einen Abgleich
+  bräuchte es einen Server mit Anmeldung.
+- iOS-Safari räumt den Speicher von Webseiten auf, die sieben Tage lang nicht
+  benutzt wurden. Als Web-App auf dem Home-Bildschirm passiert das in der
+  Praxis selten, garantiert ist es aber nicht. Für „Abgabe nächste Woche"
+  taugt es, für die einzige Kopie einer wichtigen Information nicht.
+
+Sie landen bewusst **nicht** in `daten/meine-termine.ics`: die Datei wird bei
+jedem Abgleich neu geschrieben, eine Notiz darin wäre sofort wieder weg.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
