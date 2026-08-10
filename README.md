@@ -19,6 +19,24 @@ Wenn du den Ordner verschiebst, danach einmal
 `bash benachrichtigung-einschalten.sh` neu ausführen: der Hintergrund-Job
 merkt sich den vollen Pfad.
 
+## Die zwei Ansichten
+
+Oben rechts schaltest du um; die Wahl bleibt im Browser gespeichert.
+
+- **Liste** — ein Kasten je Tag, Termine untereinander. Auf dem Handy am
+  angenehmsten und gut zum schnellen Nachschauen.
+- **Kalender** — Tage als Spalten, Uhrzeit senkrecht. Die Höhe eines
+  Kästchens entspricht der Dauer, dadurch sieht man Lücken und lange Blöcke
+  sofort. Ein roter Strich zeigt „jetzt".
+
+Beide zeigen dieselbe Woche; die Pfeile gelten für beide.
+
+**Gleichzeitige Termine** stehen im Kalender nebeneinander statt
+übereinander. Das ist kein Luxus: bei *UN-Führung* und *Controlling* gibt es
+parallele Gruppen mit verschiedenen Räumen und Dozenten — ohne diese
+Aufteilung läge eine davon unsichtbar unter der anderen.
+`spaltenVerteilen()` in `app.js` erledigt das.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
@@ -77,6 +95,14 @@ etwas geändert hat — sonst höchstens einmal täglich. Andernfalls entstünde
 allein durch den Zeitstempel alle 30 Minuten ein Commit.
 
 Von Hand auslösen: Actions → *Stundenplan aktualisieren* → *Run workflow*.
+
+**Der Zeitplan ist unzuverlässig.** GitHub garantiert für kostenlose
+Repositories keine pünktliche Ausführung: Verzögerungen von 10–30 Minuten
+sind normal, unter Last werden einzelne Termine ganz übersprungen. Wenn im
+Verlauf tagelang kein Lauf mit dem Ereignis `schedule` auftaucht, ist das ein
+GitHub-Problem und keins am Code — von Hand auslösen funktioniert dann
+trotzdem. Für einen Stundenplan ist das verkraftbar; für etwas Zeitkritisches
+wäre es der falsche Bauplatz.
 
 **Zeitzonen:** GitHub-Server laufen in UTC. `jetzt_berlin()` in `abgleich.py`
 rechnet deshalb immer auf Berliner Zeit um — sonst stünde im Dashboard nach
