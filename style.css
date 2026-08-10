@@ -91,10 +91,22 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   flex-wrap: wrap;
 }
 
+.kopf-titel { flex: 1; min-width: 0; }
+
 .kopf-stand {
   margin: 2px 0 0;
   font-size: 13px;
   color: var(--schrift-leise);
+}
+
+/* Der Knopf zum frischen Laden: quadratisch, unauffällig, gut zu treffen. */
+#neuLaden {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
 }
 
 
@@ -837,8 +849,10 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   .termin-zeit { flex: none; font-weight: 600; color: var(--schrift); }
   .wochen-titel { font-size: 14px; }
 
-  /* Kopfzeile: Titel oben, Knöpfe darunter über die volle Breite. */
-  .kopf { flex-direction: column; align-items: stretch; gap: 10px; }
+  /* Der Kopf bleibt einzeilig: Titel links, Neu-laden-Knopf rechts.
+     (Früher standen hier noch Filter- und Ansichtsknöpfe, die sind
+     inzwischen in der Werkzeugleiste beim Plan.) */
+  .kopf { flex-wrap: nowrap; }
   .schalter button { padding: 9px 16px; font-size: 14px; }
 
   /* Die Werkzeugleiste teilt sich die Zeile: Ansicht links, Knöpfe rechts. */

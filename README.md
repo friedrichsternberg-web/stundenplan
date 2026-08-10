@@ -170,6 +170,31 @@ wäre es der falsche Bauplatz.
 rechnet deshalb immer auf Berliner Zeit um — sonst stünde im Dashboard nach
 einem Lauf bei GitHub eine zwei Stunden alte Uhrzeit.
 
+## Zwischenspeicher — die häufigste Fehlerquelle
+
+GitHub Pages erlaubt dem Browser, **jede Datei zehn Minuten zu behalten**,
+und zwar jede für sich. Daraus folgen zwei Dinge:
+
+1. Nach einer Änderung sieht man sie nicht sofort.
+2. Schlimmer: der Browser kann die neue `index.html` mit der alten `app.js`
+   mischen. Dann sucht alter Code nach Bausteinen, die es noch nicht gibt,
+   bricht ab — und die Seite bleibt leer.
+
+Dagegen hängt die Automatik beim Veröffentlichen eine Versionsnummer an:
+`app.js?v=a1b2c3d4`, die Kennung des Commits. Sie ändert sich genau dann,
+wenn sich am Quellcode etwas getan hat. Damit passen HTML, Code und Aussehen
+immer zusammen.
+
+Die `index.html` selbst kann trotzdem bis zu zehn Minuten alt sein — auf
+Pages lassen sich die Kopfzeilen nicht einstellen. Dafür gibt es den Knopf
+**↻** oben rechts: er ruft die Seite mit einem neuen Anhängsel auf, wodurch
+sie als andere Adresse gilt und komplett frisch geladen wird. Auf dem
+Home-Bildschirm ist das der einzige Weg, weil es dort keine Adressleiste gibt.
+
+Bewusst **kein Service Worker**: der könnte das sauberer lösen, kann sich
+aber auch selbst festfahren und eine alte Fassung dauerhaft festhalten. Das
+wäre ein schlimmeres Problem als zehn Minuten Wartezeit.
+
 ## Woher die Daten kommen
 
 Die Moodle-Seite `fb2-stundenplan/stundenplan.php` ist nur ein Auswahlmenü.

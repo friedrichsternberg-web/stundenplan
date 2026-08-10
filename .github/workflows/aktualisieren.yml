@@ -65,7 +65,27 @@ jobs:
       - name: Seite zusammenstellen
         # Die Anzeige-Dateien koennen sich geaendert haben, wenn am
         # Quellcode gearbeitet wurde. Deshalb bei jedem Lauf mitkopieren.
-        run: cp index.html app.js style.css symbol.png veroeffentlichung/
+        #
+        # Danach bekommen app.js und style.css eine Versionsnummer an die
+        # Adresse gehaengt: app.js?v=a1b2c3d4
+        #
+        # Warum: GitHub Pages erlaubt dem Browser, jede Datei zehn Minuten zu
+        # behalten - und zwar jede fuer sich. Ohne Versionsnummer kann er die
+        # neue index.html mit der alten app.js mischen. Dann sucht alter Code
+        # nach neuen Bausteinen, bricht ab, und die Seite bleibt leer.
+        #
+        # Die Nummer ist die Kennung des Commits: sie aendert sich genau
+        # dann, wenn sich am Quellcode etwas getan hat - und eben nicht bei
+        # jedem Lauf, sonst gaebe es alle 30 Minuten eine neue index.html.
+        run: |
+          cp index.html app.js style.css symbol.png veroeffentlichung/
+          VERSION="${GITHUB_SHA:0:8}"
+          sed -i \
+            -e "s|href=\"style.css\"|href=\"style.css?v=$VERSION\"|" \
+            -e "s|src=\"app.js\"|src=\"app.js?v=$VERSION\"|" \
+            veroeffentlichung/index.html
+          echo "Version der Anzeige-Dateien: $VERSION"
+          grep -o 'v=[0-9a-f]*' veroeffentlichung/index.html
 
       - name: Ergebnis hochladen
         working-directory: veroeffentlichung
