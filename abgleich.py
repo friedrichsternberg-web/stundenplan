@@ -37,10 +37,11 @@ STUNDENPLAN_URL = (
     + FACHRICHTUNG + "/" + SEMESTER + "/" + KURS + ".ics"
 )
 
-# Die Wahlpflichtfaecher, die du NICHT belegst.
+# Die Faecher, die du NICHT belegst.
 #
-# Der Plan des Kurses enthaelt das gesamte WPF-Angebot des Semesters. Ohne
-# diese Liste kaemen Mitteilungen auch fuer Faecher, die dich nichts angehen.
+# Der Plan des Kurses enthaelt das gesamte WPF-Angebot des Semesters, und auch
+# einzelne Pflichtmodule sind nicht fuer jeden dabei. Ohne diese Liste kaemen
+# Mitteilungen auch fuer Faecher, die dich nichts angehen.
 #
 # Wichtig: Aenderungen an diesen Faechern werden trotzdem vollstaendig
 # aufgezeichnet - im Protokoll und im Aenderungsverlauf des Dashboards.
@@ -51,6 +52,7 @@ STUNDENPLAN_URL = (
 # (Hakst du im Dashboard etwas anderes an, gilt das nur fuer die Anzeige in
 # diesem einen Browser - die Mitteilungen richten sich immer nach dieser Liste.)
 NICHT_BELEGTE_FAECHER = [
+    "Personalmanagement- und -entwicklung",
     "WPF - Angewandte Wohlfahrtsstaatentheorie",
     "WPF - Cross Cultural Management",
     "WPF - Ethik in Wirtschaft und Gesellschaft",
@@ -770,7 +772,14 @@ def main():
         # aendern sich dadurch bei jedem Lauf - und die GitHub-Automatik
         # wuerde daraus alle 30 Minuten einen Commit machen. Einmal am Tag
         # genuegt, damit auf dem Handy nicht "Stand: letzte Woche" steht.
-        if stunden_seit(alter_stand.get("geschriebenAm", "")) >= 24:
+        #
+        # Eine Ausnahme: wurde NICHT_BELEGTE_FAECHER von Hand geaendert, muss
+        # das sofort sichtbar werden und nicht erst morgen.
+        faecher_geaendert = (alter_stand.get("nichtBelegteFaecher")
+                             != NICHT_BELEGTE_FAECHER)
+        if faecher_geaendert:
+            print("   Faecherliste wurde geaendert")
+        if faecher_geaendert or stunden_seit(alter_stand.get("geschriebenAm", "")) >= 24:
             anzeige_schreiben(
                 alter_stand.get("termine", []),
                 alter_stand.get("aenderungen", []),
@@ -778,7 +787,8 @@ def main():
                 (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
             )
             alter_stand["geschriebenAm"] = jetzt
-            print("   Anzeigedateien aufgefrischt (taegliches Lebenszeichen)")
+            alter_stand["nichtBelegteFaecher"] = list(NICHT_BELEGTE_FAECHER)
+            print("   Anzeigedateien aufgefrischt")
 
         stand_speichern(alter_stand)
         return 0
@@ -840,8 +850,10 @@ def main():
     # trotzdem stimmen.
     alte_termine = [] if erstlauf else alter_stand.get("termine", [])
     geschrieben_am = "" if erstlauf else alter_stand.get("geschriebenAm", "")
+    alte_faecher = None if erstlauf else alter_stand.get("nichtBelegteFaecher")
 
     if (erstlauf or aenderungen or neue_termine != alte_termine
+            or alte_faecher != NICHT_BELEGTE_FAECHER
             or stunden_seit(geschrieben_am) >= 24):
         anzeige_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
         geschrieben_am = jetzt
@@ -850,6 +862,7 @@ def main():
         "etag": etag,
         "geprueftAm": jetzt,
         "geschriebenAm": geschrieben_am,
+        "nichtBelegteFaecher": list(NICHT_BELEGTE_FAECHER),
         "fensterVon": fenster_von,
         "fensterBis": fenster_bis,
         "termine": neue_termine,

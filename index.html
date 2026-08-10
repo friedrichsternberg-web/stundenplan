@@ -33,9 +33,16 @@
     <h1 id="planName">Stundenplan</h1>
     <p class="kopf-stand" id="planStand">wird geladen …</p>
   </div>
-  <button type="button" class="knopf-schlicht" id="filterOeffnen">
-    Fächer filtern
-  </button>
+  <div class="kopf-knoepfe">
+    <!-- Umschalter zwischen den beiden Ansichten derselben Woche -->
+    <div class="schalter" role="group" aria-label="Ansicht">
+      <button type="button" data-ansicht="liste" aria-pressed="true">Liste</button>
+      <button type="button" data-ansicht="kalender" aria-pressed="false">Kalender</button>
+    </div>
+    <button type="button" class="knopf-schlicht" id="filterOeffnen">
+      Fächer filtern
+    </button>
+  </div>
 </header>
 
 <main>
