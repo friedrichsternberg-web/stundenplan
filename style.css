@@ -19,6 +19,11 @@
   --geaendert: #c77700;
   --schatten: 0 1px 3px rgba(0, 0, 0, .08);
   --rundung: 10px;
+  /* Eigene Notizen bekommen eine eigene Farbe, damit man sie nicht mit
+     Angaben aus dem HWR-Plan verwechselt. */
+  --notiz-rand: #7a5af0;
+  --notiz-flaeche: #f0edfd;
+  --notiz-flaeche-hell: #e7e2fb;
 }
 
 /* Wenn das Betriebssystem auf dunkel steht, drehen wir die Farben um.
@@ -38,6 +43,9 @@
     --entfallen: #f0706e;
     --geaendert: #e0a13a;
     --schatten: 0 1px 3px rgba(0, 0, 0, .4);
+    --notiz-rand: #9d84f5;
+    --notiz-flaeche: #262336;
+    --notiz-flaeche-hell: #2f2b42;
   }
 }
 
@@ -252,6 +260,86 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   color: var(--schrift-leise);
   font-size: 14px;
   border-top: 1px solid var(--linie);
+}
+
+
+/* --- Eigene Notizen ---------------------------------------------------- */
+
+/* Eine vorhandene Notiz. Deutlich abgesetzt, damit man auf einen Blick
+   sieht, was von der HWR kommt und was du selbst notiert hast. */
+.notiz {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 6px;
+  padding: 6px 9px;
+  background: var(--notiz-flaeche);
+  border-left: 3px solid var(--notiz-rand);
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  cursor: pointer;
+  /* Zeilenumbrüche im Text bleiben erhalten. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.notiz:hover { background: var(--notiz-flaeche-hell); }
+
+.notiz-symbol { flex: 0 0 auto; opacity: .7; }
+
+/* Der Knopf, solange es noch keine Notiz gibt: unauffällig, damit er die
+   Liste nicht zupflastert – es gibt ihn ja bei jedem einzelnen Termin. */
+.notiz-neu {
+  margin-top: 5px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px dashed var(--linie);
+  border-radius: 6px;
+  color: var(--schrift-leise);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.notiz-neu:hover {
+  border-style: solid;
+  border-color: var(--notiz-rand);
+  color: var(--schrift);
+}
+
+.notiz-bearbeiten { margin-top: 6px; }
+
+.notiz-feld {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--notiz-rand);
+  border-radius: 6px;
+  background: var(--flaeche);
+  color: var(--schrift);
+  font-family: inherit;
+  /* 16px verhindert, dass iOS beim Antippen ins Feld hineinzoomt. */
+  font-size: 16px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.notiz-knoepfe { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+.notiz-loeschen { color: var(--entfallen); }
+
+/* Im Kalender steht nur ein kleines Zeichen, dass es eine Notiz gibt –
+   für den Text ist dort kein Platz. Geschrieben wird sie in der Liste. */
+.kalender-notizzeichen { opacity: .85; }
+
+.naechster-notiz {
+  margin-top: 8px;
+  padding: 6px 9px;
+  background: rgba(255, 255, 255, .16);
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 

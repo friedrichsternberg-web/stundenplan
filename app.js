@@ -53,11 +53,30 @@ const SPEICHER_GESEHEN = "stundenplan.zuletztGesehen";
 // Und unter diesem, welche der beiden Ansichten du zuletzt benutzt hast.
 const SPEICHER_ANSICHT = "stundenplan.ansicht";
 
+/* Deine eigenen Notizen zu einzelnen Terminen.
+
+   Sie liegen im Browser, nicht in der Kalenderdatei: der Stundenplan kommt
+   von der HWR und wird bei jedem Abgleich überschrieben. Eine Notiz darin
+   wäre beim nächsten Lauf weg.
+
+   Gespeichert wird nach der Termin-Kennung (z. B. "sked.de1200291"), nicht
+   nach Datum und Uhrzeit. Dadurch bleibt die Notiz am Termin kleben, auch
+   wenn der Raum wechselt oder die Vorlesung verschoben wird. */
+const SPEICHER_NOTIZEN = "stundenplan.notizen";
+
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
 // "liste" oder "kalender".
 let ansicht = "liste";
+
+// Deine Notizen, als { "sked.de1200291": "Abgabe bis Freitag", ... }
+let notizen = {};
+
+// Die Kennung des Termins, dessen Notiz gerade bearbeitet wird – oder null.
+// Solange etwas offen ist, wird die Woche nicht neu gezeichnet, sonst wäre
+// das Getippte weg.
+let offeneNotiz = null;
 
 // Die Fächer, die du abgewählt hast. Wird in starten() gefüllt, sobald die
 // Voreinstellung aus den Daten bekannt ist.
@@ -275,6 +294,9 @@ function naechstenZeichnen() {
       ${treffer.anmerkung
         ? `<div class="naechster-zeile"><strong>${sicher(treffer.anmerkung)}</strong></div>`
         : ""}
+      ${notizen[treffer.id]
+        ? `<div class="naechster-notiz">✎ ${sicher(notizen[treffer.id])}</div>`
+        : ""}
     </div>`;
 }
 
@@ -364,8 +386,133 @@ function terminZeichnen(termin) {
         ${termin.anmerkung
           ? `<div class="termin-anmerkung">${sicher(termin.anmerkung)}</div>`
           : ""}
+        ${notizZeichnen(termin)}
       </div>
     </div>`;
+}
+
+
+/* --- Eigene Notizen ------------------------------------------------------
+
+   Für alles, was nicht im HWR-System steht: "heute online", "Abgabe bis
+   Freitag", "fällt aus". Ein Klick auf die Notiz öffnet sie zum Bearbeiten.
+   ---------------------------------------------------------------------- */
+
+function notizenLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_NOTIZEN);
+    return roh ? JSON.parse(roh) : {};
+  } catch (fehler) {
+    return {};
+  }
+}
+
+function notizenSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_NOTIZEN, JSON.stringify(notizen));
+  } catch (fehler) {
+    // Der Browser kann das Speichern verweigern, etwa im privaten Modus.
+    // Dann steht die Notiz noch auf dem Bildschirm, ist aber nach dem
+    // Neuladen weg. Besser als ein Absturz.
+  }
+}
+
+/* Setzt oder entfernt eine Notiz. Ein leerer Text löscht sie – so braucht es
+   keinen eigenen Löschweg für "ich hab mich vertippt". */
+function notizSetzen(kennung, text) {
+  const sauber = (text || "").trim();
+  if (sauber) notizen[kennung] = sauber;
+  else delete notizen[kennung];
+  notizenSpeichern();
+}
+
+function notizZeichnen(termin) {
+  const text = notizen[termin.id] || "";
+
+  if (offeneNotiz === termin.id) {
+    return `
+      <div class="notiz-bearbeiten">
+        <textarea id="notizFeld" class="notiz-feld" rows="2"
+                  placeholder="z. B. heute online · Abgabe bis Freitag · fällt aus"
+        >${sicher(text)}</textarea>
+        <div class="notiz-knoepfe">
+          <button type="button" class="knopf-schlicht"
+                  data-notiz-speichern="${sicher(termin.id)}">Speichern</button>
+          <button type="button" class="knopf-schlicht"
+                  data-notiz-abbrechen="ja">Abbrechen</button>
+          ${text ? `<button type="button" class="knopf-schlicht notiz-loeschen"
+                            data-notiz-loeschen="${sicher(termin.id)}">Löschen</button>` : ""}
+        </div>
+      </div>`;
+  }
+
+  if (text) {
+    return `
+      <div class="notiz" data-notiz-oeffnen="${sicher(termin.id)}"
+           title="Zum Bearbeiten anklicken">
+        <span class="notiz-symbol">✎</span><span>${sicher(text)}</span>
+      </div>`;
+  }
+
+  return `
+    <button type="button" class="notiz-neu"
+            data-notiz-oeffnen="${sicher(termin.id)}">+ Notiz</button>`;
+}
+
+/* Nach dem Öffnen den Cursor ins Textfeld setzen, und zwar ans Ende des
+   vorhandenen Textes – nicht an den Anfang, wo man beim Weiterschreiben
+   alles verschieben würde. */
+function notizfeldAktivieren() {
+  const feld = document.getElementById("notizFeld");
+  if (!feld) return;
+  feld.focus();
+  if (typeof feld.setSelectionRange === "function") {
+    feld.setSelectionRange(feld.value.length, feld.value.length);
+  }
+}
+
+/* Ein einziger Zuhörer für alle Notiz-Knöpfe.
+
+   Die Terminliste wird bei jeder Änderung komplett neu aufgebaut. Würde an
+   jedem Knopf einzeln ein Zuhörer hängen, wäre er danach verschwunden.
+   Deshalb hängt er am Kasten drumherum, der bestehen bleibt, und schaut bei
+   jedem Klick nach, wo genau er gelandet ist. */
+function notizKlick(ereignis) {
+  const ziel = ereignis.target && ereignis.target.closest
+    ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
+                              + "[data-notiz-abbrechen],[data-notiz-loeschen]")
+    : null;
+  if (!ziel) return;
+
+  const zuOeffnen = ziel.getAttribute("data-notiz-oeffnen");
+  if (zuOeffnen) {
+    offeneNotiz = zuOeffnen;
+    wocheZeichnen();
+    notizfeldAktivieren();
+    return;
+  }
+
+  const zuSpeichern = ziel.getAttribute("data-notiz-speichern");
+  if (zuSpeichern) {
+    const feld = document.getElementById("notizFeld");
+    notizSetzen(zuSpeichern, feld ? feld.value : "");
+    offeneNotiz = null;
+    allesZeichnen();
+    return;
+  }
+
+  const zuLoeschen = ziel.getAttribute("data-notiz-loeschen");
+  if (zuLoeschen) {
+    notizSetzen(zuLoeschen, "");
+    offeneNotiz = null;
+    allesZeichnen();
+    return;
+  }
+
+  if (ziel.getAttribute("data-notiz-abbrechen")) {
+    offeneNotiz = null;
+    wocheZeichnen();
+  }
 }
 
 
@@ -538,7 +685,8 @@ function kalenderBauen(tage) {
              title="${sicher(uhrzeit(termin.start) + "–" + uhrzeit(termin.ende) + " " + termin.titel
                             + (termin.raum ? " · " + termin.raum : "")
                             + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
-          <div class="kalender-termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
+          <div class="kalender-termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}${
+            notizen[termin.id] ? ` <span class="kalender-notizzeichen">✎</span>` : ""}</div>
           <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
@@ -714,6 +862,9 @@ function ansichtSetzen(neueAnsicht) {
 }
 
 function knoepfeVerbinden() {
+  // Alle Notiz-Knöpfe laufen über diesen einen Zuhörer, siehe notizKlick().
+  document.getElementById("tage").addEventListener("click", notizKlick);
+
   /* Wechselt der Bildschirm die Größenklasse – Handy gedreht, Fenster
      verkleinert –, gilt eine andere Stundenhöhe. Die steckt in festen
      Pixelwerten im HTML, also muss neu gezeichnet werden. matchMedia meldet
@@ -789,6 +940,7 @@ function starten() {
   // und die gespeicherte Auswahl laden.
   NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
   NICHT_BELEGTE_GRUPPEN = STUNDENPLAN.nichtBelegteGruppen || [];
+  notizen = notizenLaden();
   abgewaehlteFaecher = filterLaden();
 
   try {
