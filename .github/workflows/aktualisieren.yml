@@ -19,6 +19,12 @@ on:
     # alle Auftraege gleichzeitig, dann stellt GitHub sie in die Warteschlange.
     - cron: "7,37 * * * *"
 
+  # Auch bei jeder Aenderung am Quellcode. Sonst haengt die veroeffentlichte
+  # Seite hinterher, bis der naechste Zeitplan-Termin greift - und der ist
+  # bei GitHub nicht verlaesslich (siehe README).
+  push:
+    branches: [main]
+
   # Erlaubt, den Auftrag von Hand auszuloesen - praktisch zum Ausprobieren.
   workflow_dispatch:
 
