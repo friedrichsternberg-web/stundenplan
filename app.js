@@ -53,6 +53,9 @@ const SPEICHER_GESEHEN = "stundenplan.zuletztGesehen";
 // Und unter diesem, welche der beiden Ansichten du zuletzt benutzt hast.
 const SPEICHER_ANSICHT = "stundenplan.ansicht";
 
+// Welcher Bereich zuletzt offen war.
+const SPEICHER_SEITE = "stundenplan.seite";
+
 /* Deine eigenen Notizen zu einzelnen Terminen.
 
    Sie liegen im Browser, nicht in der Kalenderdatei: der Stundenplan kommt
@@ -70,7 +73,16 @@ let angezeigterMontag = montagDerWoche(new Date());
 // "liste" oder "kalender".
 let ansicht = "liste";
 
-// Deine Notizen, als { "sked.de1200291": "Abgabe bis Freitag", ... }
+// Welcher Bereich gerade offen ist: "plan", "todos" oder "aenderungen".
+let seite = "plan";
+
+/* Ob die Notiz-Knöpfe im Plan sichtbar sind.
+
+   Bewusst NICHT gespeichert: der Bearbeiten-Modus ist etwas, das man für
+   einen Moment einschaltet, nicht ein Zustand, in dem die App startet. */
+let bearbeitenModus = false;
+
+// Deine Notizen, als { "sked.de1200291": { text: "...", erledigt: false } }
 let notizen = {};
 
 // Die Kennung des Termins, dessen Notiz gerade bearbeitet wird – oder null.
@@ -398,13 +410,45 @@ function terminZeichnen(termin) {
    Freitag", "fällt aus". Ein Klick auf die Notiz öffnet sie zum Bearbeiten.
    ---------------------------------------------------------------------- */
 
+/* Liest die Notizen und bringt sie auf das aktuelle Format.
+
+   In der ersten Fassung war eine Notiz einfach ein Text. Jetzt ist sie ein
+   kleines Objekt mit Text und Häkchen: { text: "...", erledigt: false }.
+   Damit vorhandene Notizen beim Umstieg nicht verschwinden, wird die alte
+   Schreibweise hier stillschweigend umgewandelt. */
 function notizenLaden() {
   try {
     const roh = localStorage.getItem(SPEICHER_NOTIZEN);
-    return roh ? JSON.parse(roh) : {};
+    const gelesen = roh ? JSON.parse(roh) : {};
+    const ergebnis = {};
+    for (const kennung of Object.keys(gelesen)) {
+      const wert = gelesen[kennung];
+      if (typeof wert === "string") {
+        ergebnis[kennung] = { text: wert, erledigt: false };
+      } else if (wert && typeof wert.text === "string") {
+        ergebnis[kennung] = { text: wert.text, erledigt: Boolean(wert.erledigt) };
+      }
+    }
+    return ergebnis;
   } catch (fehler) {
     return {};
   }
+}
+
+/* Der Text einer Notiz, oder "" wenn es keine gibt. Spart überall die
+   Prüfung, ob der Eintrag überhaupt existiert. */
+function notizText(kennung) {
+  return notizen[kennung] ? notizen[kennung].text : "";
+}
+
+function notizErledigt(kennung) {
+  return Boolean(notizen[kennung] && notizen[kennung].erledigt);
+}
+
+function erledigtUmschalten(kennung) {
+  if (!notizen[kennung]) return;
+  notizen[kennung].erledigt = !notizen[kennung].erledigt;
+  notizenSpeichern();
 }
 
 function notizenSpeichern() {
@@ -421,38 +465,59 @@ function notizenSpeichern() {
    keinen eigenen Löschweg für "ich hab mich vertippt". */
 function notizSetzen(kennung, text) {
   const sauber = (text || "").trim();
-  if (sauber) notizen[kennung] = sauber;
-  else delete notizen[kennung];
+  if (sauber) {
+    // Ein vorhandenes Häkchen bleibt erhalten, wenn nur der Text geändert wird.
+    const erledigt = notizErledigt(kennung);
+    notizen[kennung] = { text: sauber, erledigt: erledigt };
+  } else {
+    delete notizen[kennung];
+  }
   notizenSpeichern();
 }
 
+/* Das Textfeld zum Schreiben einer Notiz. Steht als eigene Funktion da, weil
+   es an zwei Stellen gebraucht wird: im Plan und im To-do-Bereich. */
+function notizFeldZeichnen(kennung, text) {
+  return `
+    <div class="notiz-bearbeiten">
+      <textarea id="notizFeld" class="notiz-feld" rows="2"
+                placeholder="z. B. heute online · Abgabe bis Freitag · fällt aus"
+      >${sicher(text)}</textarea>
+      <div class="notiz-knoepfe">
+        <button type="button" class="knopf-schlicht"
+                data-notiz-speichern="${sicher(kennung)}">Speichern</button>
+        <button type="button" class="knopf-schlicht"
+                data-notiz-abbrechen="ja">Abbrechen</button>
+        ${text ? `<button type="button" class="knopf-schlicht notiz-loeschen"
+                          data-notiz-loeschen="${sicher(kennung)}">Löschen</button>` : ""}
+      </div>
+    </div>`;
+}
+
 function notizZeichnen(termin) {
-  const text = notizen[termin.id] || "";
+  const text = notizText(termin.id);
 
   if (offeneNotiz === termin.id) {
-    return `
-      <div class="notiz-bearbeiten">
-        <textarea id="notizFeld" class="notiz-feld" rows="2"
-                  placeholder="z. B. heute online · Abgabe bis Freitag · fällt aus"
-        >${sicher(text)}</textarea>
-        <div class="notiz-knoepfe">
-          <button type="button" class="knopf-schlicht"
-                  data-notiz-speichern="${sicher(termin.id)}">Speichern</button>
-          <button type="button" class="knopf-schlicht"
-                  data-notiz-abbrechen="ja">Abbrechen</button>
-          ${text ? `<button type="button" class="knopf-schlicht notiz-loeschen"
-                            data-notiz-loeschen="${sicher(termin.id)}">Löschen</button>` : ""}
-        </div>
-      </div>`;
+    return notizFeldZeichnen(termin.id, text);
   }
 
   if (text) {
+    // Klassenliste ohne überflüssige Leerzeichen zusammensetzen.
+    const klassen = "notiz" + (notizErledigt(termin.id) ? " notiz-erledigt" : "");
     return `
-      <div class="notiz" data-notiz-oeffnen="${sicher(termin.id)}"
+      <div class="${klassen}"
+           data-notiz-oeffnen="${sicher(termin.id)}"
            title="Zum Bearbeiten anklicken">
         <span class="notiz-symbol">✎</span><span>${sicher(text)}</span>
       </div>`;
   }
+
+  /* Ohne Notiz steht hier normalerweise NICHTS.
+
+     Ein "+ Notiz" unter jedem einzelnen Termin macht die Liste unruhig –
+     bei dir wären das über hundert Knöpfe für eine Handvoll Notizen.
+     Deshalb erscheint er nur, wenn du oben auf "Bearbeiten" gegangen bist. */
+  if (!bearbeitenModus) return "";
 
   return `
     <button type="button" class="notiz-neu"
@@ -480,14 +545,26 @@ function notizfeldAktivieren() {
 function notizKlick(ereignis) {
   const ziel = ereignis.target && ereignis.target.closest
     ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
-                              + "[data-notiz-abbrechen],[data-notiz-loeschen]")
+                              + "[data-notiz-abbrechen],[data-notiz-loeschen],"
+                              + "[data-todo-haken]")
     : null;
   if (!ziel) return;
+
+  // Abhaken im To-do-Bereich.
+  const zuHaken = ziel.getAttribute("data-todo-haken");
+  if (zuHaken) {
+    erledigtUmschalten(zuHaken);
+    allesZeichnen();
+    return;
+  }
 
   const zuOeffnen = ziel.getAttribute("data-notiz-oeffnen");
   if (zuOeffnen) {
     offeneNotiz = zuOeffnen;
+    // Beide Bereiche neu zeichnen: geöffnet werden kann aus dem Plan
+    // heraus wie aus der To-do-Liste.
     wocheZeichnen();
+    todosZeichnen();
     notizfeldAktivieren();
     return;
   }
@@ -512,6 +589,7 @@ function notizKlick(ereignis) {
   if (ziel.getAttribute("data-notiz-abbrechen")) {
     offeneNotiz = null;
     wocheZeichnen();
+    todosZeichnen();
   }
 }
 
@@ -725,6 +803,188 @@ function kalenderBauen(tage) {
 
 
 /* -------------------------------------------------------------------------
+   4b. Der Bereich "To-dos"
+
+   Sammelt zwei Sorten von Dingen:
+
+   1. deine eigenen Notizen – die kann man abhaken
+   2. Hinweise, die schon im HWR-Plan stehen (ONLINE, Klausur, Exkursion)
+
+   Beides sortiert nach Datum, Vergangenes getrennt vom Kommenden.
+   ------------------------------------------------------------------------- */
+
+/* Sucht zu einer Termin-Kennung den Termin. Notizen können auch an Terminen
+   hängen, die inzwischen aus dem Zeitfenster gefallen sind – dann gibt es
+   hier nichts, und der Eintrag wird als "Termin nicht mehr im Plan" gezeigt,
+   statt still zu verschwinden. */
+function terminZuKennung(kennung) {
+  return STUNDENPLAN.termine.filter(t => t.id === kennung)[0] || null;
+}
+
+/* Baut aus den Notizen die Liste für den To-do-Bereich. */
+function aufgabenSammeln() {
+  const aufgaben = [];
+  for (const kennung of Object.keys(notizen)) {
+    const termin = terminZuKennung(kennung);
+    aufgaben.push({
+      kennung: kennung,
+      text: notizen[kennung].text,
+      erledigt: notizen[kennung].erledigt,
+      termin: termin,
+      // Ohne Termin ans Ende sortieren.
+      start: termin ? termin.start : "9999",
+    });
+  }
+  aufgaben.sort((a, b) => a.start.localeCompare(b.start));
+  return aufgaben;
+}
+
+/* Die Hinweise aus dem Stundenplan – zusammengefasst.
+
+   Ohne Zusammenfassen stünde der 04.09. sechsmal untereinander mit
+   "online": das sind sechs Zeitblöcke desselben Fachs am selben Tag. Für
+   eine Übersicht ist das eine Zeile, von der ersten bis zur letzten Uhrzeit.
+   Zusammengefasst wird nach Tag, Fach und Wortlaut des Hinweises. */
+function hinweiseSammeln() {
+  const nachSchluessel = new Map();
+
+  for (const termin of sichtbareTermine()) {
+    if (!termin.anmerkung) continue;
+    const schluessel = termin.start.slice(0, 10) + "|" + termin.titel + "|" + termin.anmerkung;
+    const vorhanden = nachSchluessel.get(schluessel);
+    if (vorhanden) {
+      if (termin.start < vorhanden.start) vorhanden.start = termin.start;
+      if (termin.ende > vorhanden.ende) vorhanden.ende = termin.ende;
+      vorhanden.anzahl += 1;
+    } else {
+      nachSchluessel.set(schluessel, {
+        start: termin.start,
+        ende: termin.ende,
+        titel: termin.titel,
+        anmerkung: termin.anmerkung,
+        raum: termin.raum,
+        anzahl: 1,
+      });
+    }
+  }
+
+  return [...nachSchluessel.values()].sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/* Ist ein Zeitpunkt schon vorbei? Verglichen wird auf den Tag genau: ein
+   Termin, der heute früher war, gilt nicht als vergangen – die Notiz dazu
+   ist ja womöglich noch aktuell. */
+function istVorbei(zeitangabe) {
+  return zeitangabe.slice(0, 10) < tagesSchluessel(new Date());
+}
+
+function todosZeichnen() {
+  const aufgaben = aufgabenSammeln();
+  const offen = aufgaben.filter(a => !a.erledigt);
+  const erledigt = aufgaben.filter(a => a.erledigt);
+  const hinweise = hinweiseSammeln().filter(h => !istVorbei(h.start));
+
+  const stuecke = [];
+
+  // --- Deine Aufgaben ------------------------------------------------
+  stuecke.push(`<h2 class="todo-ueberschrift">Meine Notizen</h2>`);
+
+  if (aufgaben.length === 0) {
+    stuecke.push(`
+      <p class="leer-text">
+        Noch keine Notizen. Geh im Plan auf <strong>Bearbeiten</strong> und
+        schreib etwas zu einer Vorlesung – zum Beispiel „heute online" oder
+        „Abgabe bis Freitag".
+      </p>`);
+  } else {
+    if (offen.length > 0) {
+      stuecke.push(offen.map(aufgabeZeichnen).join(""));
+    } else {
+      stuecke.push(`<p class="leer-text">Nichts offen. Alles abgehakt.</p>`);
+    }
+
+    if (erledigt.length > 0) {
+      stuecke.push(`
+        <h3 class="todo-unterueberschrift">
+          Erledigt <span class="todo-anzahl">${erledigt.length}</span>
+        </h3>
+        ${erledigt.map(aufgabeZeichnen).join("")}`);
+    }
+  }
+
+  // --- Hinweise aus dem Plan ------------------------------------------
+  stuecke.push(`<h2 class="todo-ueberschrift">Hinweise aus dem Stundenplan</h2>`);
+
+  if (hinweise.length === 0) {
+    stuecke.push(`<p class="leer-text">
+      Für die kommenden Wochen ist nichts vermerkt.
+    </p>`);
+  } else {
+    stuecke.push(hinweise.map(hinweisZeichnen).join(""));
+  }
+
+  document.getElementById("todoInhalt").innerHTML = stuecke.join("");
+}
+
+function aufgabeZeichnen(aufgabe) {
+  const termin = aufgabe.termin;
+
+  let wann;
+  if (!termin) {
+    wann = "Termin steht nicht mehr im Plan";
+  } else {
+    wann = zeitpunktLesbar(termin.start) + "–" + uhrzeit(termin.ende)
+         + " · " + termin.titel;
+  }
+
+  const vorbei = termin && istVorbei(termin.start) && !aufgabe.erledigt;
+
+  // Wird die Notiz gerade bearbeitet, steht hier das Textfeld statt der Zeile.
+  if (offeneNotiz === aufgabe.kennung) {
+    return `
+      <div class="todo todo-offen-bearbeiten">
+        <div class="todo-wann">${sicher(wann)}</div>
+        ${notizFeldZeichnen(aufgabe.kennung, aufgabe.text)}
+      </div>`;
+  }
+
+  const klassen = "todo"
+    + (aufgabe.erledigt ? " todo-erledigt" : "")
+    + (vorbei ? " todo-vorbei" : "");
+
+  return `
+    <div class="${klassen}">
+      <button type="button" class="todo-haken"
+              data-todo-haken="${sicher(aufgabe.kennung)}"
+              aria-label="${aufgabe.erledigt ? "Wieder öffnen" : "Als erledigt abhaken"}">
+        ${aufgabe.erledigt ? "✓" : ""}
+      </button>
+      <div class="todo-inhalt" data-notiz-oeffnen="${sicher(aufgabe.kennung)}">
+        <div class="todo-text">${sicher(aufgabe.text)}</div>
+        <div class="todo-wann">
+          ${vorbei ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
+        </div>
+      </div>
+    </div>`;
+}
+
+function hinweisZeichnen(hinweis) {
+  const wann = zeitpunktLesbar(hinweis.start) + "–" + uhrzeit(hinweis.ende);
+  return `
+    <div class="todo todo-hinweis">
+      <div class="todo-symbol">!</div>
+      <div class="todo-inhalt">
+        <div class="todo-text">${sicher(hinweis.anmerkung)}</div>
+        <div class="todo-wann">
+          ${sicher(wann + " · " + hinweis.titel
+                   + (hinweis.raum ? " · " + hinweis.raum : ""))}
+        </div>
+      </div>
+    </div>`;
+}
+
+
+/* -------------------------------------------------------------------------
    5. Änderungen
 
    abgleich.py hält fest, was sich seit dem letzten Abruf geändert hat.
@@ -744,31 +1004,42 @@ function sichtbareBloecke() {
     .filter(block => block.eintraege.length > 0);
 }
 
-function hinweisZeichnen() {
-  const bereich = document.getElementById("aenderungsHinweis");
+/* Wie viele Änderungen du noch nicht gesehen hast. Die Zahl steht am Reiter
+   "Änderungen"; ein Besuch dieses Bereichs setzt sie zurück. */
+function ungeseheneAenderungen() {
   const bloecke = sichtbareBloecke();
-  if (bloecke.length === 0) { bereich.innerHTML = ""; return; }
+  if (bloecke.length === 0) return 0;
 
   let zuletztGesehen = "";
   try { zuletztGesehen = localStorage.getItem(SPEICHER_GESEHEN) || ""; }
   catch (fehler) { /* egal */ }
 
-  const neue = bloecke.filter(block => block.erkanntAm > zuletztGesehen);
-  if (neue.length === 0) { bereich.innerHTML = ""; return; }
+  return bloecke
+    .filter(block => block.erkanntAm > zuletztGesehen)
+    .reduce((summe, block) => summe + block.eintraege.length, 0);
+}
 
-  const anzahl = neue.reduce((summe, block) => summe + block.eintraege.length, 0);
-  bereich.innerHTML = `
-    <div class="hinweis">
-      <div class="hinweis-titel">
-        ${anzahl === 1 ? "Eine Änderung" : anzahl + " Änderungen"} seit deinem letzten Besuch
-      </div>
-      <div class="verlauf-detail">Die Einzelheiten stehen unten im Änderungsverlauf.</div>
-    </div>`;
+function aenderungenAlsGesehenMerken() {
+  const bloecke = sichtbareBloecke();
+  if (bloecke.length === 0) return;
+  try { localStorage.setItem(SPEICHER_GESEHEN, bloecke[0].erkanntAm); }
+  catch (fehler) { /* egal */ }
+}
 
-  // Ab jetzt gilt alles als gesehen.
-  try {
-    localStorage.setItem(SPEICHER_GESEHEN, bloecke[0].erkanntAm);
-  } catch (fehler) { /* egal */ }
+/* Setzt die kleinen Zahlen an den Reitern. Sie sind der Grund, warum man den
+   Plan gar nicht erst aufmachen muss, um zu sehen, ob etwas ansteht. */
+function reiterZahlenSetzen() {
+  const offeneAufgaben = Object.keys(notizen)
+    .filter(kennung => !notizen[kennung].erledigt).length;
+  zahlSetzen("todoZahl", offeneAufgaben);
+  zahlSetzen("aenderungsZahl", ungeseheneAenderungen());
+}
+
+function zahlSetzen(elementKennung, anzahl) {
+  const element = document.getElementById(elementKennung);
+  if (!element) return;
+  element.textContent = String(anzahl);
+  element.hidden = anzahl === 0;
 }
 
 function verlaufZeichnen() {
@@ -827,10 +1098,54 @@ function eintragZeichnen(eintrag) {
    6. Start
    ------------------------------------------------------------------------- */
 
+/* Zeichnet alles neu, was gerade zu sehen sein könnte. Die Reiterzahlen
+   immer, denn die stehen über allen Bereichen. */
 function allesZeichnen() {
   naechstenZeichnen();
   wocheZeichnen();
+  todosZeichnen();
   verlaufZeichnen();
+  reiterZahlenSetzen();
+}
+
+/* Wechselt den Bereich. Die drei Abschnitte liegen alle in der Seite und
+   werden nur ein- und ausgeblendet – so bleibt der Wechsel sofort da, ohne
+   Nachladen. */
+function seiteSetzen(neueSeite) {
+  seite = neueSeite;
+  try { localStorage.setItem(SPEICHER_SEITE, seite); }
+  catch (fehler) { /* dann startet die App eben wieder beim Plan */ }
+
+  const bereiche = { plan: "seitePlan", todos: "seiteTodos", aenderungen: "seiteAenderungen" };
+  for (const name of Object.keys(bereiche)) {
+    const bereich = document.getElementById(bereiche[name]);
+    if (bereich) bereich.hidden = name !== seite;
+  }
+
+  for (const knopf of document.querySelectorAll("[data-seite]")) {
+    const aktiv = knopf.getAttribute("data-seite") === seite;
+    knopf.classList.toggle("reiter-aktiv", aktiv);
+    knopf.setAttribute("aria-selected", aktiv ? "true" : "false");
+  }
+
+  // Wer die Änderungen ansieht, hat sie gesehen.
+  if (seite === "aenderungen") aenderungenAlsGesehenMerken();
+
+  allesZeichnen();
+}
+
+/* Schaltet die Notiz-Knöpfe im Plan ein und aus. */
+function bearbeitenUmschalten() {
+  bearbeitenModus = !bearbeitenModus;
+  // Beim Verlassen ein offenes Textfeld schließen, sonst bliebe es hängen.
+  if (!bearbeitenModus) offeneNotiz = null;
+
+  const knopf = document.getElementById("bearbeitenSchalter");
+  if (knopf) {
+    knopf.textContent = bearbeitenModus ? "Fertig" : "Bearbeiten";
+    knopf.classList.toggle("knopf-aktiv", bearbeitenModus);
+  }
+  wocheZeichnen();
 }
 
 function kopfZeichnen() {
@@ -863,7 +1178,18 @@ function ansichtSetzen(neueAnsicht) {
 
 function knoepfeVerbinden() {
   // Alle Notiz-Knöpfe laufen über diesen einen Zuhörer, siehe notizKlick().
+  // Er hängt an beiden Bereichen, in denen Notizen vorkommen.
   document.getElementById("tage").addEventListener("click", notizKlick);
+  document.getElementById("todoInhalt").addEventListener("click", notizKlick);
+
+  for (const knopf of document.querySelectorAll("[data-seite]")) {
+    knopf.addEventListener("click", () => {
+      seiteSetzen(knopf.getAttribute("data-seite"));
+    });
+  }
+
+  document.getElementById("bearbeitenSchalter")
+    .addEventListener("click", bearbeitenUmschalten);
 
   /* Wechselt der Bildschirm die Größenklasse – Handy gedreht, Fenster
      verkleinert –, gilt eine andere Stundenhöhe. Die steckt in festen
@@ -946,16 +1272,21 @@ function starten() {
   try {
     const gemerkt = localStorage.getItem(SPEICHER_ANSICHT);
     if (gemerkt === "kalender" || gemerkt === "liste") ansicht = gemerkt;
-  } catch (fehler) { /* dann bleibt es bei der Liste */ }
+
+    const gemerkteSeite = localStorage.getItem(SPEICHER_SEITE);
+    if (gemerkteSeite === "plan" || gemerkteSeite === "todos"
+        || gemerkteSeite === "aenderungen") {
+      seite = gemerkteSeite;
+    }
+  } catch (fehler) { /* dann bleibt es bei Liste und Plan */ }
 
   kopfZeichnen();
   knoepfeVerbinden();
-  hinweisZeichnen();
-  naechstenZeichnen();
-  verlaufZeichnen();
-  // Setzt die gemerkte Ansicht, hebt den richtigen Knopf hervor und zeichnet
-  // die Woche – deshalb hier kein zusätzliches wocheZeichnen().
+  // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
+  // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
+  // hier kein weiterer Zeichen-Aufruf.
   ansichtSetzen(ansicht);
+  seiteSetzen(seite);
 }
 
 /* Lädt daten/plan.js nach und ruft danach starten() auf.

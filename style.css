@@ -164,6 +164,192 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 }
 
 
+/* --- Hauptnavigation --------------------------------------------------- */
+
+.reiter {
+  max-width: 900px;
+  margin: 0 auto 18px;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--linie);
+}
+
+.reiter button {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 6px 9px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--schrift-leise);
+  cursor: pointer;
+  /* Damit der aktive Reiter beim Umschalten nicht die Breite ändert. */
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.reiter button:hover { color: var(--schrift); }
+
+.reiter .reiter-aktiv {
+  color: var(--akzent);
+  border-bottom-color: var(--akzent);
+  font-weight: 600;
+}
+
+/* Die kleine Zahl am Reiter. */
+.reiter-zahl {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.bereich-hinweis {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+
+/* --- Werkzeugleiste über dem Plan -------------------------------------- */
+
+.werkzeug-leiste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* Der Bearbeiten-Knopf, solange er aktiv ist. */
+.knopf-aktiv {
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  border-color: var(--akzent);
+}
+
+.knopf-aktiv:hover { background: var(--akzent); }
+
+
+/* --- To-do-Bereich ----------------------------------------------------- */
+
+.todo-ueberschrift {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 22px 0 10px;
+}
+
+.todo-ueberschrift:first-child { margin-top: 0; }
+
+.todo-unterueberschrift {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--schrift-leise);
+  margin: 18px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.todo-anzahl {
+  background: var(--flaeche-gedaempft);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+}
+
+.todo {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-left: 3px solid var(--notiz-rand);
+  border-radius: var(--rundung);
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  box-shadow: var(--schatten);
+}
+
+/* Das Kästchen zum Abhaken. Bewusst groß genug für den Daumen. */
+.todo-haken {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--linie);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--akzent-schrift);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.todo-haken:hover { border-color: var(--notiz-rand); }
+
+.todo-inhalt { flex: 1; min-width: 0; cursor: pointer; }
+
+.todo-text {
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.todo-wann {
+  font-size: 12px;
+  color: var(--schrift-leise);
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+/* Abgehakt: durchgestrichen und zurückgenommen, aber noch lesbar. */
+.todo-erledigt { opacity: .55; }
+.todo-erledigt .todo-text { text-decoration: line-through; }
+.todo-erledigt .todo-haken {
+  background: var(--notiz-rand);
+  border-color: var(--notiz-rand);
+  color: #fff;
+}
+
+/* Offen, aber der Termin ist schon vorbei. */
+.todo-vorbei { border-left-color: var(--entfallen); }
+
+.todo-marke-vorbei {
+  color: var(--entfallen);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+
+/* Hinweise aus dem HWR-Plan: andere Farbe, kein Häkchen – die kann man
+   nicht erledigen, die sind einfach so. */
+.todo-hinweis { border-left-color: var(--geaendert); }
+
+.todo-symbol {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--geaendert);
+  color: var(--flaeche);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  text-align: center;
+}
+
+.todo-offen-bearbeiten { display: block; }
+
+
 /* --- Hinweis auf neue Änderungen -------------------------------------- */
 
 .hinweis {
@@ -653,8 +839,14 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
   /* Kopfzeile: Titel oben, Knöpfe darunter über die volle Breite. */
   .kopf { flex-direction: column; align-items: stretch; gap: 10px; }
-  .kopf-knoepfe { justify-content: space-between; }
   .schalter button { padding: 9px 16px; font-size: 14px; }
+
+  /* Die Werkzeugleiste teilt sich die Zeile: Ansicht links, Knöpfe rechts. */
+  .werkzeug-leiste { justify-content: space-between; }
+  .werkzeug-leiste .schalter { flex: 1; }
+  .werkzeug-leiste .schalter button { flex: 1; }
+
+  .reiter button { font-size: 13px; padding: 11px 4px 10px; }
 
   /* Hochkant soll eine ganze Woche auf einen Blick draufpassen.
      Dafür darf keine Mindestbreite mehr gelten: die fünf Tage teilen sich

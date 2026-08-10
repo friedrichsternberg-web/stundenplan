@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Stundenplan">
+<meta name="apple-mobile-web-app-title" content="Uni">
 
 <!-- Farbe der Statusleiste, passend zu hell und dunkel. -->
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -22,7 +22,7 @@
 <link rel="apple-touch-icon" href="symbol.png">
 <link rel="icon" href="symbol.png">
 
-<title>Stundenplan</title>
+<title>Uni-Dashboard</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -30,44 +30,70 @@
 <!-- Kopfbereich: welcher Plan, und wann wurde zuletzt nachgeschaut -->
 <header class="kopf">
   <div class="kopf-titel">
-    <h1 id="planName">Stundenplan</h1>
+    <h1 id="planName">Uni-Dashboard</h1>
     <p class="kopf-stand" id="planStand">wird geladen …</p>
-  </div>
-  <div class="kopf-knoepfe">
-    <!-- Umschalter zwischen den beiden Ansichten derselben Woche -->
-    <div class="schalter" role="group" aria-label="Ansicht">
-      <button type="button" data-ansicht="liste" aria-pressed="true">Liste</button>
-      <button type="button" data-ansicht="kalender" aria-pressed="false">Kalender</button>
-    </div>
-    <button type="button" class="knopf-schlicht" id="filterOeffnen">
-      Fächer filtern
-    </button>
   </div>
 </header>
 
+<!-- Die Hauptnavigation. Jeder Knopf blendet einen der drei Bereiche ein.
+     Die Zahl an "To-dos" zeigt, wie viel offen ist. -->
+<nav class="reiter" role="tablist" aria-label="Bereiche">
+  <button type="button" data-seite="plan" role="tab" aria-selected="true">
+    Plan
+  </button>
+  <button type="button" data-seite="todos" role="tab" aria-selected="false">
+    To-dos <span class="reiter-zahl" id="todoZahl" hidden></span>
+  </button>
+  <button type="button" data-seite="aenderungen" role="tab" aria-selected="false">
+    Änderungen <span class="reiter-zahl" id="aenderungsZahl" hidden></span>
+  </button>
+</nav>
+
 <main>
 
-  <!-- Was als Nächstes ansteht. Das ist die Information, für die man
-       normalerweise die Moodle-Seite aufmacht. -->
-  <section class="naechster" id="naechsterBereich"></section>
+  <!-- ================= Bereich 1: Stundenplan ================= -->
+  <section id="seitePlan">
 
-  <!-- Meldung, falls es seit dem letzten Blick Änderungen gab -->
-  <section id="aenderungsHinweis"></section>
+    <!-- Was als Nächstes ansteht. Das ist die Information, für die man
+         normalerweise die Moodle-Seite aufmacht. -->
+    <div class="naechster" id="naechsterBereich"></div>
 
-  <!-- Wochenansicht mit Blättern -->
-  <section class="woche">
     <div class="wochen-leiste">
       <button type="button" class="knopf-pfeil" id="wocheZurueck" aria-label="Woche zurück">‹</button>
       <div class="wochen-titel" id="wochenTitel"></div>
       <button type="button" class="knopf-pfeil" id="wocheVor" aria-label="Woche vor">›</button>
       <button type="button" class="knopf-schlicht" id="wocheHeute">Heute</button>
     </div>
+
+    <!-- Zweite Reihe: Darstellung wählen und Notizen bearbeiten. -->
+    <div class="werkzeug-leiste">
+      <div class="schalter" role="group" aria-label="Ansicht">
+        <button type="button" data-ansicht="liste" aria-pressed="true">Liste</button>
+        <button type="button" data-ansicht="kalender" aria-pressed="false">Kalender</button>
+      </div>
+      <button type="button" class="knopf-schlicht" id="bearbeitenSchalter">
+        Bearbeiten
+      </button>
+      <button type="button" class="knopf-schlicht" id="filterOeffnen">Fächer</button>
+    </div>
+
     <div class="tage" id="tage"></div>
   </section>
 
-  <!-- Verlauf aller erkannten Änderungen -->
-  <section class="verlauf">
-    <h2>Änderungsverlauf</h2>
+  <!-- ================= Bereich 2: To-dos ================= -->
+  <section id="seiteTodos" hidden>
+    <p class="bereich-hinweis">
+      Alles, was du dir zu einzelnen Terminen notiert hast – und die Hinweise,
+      die schon im Stundenplan der HWR stehen.
+    </p>
+    <div id="todoInhalt"></div>
+  </section>
+
+  <!-- ================= Bereich 3: Änderungen ================= -->
+  <section id="seiteAenderungen" hidden>
+    <p class="bereich-hinweis">
+      Was sich seit dem ersten Abruf am Stundenplan geändert hat.
+    </p>
     <div id="verlauf"></div>
   </section>
 
