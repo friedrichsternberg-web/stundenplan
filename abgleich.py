@@ -534,6 +534,21 @@ def ueber_aenderungen_benachrichtigen(aenderungen):
 # 6. Ergebnisse speichern
 # ===========================================================================
 
+def jetzt_berlin():
+    """
+    Die aktuelle Zeit in Berlin - egal, wo das Skript laeuft.
+
+    Das ist kein Schoenheitsfehler: dein Mac steht auf Berliner Zeit, die
+    GitHub-Server laufen in Weltzeit (UTC). Ohne diese Umrechnung stuende im
+    Dashboard nach einem Lauf bei GitHub "zuletzt geprueft: 08:52", obwohl es
+    in Berlin 10:52 war.
+
+    Zurueck kommt eine Zeit ohne angeheftete Zeitzone, damit sie sich wie
+    bisher vergleichen und formatieren laesst.
+    """
+    return datetime.now(ZEITZONE_BERLIN).replace(tzinfo=None)
+
+
 def stunden_seit(zeitangabe):
     """
     Wie viele Stunden ist ein Zeitpunkt her? Bei unbekanntem oder unlesbarem
@@ -545,7 +560,7 @@ def stunden_seit(zeitangabe):
         moment = datetime.strptime(zeitangabe, "%Y-%m-%dT%H:%M")
     except ValueError:
         return 1e9
-    return (datetime.now() - moment).total_seconds() / 3600
+    return (jetzt_berlin() - moment).total_seconds() / 3600
 
 
 def stand_laden():
@@ -729,7 +744,7 @@ def main():
     if not os.path.isdir(DATENORDNER):
         os.makedirs(DATENORDNER)
 
-    jetzt = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    jetzt = jetzt_berlin().strftime("%Y-%m-%dT%H:%M")
     alter_stand = stand_laden()
     erstlauf = alter_stand is None
 
