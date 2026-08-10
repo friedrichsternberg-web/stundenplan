@@ -23,7 +23,7 @@
 <link rel="icon" href="symbol.png">
 
 <title>Uni-Dashboard</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=364a2a89">
 </head>
 <body>
 
@@ -33,6 +33,11 @@
     <h1 id="planName">Uni-Dashboard</h1>
     <p class="kopf-stand" id="planStand">wird geladen …</p>
   </div>
+  <!-- Erzwingt ein wirklich frisches Laden. Auf dem Home-Bildschirm gibt es
+       keine Adressleiste, mit der man das sonst erreichen könnte. -->
+  <button type="button" class="knopf-schlicht" id="neuLaden" title="Seite frisch laden">
+    ↻
+  </button>
 </header>
 
 <!-- Die Hauptnavigation. Jeder Knopf blendet einen der drei Bereiche ein.
@@ -120,7 +125,7 @@
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js"></script>
+<script src="app.js?v=364a2a89"></script>
 
 </body>
 </html>

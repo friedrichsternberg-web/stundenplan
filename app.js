@@ -1191,6 +1191,19 @@ function knoepfeVerbinden() {
   document.getElementById("bearbeitenSchalter")
     .addEventListener("click", bearbeitenUmschalten);
 
+  /* Frisch laden erzwingen.
+
+     Ein einfaches Neuladen genügt nicht: der Browser darf jede Datei zehn
+     Minuten behalten, auf dem Home-Bildschirm oft länger. Rufen wir dagegen
+     dieselbe Seite mit einem neuen Anhängsel auf, gilt sie als andere
+     Adresse und wird komplett neu geholt. */
+  const neuLadenKnopf = document.getElementById("neuLaden");
+  if (neuLadenKnopf) {
+    neuLadenKnopf.addEventListener("click", () => {
+      location.href = location.pathname + "?frisch=" + Date.now();
+    });
+  }
+
   /* Wechselt der Bildschirm die Größenklasse – Handy gedreht, Fenster
      verkleinert –, gilt eine andere Stundenhöhe. Die steckt in festen
      Pixelwerten im HTML, also muss neu gezeichnet werden. matchMedia meldet
