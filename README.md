@@ -51,23 +51,36 @@ Account hinzufügen → Andere → *Kalenderabo hinzufügen*, dann die Adresse v
 `daten/meine-termine.ics` eintragen. Diese Datei enthält nur die Fächer, die
 du belegst — nicht alle 23 des Semesters.
 
-## Veröffentlichen
+## Wer was macht
 
-`veroeffentlichen.sh` schiebt `daten/plan.js` und `daten/meine-termine.ics`
-zu GitHub. `abgleich.py` ruft es selbst auf, und zwar:
+Zwei voneinander unabhängige Läufe, jeder mit einer Aufgabe:
 
-- sobald sich am Inhalt etwas geändert hat
-- sonst höchstens einmal am Tag, damit auf dem Handy nicht „Stand: letzte
-  Woche" steht, ohne dass die Versionsgeschichte mit sinnlosen Einträgen
-  volläuft
+| | wo | Aufgabe |
+|---|---|---|
+| **Mac** | launchd, alle ~30 Min | vergleicht und **benachrichtigt dich** |
+| **GitHub** | Actions, alle 30 Min | vergleicht und **aktualisiert die Seite** |
 
-Ohne hinterlegtes GitHub-Repository tut das Skript nichts und meldet das —
-am Mac funktioniert dann trotzdem alles.
+Der Mac lädt nichts mehr hoch. Beide führen ihren eigenen `stand.json` und
+kommen unabhängig zum selben Ergebnis.
 
-**Einmal von Hand `git push` ausführen**, bevor der Hintergrund-Job das tut:
-Die Anmeldung bei GitHub läuft beim ersten Mal über eine Rückfrage im
-Terminal, und die kann ein Hintergrund-Job nicht beantworten. Danach liegt
-die Anmeldung im Schlüsselbund und es geht von allein.
+**Getrennte Zweige, damit sich beide nicht überschreiben:**
+
+- `main` — Quellcode. Hier wird entwickelt. Erzeugte Dateien sind ignoriert.
+- `gh-pages` — das Ergebnis. Schreibt **nur** die Automatik. GitHub Pages
+  liefert von hier aus.
+
+Lägen beide im selben Zweig, würde jedes `git pull` auf dem Mac zu
+Konflikten in `daten/plan.js` führen.
+
+Die Anzeigedateien werden nur neu geschrieben, wenn sich am Inhalt wirklich
+etwas geändert hat — sonst höchstens einmal täglich. Andernfalls entstünde
+allein durch den Zeitstempel alle 30 Minuten ein Commit.
+
+Von Hand auslösen: Actions → *Stundenplan aktualisieren* → *Run workflow*.
+
+**Zeitzonen:** GitHub-Server laufen in UTC. `jetzt_berlin()` in `abgleich.py`
+rechnet deshalb immer auf Berliner Zeit um — sonst stünde im Dashboard nach
+einem Lauf bei GitHub eine zwei Stunden alte Uhrzeit.
 
 ## Woher die Daten kommen
 
@@ -107,7 +120,7 @@ Plan als „entfallen" gemeldet wird.
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |
 | `benachrichtigung-*.sh` | Hintergrund-Job ein-/ausschalten |
-| `veroeffentlichen.sh` | schiebt den Stand zu GitHub |
+| `.github/workflows/aktualisieren.yml` | die GitHub-Automatik |
 | `daten/meine-termine.ics` | Kalenderdatei fürs iPhone, nur belegte Fächer (erzeugt) |
 | `symbol.png` | Symbol für den Home-Bildschirm |
 
@@ -138,7 +151,7 @@ Die Mitteilungen richten sich immer nach der Liste in `abgleich.py`.
 
 ## Grenzen
 
-- Der Abgleich läuft nur, wenn der Mac an und du angemeldet bist. Für
+- **Die Benachrichtigung** kommt nur, wenn der Mac an, angemeldet und wach ist. Für
   „Raum geändert, Vorlesung ist morgen" reicht das; für eine Meldung um
   6 Uhr morgens, während der Mac aus ist, nicht.
 - Ein **neu hinzukommendes** Wahlpflichtfach steht nicht in der Liste und
