@@ -354,9 +354,26 @@ function terminZeichnen(termin) {
    auf einen Blick.
    ---------------------------------------------------------------------- */
 
-// Wie viele Bildpunkte eine Stunde hoch ist. Größer = luftiger, aber man
-// muss mehr scrollen.
-const STUNDE_HOEHE = 58;
+/* Wie viele Bildpunkte eine Stunde hoch ist.
+
+   Auf dem Handy im Hochformat soll eine ganze Woche auf einen Blick
+   draufpassen. Dein Plan läuft von 8 bis 19 Uhr, also 11 Stunden:
+
+     58 px/Stunde -> 638 px Raster – zu hoch, man muss scrollen
+     40 px/Stunde -> 440 px Raster + 42 px Kopfzeile = 482 px – passt
+
+   Am großen Bildschirm darf es luftiger bleiben, dort stört die Höhe nicht. */
+const STUNDE_HOEHE_GROSS = 58;
+const STUNDE_HOEHE_HANDY = 40;
+
+/* Dieselbe Grenze wie im style.css. Über matchMedia fragen wir den Browser,
+   welche der beiden Größen gerade gilt – und lassen uns benachrichtigen,
+   wenn sich das ändert (Gerät gedreht, Fenster verkleinert). */
+const SCHMALER_BILDSCHIRM = window.matchMedia("(max-width: 520px)");
+
+function stundenHoehe() {
+  return SCHMALER_BILDSCHIRM.matches ? STUNDE_HOEHE_HANDY : STUNDE_HOEHE_GROSS;
+}
 
 // Zeigt der Kalender keine Termine, wird trotzdem dieser Bereich dargestellt –
 // ein Raster ganz ohne Zeitachse wäre verwirrend.
@@ -425,6 +442,8 @@ function spaltenVerteilen(termine) {
 
 function kalenderBauen(tage) {
   const alleTermine = tage.reduce((liste, t) => liste.concat(t.termine), []);
+  const stundeHoehe = stundenHoehe();
+  const proMinute = stundeHoehe / 60;
 
   // Der gezeigte Zeitbereich richtet sich nach der Woche, bleibt aber
   // mindestens beim Standard – sonst springt das Raster jede Woche.
@@ -436,13 +455,13 @@ function kalenderBauen(tage) {
   }
 
   const startMinute = vonStunde * 60;
-  const hoehe = (bisStunde - vonStunde) * STUNDE_HOEHE;
+  const hoehe = (bisStunde - vonStunde) * stundeHoehe;
 
   // Die Zeitachse links.
   const stundenBeschriftung = [];
   const rasterLinien = [];
   for (let stunde = vonStunde; stunde <= bisStunde; stunde++) {
-    const oben = (stunde - vonStunde) * STUNDE_HOEHE;
+    const oben = (stunde - vonStunde) * stundeHoehe;
     if (stunde < bisStunde) {
       stundenBeschriftung.push(
         `<div class="kalender-stunde" style="top:${oben}px">
@@ -457,7 +476,7 @@ function kalenderBauen(tage) {
   const heuteSchluessel = tagesSchluessel(jetzt);
   const jetztMinute = jetzt.getHours() * 60 + jetzt.getMinutes();
   const jetztSichtbar = jetztMinute >= startMinute && jetztMinute <= bisStunde * 60;
-  const jetztOben = (jetztMinute - startMinute) * (STUNDE_HOEHE / 60);
+  const jetztOben = (jetztMinute - startMinute) * proMinute;
 
   const kopfSpalten = tage.map(eintrag => `
     <div class="kalender-tagkopf ${eintrag.istHeute ? "kalender-tagkopf-heute" : ""}">
@@ -473,16 +492,22 @@ function kalenderBauen(tage) {
       const beginn = minutenAmTag(termin.start) - startMinute;
       const dauer = minutenAmTag(termin.ende) - minutenAmTag(termin.start);
 
-      const oben = beginn * (STUNDE_HOEHE / 60);
+      const oben = beginn * proMinute;
       // Zwei Bildpunkte Luft nach unten, damit sich Termine optisch nicht
       // berühren. Nach unten begrenzt, damit auch ein 30-Minuten-Termin
       // noch lesbar bleibt.
-      const kastenHoehe = Math.max(dauer * (STUNDE_HOEHE / 60) - 2, 22);
+      const kastenHoehe = Math.max(dauer * proMinute - 2, 20);
       const breite = 100 / platz.spaltenGesamt;
       const links = platz.spalte * breite;
 
-      // In einem schmalen Kästchen ist für Raum und Uhrzeit kein Platz.
-      const knapp = kastenHoehe < 44;
+      // In einem flachen Kästchen ist neben dem Titel für nichts mehr Platz.
+      // Die Grenzen wachsen mit dem Maßstab mit, damit sie auf dem Handy und
+      // am großen Bildschirm gleich sinnvoll greifen.
+      //
+      // Reihenfolge nach Nützlichkeit: Titel, dann Raum, dann Anmerkung, und
+      // die Uhrzeit zuletzt – die liest man ohnehin an der Zeitachse ab.
+      const knapp = kastenHoehe < stundeHoehe * 0.8;
+      const geraeumig = kastenHoehe >= stundeHoehe * 1.6;
 
       return `
         <div class="kalender-termin ${termin.anmerkung ? "kalender-termin-hinweis" : ""}"
@@ -492,9 +517,9 @@ function kalenderBauen(tage) {
                             + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
           <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
-            <div class="kalender-termin-zeile">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
-            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}`}
+            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}
+            ${geraeumig ? `<div class="kalender-termin-zeile">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>` : ""}`}
         </div>`;
     }).join("");
 
@@ -507,7 +532,12 @@ function kalenderBauen(tage) {
       </div>`;
   }).join("");
 
-  const spaltenVorlage = "var(--zeitspalte) repeat(" + tage.length + ", minmax(96px, 1fr))";
+  /* Die Mindestbreite einer Tagesspalte steht im CSS, weil sie vom
+     Bildschirm abhängt: am großen Bildschirm 96 px, auf dem Handy 0 – dort
+     sollen sich fünf Spalten die vorhandene Breite teilen, statt das Raster
+     seitlich hinauszuschieben. */
+  const spaltenVorlage =
+    "var(--zeitspalte) repeat(" + tage.length + ", minmax(var(--tagspalte), 1fr))";
 
   return `
     <div class="kalender-rahmen">
@@ -661,6 +691,17 @@ function ansichtSetzen(neueAnsicht) {
 }
 
 function knoepfeVerbinden() {
+  /* Wechselt der Bildschirm die Größenklasse – Handy gedreht, Fenster
+     verkleinert –, gilt eine andere Stundenhöhe. Die steckt in festen
+     Pixelwerten im HTML, also muss neu gezeichnet werden. matchMedia meldet
+     sich genau beim Überschreiten der Grenze und nicht bei jedem Pixel. */
+  if (SCHMALER_BILDSCHIRM.addEventListener) {
+    SCHMALER_BILDSCHIRM.addEventListener("change", wocheZeichnen);
+  } else if (SCHMALER_BILDSCHIRM.addListener) {
+    // Ältere Safari-Fassungen kennen nur diesen Weg.
+    SCHMALER_BILDSCHIRM.addListener(wocheZeichnen);
+  }
+
   for (const knopf of document.querySelectorAll("[data-ansicht]")) {
     knopf.addEventListener("click", () => {
       ansichtSetzen(knopf.getAttribute("data-ansicht"));
