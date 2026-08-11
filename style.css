@@ -99,6 +99,13 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   color: var(--schrift-leise);
 }
 
+/* Ist der Stand älter als ein halber Tag, fällt das auf. Dann hat die
+   Automatik länger nicht gelaufen und der Plan könnte überholt sein. */
+.kopf-stand-alt {
+  color: var(--geaendert);
+  font-weight: 600;
+}
+
 /* Der Knopf zum frischen Laden: quadratisch, unauffällig, gut zu treffen. */
 #neuLaden {
   flex: 0 0 auto;

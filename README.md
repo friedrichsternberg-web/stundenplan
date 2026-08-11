@@ -171,18 +171,28 @@ Lägen beide im selben Zweig, würde jedes `git pull` auf dem Mac zu
 Konflikten in `daten/plan.js` führen.
 
 Die Anzeigedateien werden nur neu geschrieben, wenn sich am Inhalt wirklich
-etwas geändert hat — sonst höchstens einmal täglich. Andernfalls entstünde
-allein durch den Zeitstempel alle 30 Minuten ein Commit.
+etwas geändert hat — sonst höchstens alle vier Stunden
+(`AUFFRISCHEN_NACH_STUNDEN` in `abgleich.py`). Andernfalls entstünde allein
+durch den Zeitstempel bei jedem Lauf ein Commit.
+
+Hier stand zuerst 24 Stunden. Das war zu lang: änderte sich am Plan tagelang
+nichts, zeigte das Dashboard „zuletzt geprüft: vorgestern", obwohl die
+Prüfung lief — das sieht nach einem Ausfall aus, ist aber keiner.
 
 Von Hand auslösen: Actions → *Stundenplan aktualisieren* → *Run workflow*.
 
-**Der Zeitplan ist unzuverlässig.** GitHub garantiert für kostenlose
-Repositories keine pünktliche Ausführung: Verzögerungen von 10–30 Minuten
-sind normal, unter Last werden einzelne Termine ganz übersprungen. Wenn im
-Verlauf tagelang kein Lauf mit dem Ereignis `schedule` auftaucht, ist das ein
-GitHub-Problem und keins am Code — von Hand auslösen funktioniert dann
-trotzdem. Für einen Stundenplan ist das verkraftbar; für etwas Zeitkritisches
-wäre es der falsche Bauplatz.
+**Der Zeitplan ist unzuverlässig — gemessen, nicht vermutet.** GitHub führt
+auf kostenlosen Repositories Zeitplan-Termine nur „nach Möglichkeit" aus. Am
+10./11.08. liefen von rund 34 geplanten Terminen **sechs**, mit Lücken von
+drei bis fünf Stunden — alle erfolgreich, nur eben verworfen statt verspätet.
+
+Deshalb steht der Zeitplan auf **viertelstündlich**, obwohl drei bis vier
+Läufe am Tag genügen: wer häufig plant, bekommt öfter einen Zuschlag.
+Verworfene Termine kosten nichts, sie starten gar nicht erst.
+
+Bleibt die Automatik trotzdem länger aus, zeigt das Dashboard es an: der
+Stand im Kopf wird ab zwölf Stunden farbig hervorgehoben. Von Hand auslösen
+geht immer über Actions → *Run workflow*.
 
 **Zeitzonen:** GitHub-Server laufen in UTC. `jetzt_berlin()` in `abgleich.py`
 rechnet deshalb immer auf Berliner Zeit um — sonst stünde im Dashboard nach

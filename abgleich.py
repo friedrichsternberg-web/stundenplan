@@ -119,6 +119,19 @@ DATEI_KALENDER = os.path.join(DATENORDNER, "meine-termine.ics")
 # Wie viele vergangene Aenderungen im Verlauf aufgehoben werden.
 MAXIMALE_ANZAHL_AENDERUNGEN = 300
 
+# Wie alt der angezeigte Stand hoechstens werden darf, in Stunden.
+#
+# Die Anzeigedateien werden normalerweise nur geschrieben, wenn sich am Plan
+# etwas geaendert hat - sonst gaebe es bei jedem Lauf einen Commit, allein
+# weil der Zeitstempel weiterrueckt.
+#
+# Hier stand zuerst 24. Das war zu lang: aendert sich am Plan tagelang
+# nichts, stand im Dashboard "zuletzt geprueft: vorgestern", obwohl die
+# Pruefung laeuft. Das sieht nach einem Ausfall aus, ist aber keiner.
+# Mit 4 Stunden frischt sich die Anzeige mehrmals taeglich auf, und es
+# bleiben trotzdem nur eine Handvoll Commits pro Tag.
+AUFFRISCHEN_NACH_STUNDEN = 4
+
 # Alle Zeiten im Plan sind Berliner Ortszeit. Fuer die Kalenderdatei rechnen
 # wir sie in Weltzeit (UTC) um - dann muss die Datei keine eigenen
 # Zeitzonenregeln mitliefern, und Sommer-/Winterzeit stimmt automatisch.
@@ -818,7 +831,9 @@ def main():
             or alter_stand.get("nichtBelegteGruppen") != NICHT_BELEGTE_GRUPPEN)
         if faecher_geaendert:
             print("   Faecherliste wurde geaendert")
-        if faecher_geaendert or stunden_seit(alter_stand.get("geschriebenAm", "")) >= 24:
+        if (faecher_geaendert
+                or stunden_seit(alter_stand.get("geschriebenAm", ""))
+                    >= AUFFRISCHEN_NACH_STUNDEN):
             anzeige_schreiben(
                 alter_stand.get("termine", []),
                 alter_stand.get("aenderungen", []),
@@ -896,7 +911,7 @@ def main():
     if (erstlauf or aenderungen or neue_termine != alte_termine
             or alte_faecher != NICHT_BELEGTE_FAECHER
             or alte_gruppen != NICHT_BELEGTE_GRUPPEN
-            or stunden_seit(geschrieben_am) >= 24):
+            or stunden_seit(geschrieben_am) >= AUFFRISCHEN_NACH_STUNDEN):
         anzeige_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
         geschrieben_am = jetzt
 

@@ -15,9 +15,17 @@ on:
   schedule:
     # Achtung: GitHub rechnet in UTC, nicht in Berliner Zeit. Fuer diesen
     # Zweck ist das egal - geprueft wird ohnehin rund um die Uhr.
+    #
     # Die krummen Minuten sind Absicht: zur vollen Stunde starten weltweit
     # alle Auftraege gleichzeitig, dann stellt GitHub sie in die Warteschlange.
-    - cron: "7,37 * * * *"
+    #
+    # Warum viertelstuendlich, obwohl drei bis vier Laeufe am Tag genuegen?
+    # Weil GitHub auf kostenlosen Repositories Zeitplan-Termine nur "nach
+    # Moeglichkeit" ausfuehrt und den Grossteil verwirft. Gemessen am
+    # 10./11.08.: von rund 34 geplanten Terminen liefen 6, mit Luecken von
+    # drei bis fuenf Stunden. Wer haeufig plant, bekommt oefter einen Zuschlag -
+    # verworfene Termine kosten nichts, weil sie gar nicht erst starten.
+    - cron: "3,18,33,48 * * * *"
 
   # Auch bei jeder Aenderung am Quellcode. Sonst haengt die veroeffentlichte
   # Seite hinterher, bis der naechste Zeitplan-Termin greift - und der ist

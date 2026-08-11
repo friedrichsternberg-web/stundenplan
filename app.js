@@ -1398,9 +1398,24 @@ function kopfZeichnen() {
   document.getElementById("planName").textContent =
     grossgeschrieben + " · Semester " + semesterZahl;
 
-  document.getElementById("planStand").textContent =
-    "Zuletzt geprüft: " + zeitpunktLesbar(STUNDENPLAN.geprueftAm)
-    + " · " + STUNDENPLAN.termine.length + " Termine";
+  /* Wie alt der angezeigte Stand ist.
+
+     Das ist mehr als Zierde: die Automatik bei GitHub führt Zeitplan-Termine
+     nur "nach Möglichkeit" aus. Bleibt sie länger aus, soll man das sehen und
+     nicht einem Plan vertrauen, der womöglich überholt ist. Ab einem halben
+     Tag ohne Prüfung wird der Hinweis deutlich. */
+  const geprueft = alsDatum(STUNDENPLAN.geprueftAm);
+  const stundenHer = (new Date() - geprueft) / 3600000;
+
+  let alter;
+  if (stundenHer < 1) alter = "gerade eben geprüft";
+  else if (stundenHer < 24) alter = "vor " + Math.round(stundenHer) + " Std. geprüft";
+  else alter = "vor " + Math.round(stundenHer / 24) + " Tagen geprüft";
+
+  const anzeige = document.getElementById("planStand");
+  anzeige.textContent = alter + " · " + sichtbareTermine().length + " Termine";
+  anzeige.classList.toggle("kopf-stand-alt", stundenHer >= 12);
+  anzeige.title = "Zuletzt geprüft: " + zeitpunktLesbar(STUNDENPLAN.geprueftAm);
 }
 
 /* Schaltet zwischen Liste und Kalender um und hebt den aktiven Knopf hervor. */
