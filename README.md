@@ -82,6 +82,24 @@ zusammengefasst: der 4. September besteht aus sechs Zeitblöcken, die alle
 Im Kalender steht bei Terminen mit Notiz nur ein ✎ — für den Text ist im
 Raster kein Platz.
 
+### Aufgaben ohne Vorlesung
+
+„Bibliotheksbuch zurückgeben" hängt an keinem Termin. Solche Aufgaben legst
+du im Reiter **To-dos** über **+ Neue Aufgabe** an, oder im Plan über
+*Bearbeiten* → **+ Aufgabe für diesen Tag**. Sie haben einen Tag, aber keine
+Uhrzeit, und stehen im Plan unten im jeweiligen Tageskasten.
+
+Sie brauchen einen **eigenen Speicher** (`stundenplan.aufgaben`) und nicht
+bloß einen weiteren Eintrag bei den Notizen: eine Notiz gehört zu genau einem
+Termin, an einem Tag können aber beliebig viele freie Aufgaben liegen —
+deshalb eine Liste statt einer Zuordnung. Ihre Kennungen beginnen mit
+`eigen-`, dadurch lassen sie sich überall von den HWR-Terminen (`sked.de…`)
+unterscheiden.
+
+Liegt an einem Samstag oder Sonntag eine Aufgabe, wird dieser Tag im Plan
+angezeigt, obwohl dort keine Vorlesung ist — sonst käme man nicht an sie
+heran.
+
 Gespeichert wird nach der **Termin-Kennung** (`sked.de1200291`), nicht nach
 Datum und Uhrzeit. Dadurch bleibt die Notiz am Termin kleben, auch wenn der
 Raum wechselt oder die Vorlesung verschoben wird.

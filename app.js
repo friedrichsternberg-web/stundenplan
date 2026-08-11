@@ -77,6 +77,15 @@ const SPEICHER_SEITE = "stundenplan.seite";
    wenn der Raum wechselt oder die Vorlesung verschoben wird. */
 const SPEICHER_NOTIZEN = "stundenplan.notizen";
 
+/* Aufgaben, die zu keiner Vorlesung gehören – "Bibliotheksbuch zurückgeben",
+   "Hausarbeit drucken".
+
+   Sie brauchen einen eigenen Speicher und nicht bloß einen weiteren Eintrag
+   bei den Notizen: eine Notiz gehört zu genau einem Termin, an einem Tag
+   können aber beliebig viele freie Aufgaben liegen. Deshalb ist das hier
+   eine Liste und keine Zuordnung. */
+const SPEICHER_AUFGABEN = "stundenplan.aufgaben";
+
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
@@ -94,6 +103,9 @@ let bearbeitenModus = false;
 
 // Deine Notizen, als { "sked.de1200291": { text: "...", erledigt: false } }
 let notizen = {};
+
+// Freie Aufgaben: [{ id, text, datum: "2026-08-11", erledigt: false }, ...]
+let aufgaben = [];
 
 // Die Kennung des Termins, dessen Notiz gerade bearbeitet wird – oder null.
 // Solange etwas offen ist, wird die Woche nicht neu gezeichnet, sonst wäre
@@ -157,6 +169,19 @@ function tageDazu(datum, anzahl) {
 function datumKurz(datum) {
   return String(datum.getDate()).padStart(2, "0") + "."
        + String(datum.getMonth() + 1).padStart(2, "0") + ".";
+}
+
+/* Formatiert einen reinen Tag ("2026-08-11") als "Di 11.08.2026" – für
+   freie Aufgaben, die keine Uhrzeit haben. Heute und morgen werden benannt,
+   das liest sich schneller als ein Datum. */
+function tagLesbar(tagesschluessel) {
+  const heute = tagesSchluessel(new Date());
+  if (tagesschluessel === heute) return "Heute";
+  if (tagesschluessel === tagesSchluessel(tageDazu(new Date(), 1))) return "Morgen";
+
+  const datum = alsDatum(tagesschluessel + "T00:00");
+  return WOCHENTAGE[datum.getDay()].slice(0, 2) + " "
+       + datumKurz(datum) + datum.getFullYear();
 }
 
 /* Formatiert eine Zeitangabe aus dem Plan als "Mo 10.08., 08:00". */
@@ -353,10 +378,19 @@ function wocheZeichnen() {
     const tag = tageDazu(montag, versatz);
     const schluessel = tagesSchluessel(tag);
     const termineDesTages = nachTag.get(schluessel) || [];
-    if (versatz >= 5 && termineDesTages.length === 0) continue;
+    const aufgabenDesTages = aufgabenFuerTag(schluessel);
+
+    // Am Wochenende ist normalerweise nichts – dann bleibt der Kasten weg.
+    // Steht dort aber eine eigene Aufgabe, muss der Tag sichtbar sein,
+    // sonst käme man an sie nicht heran.
+    if (versatz >= 5 && termineDesTages.length === 0
+        && aufgabenDesTages.length === 0) continue;
+
     tage.push({
       datum: tag,
+      schluessel: schluessel,
       termine: termineDesTages,
+      aufgaben: aufgabenDesTages,
       istHeute: schluessel === heuteSchluessel,
     });
   }
@@ -382,8 +416,10 @@ function listeBauen(tage) {
       : uhrzeit(termineDesTages[0].start) + "–"
         + uhrzeit(termineDesTages[termineDesTages.length - 1].ende);
 
+    const klassen = "tag" + (istHeute ? " tag-heute" : "");
+
     stuecke.push(`
-      <div class="tag ${istHeute ? "tag-heute" : ""}">
+      <div class="${klassen}">
         <div class="tag-kopf">
           <span>${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}</span>
           <span class="tag-kopf-zusatz">${kopfZusatz}</span>
@@ -391,6 +427,15 @@ function listeBauen(tage) {
         ${termineDesTages.length === 0
           ? `<div class="tag-leer">Keine Veranstaltung.</div>`
           : termineDesTages.map(terminZeichnen).join("")}
+        ${eintrag.aufgaben.map(freieAufgabeZeichnen).join("")}
+        ${bearbeitenModus
+          ? `<div class="tag-fuss">
+               <button type="button" class="notiz-neu"
+                       data-aufgabe-neu="${sicher(eintrag.schluessel)}">
+                 + Aufgabe für diesen Tag
+               </button>
+             </div>`
+          : ""}
       </div>`);
   }
   return stuecke.join("");
@@ -485,14 +530,106 @@ function notizSetzen(kennung, text) {
   notizenSpeichern();
 }
 
+/* --- Freie Aufgaben ------------------------------------------------------
+
+   Alles, was an einem Tag zu tun ist, ohne zu einer Vorlesung zu gehören.
+   ---------------------------------------------------------------------- */
+
+function aufgabenLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_AUFGABEN);
+    const gelesen = roh ? JSON.parse(roh) : [];
+    if (!Array.isArray(gelesen)) return [];
+    // Nur brauchbare Einträge übernehmen – eine kaputte Zeile soll nicht
+    // die ganze Liste unbenutzbar machen.
+    return gelesen
+      .filter(a => a && typeof a.text === "string" && typeof a.datum === "string")
+      .map(a => ({
+        id: String(a.id || neueAufgabenKennung()),
+        text: a.text,
+        datum: a.datum,
+        erledigt: Boolean(a.erledigt),
+      }));
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function aufgabenSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_AUFGABEN, JSON.stringify(aufgaben));
+  } catch (fehler) { /* siehe notizenSpeichern() */ }
+}
+
+/* Eine Kennung für eine neue Aufgabe. Die Zeit allein reicht nicht: legt man
+   zwei Aufgaben in derselben Millisekunde an, gäbe es sie doppelt. Deshalb
+   kommt eine Zufallszahl dazu. Das Vorzeichen "eigen-" unterscheidet sie von
+   den Termin-Kennungen der HWR ("sked.de..."). */
+function neueAufgabenKennung() {
+  return "eigen-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+}
+
+function aufgabeZuKennung(kennung) {
+  return aufgaben.filter(a => a.id === kennung)[0] || null;
+}
+
+function aufgabenFuerTag(tagesschluessel) {
+  return aufgaben.filter(a => a.datum === tagesschluessel);
+}
+
+/* Legt eine Aufgabe an oder ändert eine bestehende. Leerer Text löscht sie –
+   genau wie bei den Notizen. */
+function aufgabeSetzen(kennung, text, datum) {
+  const sauber = (text || "").trim();
+
+  if (!sauber) {
+    aufgaben = aufgaben.filter(a => a.id !== kennung);
+    aufgabenSpeichern();
+    return;
+  }
+
+  const vorhandene = aufgabeZuKennung(kennung);
+  if (vorhandene) {
+    vorhandene.text = sauber;
+    if (datum) vorhandene.datum = datum;
+  } else {
+    aufgaben.push({
+      id: kennung,
+      text: sauber,
+      datum: datum || tagesSchluessel(new Date()),
+      erledigt: false,
+    });
+  }
+  aufgabenSpeichern();
+}
+
+function aufgabeErledigtUmschalten(kennung) {
+  const aufgabe = aufgabeZuKennung(kennung);
+  if (!aufgabe) return;
+  aufgabe.erledigt = !aufgabe.erledigt;
+  aufgabenSpeichern();
+}
+
 /* Das Textfeld zum Schreiben einer Notiz. Steht als eigene Funktion da, weil
    es an zwei Stellen gebraucht wird: im Plan und im To-do-Bereich. */
-function notizFeldZeichnen(kennung, text) {
+function notizFeldZeichnen(kennung, text, datum) {
+  // Ein Datumsfeld gibt es nur bei freien Aufgaben. Eine Notiz an einer
+  // Vorlesung hat ihr Datum schon durch den Termin.
+  const mitDatum = typeof datum === "string";
+
   return `
     <div class="notiz-bearbeiten">
       <textarea id="notizFeld" class="notiz-feld" rows="2"
-                placeholder="z. B. heute online · Abgabe bis Freitag · fällt aus"
+                placeholder="${mitDatum
+                  ? "z. B. Bibliotheksbuch zurückgeben"
+                  : "z. B. heute online · Abgabe bis Freitag · fällt aus"}"
       >${sicher(text)}</textarea>
+      ${mitDatum
+        ? `<label class="notiz-datum">
+             Tag
+             <input type="date" id="aufgabeDatum" value="${sicher(datum)}">
+           </label>`
+        : ""}
       <div class="notiz-knoepfe">
         <button type="button" class="knopf-schlicht"
                 data-notiz-speichern="${sicher(kennung)}">Speichern</button>
@@ -500,6 +637,30 @@ function notizFeldZeichnen(kennung, text) {
                 data-notiz-abbrechen="ja">Abbrechen</button>
         ${text ? `<button type="button" class="knopf-schlicht notiz-loeschen"
                           data-notiz-loeschen="${sicher(kennung)}">Löschen</button>` : ""}
+      </div>
+    </div>`;
+}
+
+/* Zeichnet eine freie Aufgabe im Tageskasten des Plans. */
+function freieAufgabeZeichnen(aufgabe) {
+  if (offeneNotiz === aufgabe.id) {
+    return `<div class="termin termin-aufgabe">
+              ${notizFeldZeichnen(aufgabe.id, aufgabe.text, aufgabe.datum)}
+            </div>`;
+  }
+
+  const klassen = "notiz notiz-aufgabe"
+    + (aufgabe.erledigt ? " notiz-erledigt" : "");
+
+  return `
+    <div class="termin termin-aufgabe">
+      <div class="termin-zeit">Aufgabe</div>
+      <div class="termin-inhalt">
+        <div class="${klassen}" data-notiz-oeffnen="${sicher(aufgabe.id)}"
+             title="Zum Bearbeiten anklicken">
+          <span class="notiz-symbol">${aufgabe.erledigt ? "✓" : "○"}</span>
+          <span>${sicher(aufgabe.text)}</span>
+        </div>
       </div>
     </div>`;
 }
@@ -556,14 +717,29 @@ function notizKlick(ereignis) {
   const ziel = ereignis.target && ereignis.target.closest
     ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
                               + "[data-notiz-abbrechen],[data-notiz-loeschen],"
-                              + "[data-todo-haken]")
+                              + "[data-todo-haken],[data-aufgabe-neu]")
     : null;
   if (!ziel) return;
 
-  // Abhaken im To-do-Bereich.
+  /* Neue freie Aufgabe anlegen.
+
+     Der Eintrag entsteht erst beim Speichern. Bis dahin merkt sich
+     offeneNotiz nur "neu:2026-08-11" – so bleibt keine leere Aufgabe
+     zurück, wenn man abbricht. */
+  const neuerTag = ziel.getAttribute("data-aufgabe-neu");
+  if (neuerTag) {
+    offeneNotiz = "neu:" + neuerTag;
+    wocheZeichnen();
+    todosZeichnen();
+    notizfeldAktivieren();
+    return;
+  }
+
+  // Abhaken im To-do-Bereich – für beide Sorten.
   const zuHaken = ziel.getAttribute("data-todo-haken");
   if (zuHaken) {
-    erledigtUmschalten(zuHaken);
+    if (zuHaken.indexOf("eigen-") === 0) aufgabeErledigtUmschalten(zuHaken);
+    else erledigtUmschalten(zuHaken);
     allesZeichnen();
     return;
   }
@@ -582,7 +758,19 @@ function notizKlick(ereignis) {
   const zuSpeichern = ziel.getAttribute("data-notiz-speichern");
   if (zuSpeichern) {
     const feld = document.getElementById("notizFeld");
-    notizSetzen(zuSpeichern, feld ? feld.value : "");
+    const datumsfeld = document.getElementById("aufgabeDatum");
+    const text = feld ? feld.value : "";
+    const datum = datumsfeld ? datumsfeld.value : "";
+
+    if (zuSpeichern.indexOf("neu:") === 0) {
+      // Erst jetzt bekommt die Aufgabe eine Kennung.
+      aufgabeSetzen(neueAufgabenKennung(), text, datum || zuSpeichern.slice(4));
+    } else if (zuSpeichern.indexOf("eigen-") === 0) {
+      aufgabeSetzen(zuSpeichern, text, datum);
+    } else {
+      notizSetzen(zuSpeichern, text);
+    }
+
     offeneNotiz = null;
     allesZeichnen();
     return;
@@ -590,7 +778,8 @@ function notizKlick(ereignis) {
 
   const zuLoeschen = ziel.getAttribute("data-notiz-loeschen");
   if (zuLoeschen) {
-    notizSetzen(zuLoeschen, "");
+    if (zuLoeschen.indexOf("eigen-") === 0) aufgabeSetzen(zuLoeschen, "");
+    else notizSetzen(zuLoeschen, "");
     offeneNotiz = null;
     allesZeichnen();
     return;
@@ -831,13 +1020,19 @@ function terminZuKennung(kennung) {
   return STUNDENPLAN.termine.filter(t => t.id === kennung)[0] || null;
 }
 
-/* Baut aus den Notizen die Liste für den To-do-Bereich. */
+/* Baut die Liste für den To-do-Bereich – aus beiden Quellen.
+
+   Notizen hängen an einer Vorlesung und werden nach deren Anfangszeit
+   einsortiert. Freie Aufgaben haben nur einen Tag; damit sie an diesem Tag
+   oben stehen, bekommen sie beim Sortieren die Uhrzeit 00:00. */
 function aufgabenSammeln() {
-  const aufgaben = [];
+  const liste = [];
+
   for (const kennung of Object.keys(notizen)) {
     const termin = terminZuKennung(kennung);
-    aufgaben.push({
+    liste.push({
       kennung: kennung,
+      art: "notiz",
       text: notizen[kennung].text,
       erledigt: notizen[kennung].erledigt,
       termin: termin,
@@ -845,8 +1040,21 @@ function aufgabenSammeln() {
       start: termin ? termin.start : "9999",
     });
   }
-  aufgaben.sort((a, b) => a.start.localeCompare(b.start));
-  return aufgaben;
+
+  for (const aufgabe of aufgaben) {
+    liste.push({
+      kennung: aufgabe.id,
+      art: "aufgabe",
+      text: aufgabe.text,
+      erledigt: aufgabe.erledigt,
+      termin: null,
+      datum: aufgabe.datum,
+      start: aufgabe.datum + "T00:00",
+    });
+  }
+
+  liste.sort((a, b) => a.start.localeCompare(b.start));
+  return liste;
 }
 
 /* Die Hinweise aus dem Stundenplan – zusammengefasst.
@@ -897,14 +1105,30 @@ function todosZeichnen() {
   const stuecke = [];
 
   // --- Deine Aufgaben ------------------------------------------------
-  stuecke.push(`<h2 class="todo-ueberschrift">Meine Notizen</h2>`);
+  stuecke.push(`
+    <div class="todo-kopfzeile">
+      <h2 class="todo-ueberschrift">Meine Aufgaben</h2>
+      ${offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
+        <button type="button" class="knopf-schlicht"
+                data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">
+          + Neue Aufgabe
+        </button>`}
+    </div>`);
+
+  // Wird gerade eine neue Aufgabe geschrieben, steht das Feld ganz oben.
+  if (offeneNotiz && offeneNotiz.indexOf("neu:") === 0) {
+    stuecke.push(`
+      <div class="todo todo-offen-bearbeiten">
+        ${notizFeldZeichnen(offeneNotiz, "", offeneNotiz.slice(4))}
+      </div>`);
+  }
 
   if (aufgaben.length === 0) {
     stuecke.push(`
       <p class="leer-text">
-        Noch keine Notizen. Geh im Plan auf <strong>Bearbeiten</strong> und
-        schreib etwas zu einer Vorlesung – zum Beispiel „heute online" oder
-        „Abgabe bis Freitag".
+        Noch nichts eingetragen. Über <strong>+ Neue Aufgabe</strong> legst du
+        etwas an, das an keiner Vorlesung hängt. Notizen zu einer bestimmten
+        Vorlesung schreibst du im Plan über <strong>Bearbeiten</strong>.
       </p>`);
   } else {
     if (offen.length > 0) {
@@ -940,21 +1164,28 @@ function aufgabeZeichnen(aufgabe) {
   const termin = aufgabe.termin;
 
   let wann;
-  if (!termin) {
+  if (aufgabe.art === "aufgabe") {
+    // Freie Aufgabe: nur ein Tag, keine Uhrzeit und kein Fach.
+    wann = tagLesbar(aufgabe.datum);
+  } else if (!termin) {
     wann = "Termin steht nicht mehr im Plan";
   } else {
     wann = zeitpunktLesbar(termin.start) + "–" + uhrzeit(termin.ende)
          + " · " + termin.titel;
   }
 
-  const vorbei = termin && istVorbei(termin.start) && !aufgabe.erledigt;
+  const bezugstag = aufgabe.art === "aufgabe"
+    ? aufgabe.datum
+    : (termin ? termin.start : "");
+  const vorbei = bezugstag && istVorbei(bezugstag) && !aufgabe.erledigt;
 
-  // Wird die Notiz gerade bearbeitet, steht hier das Textfeld statt der Zeile.
+  // Wird der Eintrag gerade bearbeitet, steht hier das Textfeld statt der Zeile.
   if (offeneNotiz === aufgabe.kennung) {
     return `
       <div class="todo todo-offen-bearbeiten">
         <div class="todo-wann">${sicher(wann)}</div>
-        ${notizFeldZeichnen(aufgabe.kennung, aufgabe.text)}
+        ${notizFeldZeichnen(aufgabe.kennung, aufgabe.text,
+                            aufgabe.art === "aufgabe" ? aufgabe.datum : undefined)}
       </div>`;
   }
 
@@ -1039,9 +1270,10 @@ function aenderungenAlsGesehenMerken() {
 /* Setzt die kleinen Zahlen an den Reitern. Sie sind der Grund, warum man den
    Plan gar nicht erst aufmachen muss, um zu sehen, ob etwas ansteht. */
 function reiterZahlenSetzen() {
-  const offeneAufgaben = Object.keys(notizen)
+  const offeneNotizen = Object.keys(notizen)
     .filter(kennung => !notizen[kennung].erledigt).length;
-  zahlSetzen("todoZahl", offeneAufgaben);
+  const offeneFreie = aufgaben.filter(a => !a.erledigt).length;
+  zahlSetzen("todoZahl", offeneNotizen + offeneFreie);
   zahlSetzen("aenderungsZahl", ungeseheneAenderungen());
 }
 
@@ -1290,6 +1522,7 @@ function starten() {
   NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
   NICHT_BELEGTE_GRUPPEN = STUNDENPLAN.nichtBelegteGruppen || [];
   notizen = notizenLaden();
+  aufgaben = aufgabenLaden();
   abgewaehlteFaecher = filterLaden();
 
   try {

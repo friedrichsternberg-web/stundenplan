@@ -361,6 +361,61 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 .todo-offen-bearbeiten { display: block; }
 
+/* Überschrift und "+ Neue Aufgabe" nebeneinander. */
+.todo-kopfzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 22px 0 10px;
+}
+
+.todo-kopfzeile:first-child { margin-top: 0; }
+.todo-kopfzeile .todo-ueberschrift { margin: 0; }
+
+
+/* --- Freie Aufgaben im Tageskasten ------------------------------------- */
+
+/* Eine Aufgabe steht dort, wo sonst eine Vorlesung steht – aber ohne
+   Uhrzeit, denn sie gilt für den ganzen Tag. */
+.termin-aufgabe .termin-zeit {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  opacity: .75;
+}
+
+.notiz-aufgabe { margin-top: 0; }
+
+.notiz-erledigt span:last-child { text-decoration: line-through; opacity: .7; }
+
+/* Die Fußzeile im Tageskasten mit dem "+ Aufgabe"-Knopf. */
+.tag-fuss {
+  padding: 9px 14px 11px;
+  border-top: 1px solid var(--linie);
+}
+
+/* Das Datumsfeld beim Bearbeiten einer freien Aufgabe. */
+.notiz-datum {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+.notiz-datum input {
+  padding: 6px 9px;
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  background: var(--flaeche);
+  color: var(--schrift);
+  font-family: inherit;
+  /* 16px, damit iOS beim Antippen nicht hineinzoomt. */
+  font-size: 16px;
+}
+
 
 /* --- Hinweis auf neue Änderungen -------------------------------------- */
 
