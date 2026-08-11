@@ -24,6 +24,10 @@
   --notiz-rand: #7a5af0;
   --notiz-flaeche: #f0edfd;
   --notiz-flaeche-hell: #e7e2fb;
+  /* Wichtiges bekommt eine eigene, wärmere Farbe – deutlich unterscheidbar
+     von den violetten Notizen und vom blauen Akzent. */
+  --wichtig: #d4453d;
+  --wichtig-flaeche: #fdeceb;
 }
 
 /* Wenn das Betriebssystem auf dunkel steht, drehen wir die Farben um.
@@ -46,6 +50,8 @@
     --notiz-rand: #9d84f5;
     --notiz-flaeche: #262336;
     --notiz-flaeche-hell: #2f2b42;
+    --wichtig: #f0706e;
+    --wichtig-flaeche: #352424;
   }
 }
 
@@ -367,6 +373,105 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 }
 
 .todo-offen-bearbeiten { display: block; }
+
+
+/* --- Wichtig markiert -------------------------------------------------- */
+
+/* Wichtiges soll auffallen, ohne zu schreien: kräftigerer Rand und ein
+   Stern. Erledigtes verliert die Hervorhebung wieder – sonst stünde eine
+   abgehakte Aufgabe genauso laut da wie eine offene. */
+.todo-wichtig {
+  border-left-color: var(--wichtig);
+  border-left-width: 4px;
+  background: var(--wichtig-flaeche);
+}
+
+.todo-stern {
+  color: var(--wichtig);
+  font-weight: 700;
+  margin-right: 5px;
+}
+
+.notiz-wichtig-markiert {
+  border-left-color: var(--wichtig);
+  background: var(--wichtig-flaeche);
+}
+
+.notiz-wichtig-markiert .notiz-symbol { color: var(--wichtig); opacity: 1; }
+
+/* Der Schalter im Bearbeitungsfeld. */
+.notiz-felder {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.notiz-wichtig {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--schrift-leise);
+  cursor: pointer;
+}
+
+.notiz-wichtig input { width: 18px; height: 18px; cursor: pointer; }
+
+
+/* --- Ganztagszeile im Kalender ----------------------------------------- */
+
+/* Freie Aufgaben haben keine Uhrzeit. Sie ins Zeitraster zu setzen wäre
+   erfunden, also bekommen sie einen eigenen Streifen darüber – so machen
+   es Kalenderprogramme auch. */
+.kalender-ganztag-ecke {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--flaeche);
+  border-right: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie);
+  font-size: 9px;
+  color: var(--schrift-leise);
+  text-align: right;
+  padding: 4px 5px;
+}
+
+.kalender-ganztag {
+  border-left: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie);
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 22px;
+}
+
+.kalender-ganztag-heute { background: color-mix(in srgb, var(--akzent) 7%, transparent); }
+
+.kalender-aufgabe {
+  background: var(--notiz-rand);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 9.5px;
+  line-height: 1.2;
+  cursor: pointer;
+  /* Lange Aufgaben werden abgeschnitten statt die Zeile aufzublähen –
+     der volle Text steht im Tooltip und in der Liste. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kalender-aufgabe-wichtig { background: var(--wichtig); }
+
+.kalender-aufgabe-erledigt {
+  background: transparent;
+  color: var(--schrift-leise);
+  text-decoration: line-through;
+}
 
 /* Überschrift und "+ Neue Aufgabe" nebeneinander. */
 .todo-kopfzeile {

@@ -25,7 +25,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "c8931d38";
+const GEBAUTE_VERSION = "f39223ac";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -479,9 +479,14 @@ function notizenLaden() {
     for (const kennung of Object.keys(gelesen)) {
       const wert = gelesen[kennung];
       if (typeof wert === "string") {
-        ergebnis[kennung] = { text: wert, erledigt: false };
+        ergebnis[kennung] = { text: wert, erledigt: false, wichtig: false };
       } else if (wert && typeof wert.text === "string") {
-        ergebnis[kennung] = { text: wert.text, erledigt: Boolean(wert.erledigt) };
+        ergebnis[kennung] = {
+          text: wert.text,
+          erledigt: Boolean(wert.erledigt),
+          // Fehlt das Feld, ist die Notiz aus einer älteren Fassung.
+          wichtig: Boolean(wert.wichtig),
+        };
       }
     }
     return ergebnis;
@@ -498,6 +503,16 @@ function notizText(kennung) {
 
 function notizErledigt(kennung) {
   return Boolean(notizen[kennung] && notizen[kennung].erledigt);
+}
+
+/* Ist dieser Eintrag als wichtig markiert? Funktioniert für beide Sorten –
+   Notizen an Vorlesungen wie freie Aufgaben. */
+function istWichtig(kennung) {
+  if (kennung.indexOf("eigen-") === 0) {
+    const aufgabe = aufgabeZuKennung(kennung);
+    return Boolean(aufgabe && aufgabe.wichtig);
+  }
+  return Boolean(notizen[kennung] && notizen[kennung].wichtig);
 }
 
 function erledigtUmschalten(kennung) {
@@ -518,12 +533,15 @@ function notizenSpeichern() {
 
 /* Setzt oder entfernt eine Notiz. Ein leerer Text löscht sie – so braucht es
    keinen eigenen Löschweg für "ich hab mich vertippt". */
-function notizSetzen(kennung, text) {
+function notizSetzen(kennung, text, wichtig) {
   const sauber = (text || "").trim();
   if (sauber) {
     // Ein vorhandenes Häkchen bleibt erhalten, wenn nur der Text geändert wird.
-    const erledigt = notizErledigt(kennung);
-    notizen[kennung] = { text: sauber, erledigt: erledigt };
+    notizen[kennung] = {
+      text: sauber,
+      erledigt: notizErledigt(kennung),
+      wichtig: wichtig === undefined ? istWichtig(kennung) : Boolean(wichtig),
+    };
   } else {
     delete notizen[kennung];
   }
@@ -549,6 +567,7 @@ function aufgabenLaden() {
         text: a.text,
         datum: a.datum,
         erledigt: Boolean(a.erledigt),
+        wichtig: Boolean(a.wichtig),
       }));
   } catch (fehler) {
     return [];
@@ -579,7 +598,7 @@ function aufgabenFuerTag(tagesschluessel) {
 
 /* Legt eine Aufgabe an oder ändert eine bestehende. Leerer Text löscht sie –
    genau wie bei den Notizen. */
-function aufgabeSetzen(kennung, text, datum) {
+function aufgabeSetzen(kennung, text, datum, wichtig) {
   const sauber = (text || "").trim();
 
   if (!sauber) {
@@ -592,12 +611,14 @@ function aufgabeSetzen(kennung, text, datum) {
   if (vorhandene) {
     vorhandene.text = sauber;
     if (datum) vorhandene.datum = datum;
+    if (wichtig !== undefined) vorhandene.wichtig = Boolean(wichtig);
   } else {
     aufgaben.push({
       id: kennung,
       text: sauber,
       datum: datum || tagesSchluessel(new Date()),
       erledigt: false,
+      wichtig: Boolean(wichtig),
     });
   }
   aufgabenSpeichern();
@@ -624,12 +645,19 @@ function notizFeldZeichnen(kennung, text, datum) {
                   ? "z. B. Bibliotheksbuch zurückgeben"
                   : "z. B. heute online · Abgabe bis Freitag · fällt aus"}"
       >${sicher(text)}</textarea>
-      ${mitDatum
-        ? `<label class="notiz-datum">
-             Tag
-             <input type="date" id="aufgabeDatum" value="${sicher(datum)}">
-           </label>`
-        : ""}
+      <div class="notiz-felder">
+        ${mitDatum
+          ? `<label class="notiz-datum">
+               Tag
+               <input type="date" id="aufgabeDatum" value="${sicher(datum)}">
+             </label>`
+          : ""}
+        <label class="notiz-wichtig">
+          <input type="checkbox" id="notizWichtig"
+                 ${istWichtig(kennung) ? "checked" : ""}>
+          <span>★ Wichtig</span>
+        </label>
+      </div>
       <div class="notiz-knoepfe">
         <button type="button" class="knopf-schlicht"
                 data-notiz-speichern="${sicher(kennung)}">Speichern</button>
@@ -650,7 +678,12 @@ function freieAufgabeZeichnen(aufgabe) {
   }
 
   const klassen = "notiz notiz-aufgabe"
-    + (aufgabe.erledigt ? " notiz-erledigt" : "");
+    + (aufgabe.erledigt ? " notiz-erledigt" : "")
+    + (aufgabe.wichtig && !aufgabe.erledigt ? " notiz-wichtig-markiert" : "");
+
+  let zeichen = "○";
+  if (aufgabe.erledigt) zeichen = "✓";
+  else if (aufgabe.wichtig) zeichen = "★";
 
   return `
     <div class="termin termin-aufgabe">
@@ -658,7 +691,7 @@ function freieAufgabeZeichnen(aufgabe) {
       <div class="termin-inhalt">
         <div class="${klassen}" data-notiz-oeffnen="${sicher(aufgabe.id)}"
              title="Zum Bearbeiten anklicken">
-          <span class="notiz-symbol">${aufgabe.erledigt ? "✓" : "○"}</span>
+          <span class="notiz-symbol">${zeichen}</span>
           <span>${sicher(aufgabe.text)}</span>
         </div>
       </div>
@@ -674,12 +707,15 @@ function notizZeichnen(termin) {
 
   if (text) {
     // Klassenliste ohne überflüssige Leerzeichen zusammensetzen.
-    const klassen = "notiz" + (notizErledigt(termin.id) ? " notiz-erledigt" : "");
+    const klassen = "notiz"
+      + (notizErledigt(termin.id) ? " notiz-erledigt" : "")
+      + (istWichtig(termin.id) ? " notiz-wichtig-markiert" : "");
     return `
       <div class="${klassen}"
            data-notiz-oeffnen="${sicher(termin.id)}"
            title="Zum Bearbeiten anklicken">
-        <span class="notiz-symbol">✎</span><span>${sicher(text)}</span>
+        <span class="notiz-symbol">${istWichtig(termin.id) ? "★" : "✎"}</span>
+        <span>${sicher(text)}</span>
       </div>`;
   }
 
@@ -759,16 +795,19 @@ function notizKlick(ereignis) {
   if (zuSpeichern) {
     const feld = document.getElementById("notizFeld");
     const datumsfeld = document.getElementById("aufgabeDatum");
+    const wichtigfeld = document.getElementById("notizWichtig");
     const text = feld ? feld.value : "";
     const datum = datumsfeld ? datumsfeld.value : "";
+    const wichtig = wichtigfeld ? Boolean(wichtigfeld.checked) : false;
 
     if (zuSpeichern.indexOf("neu:") === 0) {
       // Erst jetzt bekommt die Aufgabe eine Kennung.
-      aufgabeSetzen(neueAufgabenKennung(), text, datum || zuSpeichern.slice(4));
+      aufgabeSetzen(neueAufgabenKennung(), text,
+                    datum || zuSpeichern.slice(4), wichtig);
     } else if (zuSpeichern.indexOf("eigen-") === 0) {
-      aufgabeSetzen(zuSpeichern, text, datum);
+      aufgabeSetzen(zuSpeichern, text, datum, wichtig);
     } else {
-      notizSetzen(zuSpeichern, text);
+      notizSetzen(zuSpeichern, text, wichtig);
     }
 
     offeneNotiz = null;
@@ -930,6 +969,30 @@ function kalenderBauen(tage) {
       <div class="kalender-tagzahl">${String(eintrag.datum.getDate()).padStart(2, "0")}.${String(eintrag.datum.getMonth() + 1).padStart(2, "0")}.</div>
     </div>`).join("");
 
+  /* Die Ganztagszeile zwischen Kopf und Raster.
+
+     Freie Aufgaben haben keine Uhrzeit – sie ins Zeitraster zu setzen wäre
+     gelogen. Echte Kalender lösen das mit einem schmalen Streifen über dem
+     Raster, und genau das ist das hier. Die Zeile erscheint nur, wenn in
+     dieser Woche überhaupt eine Aufgabe liegt; sonst kostet sie nur Höhe. */
+  const gibtAufgaben = tage.some(eintrag => eintrag.aufgaben.length > 0);
+
+  const ganztagsZeile = !gibtAufgaben ? "" : `
+    <div class="kalender-ganztag-ecke">Aufg.</div>
+    ${tage.map(eintrag => `
+      <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}">
+        ${eintrag.aufgaben.map(aufgabe => {
+          const klassen = "kalender-aufgabe"
+            + (aufgabe.erledigt ? " kalender-aufgabe-erledigt" : "")
+            + (aufgabe.wichtig && !aufgabe.erledigt ? " kalender-aufgabe-wichtig" : "");
+          return `
+            <div class="${klassen}" data-notiz-oeffnen="${sicher(aufgabe.id)}"
+                 title="${sicher(aufgabe.text)}">
+              ${aufgabe.wichtig ? "★ " : ""}${aufgabe.erledigt ? "✓ " : ""}${sicher(aufgabe.text)}
+            </div>`;
+        }).join("")}
+      </div>`).join("")}`;
+
   const tagSpalten = tage.map(eintrag => {
     const istHeuteSpalte = tagesSchluessel(eintrag.datum) === heuteSchluessel;
 
@@ -963,7 +1026,10 @@ function kalenderBauen(tage) {
                             + (termin.raum ? " · " + termin.raum : "")
                             + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
           <div class="kalender-termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}${
-            notizen[termin.id] ? ` <span class="kalender-notizzeichen">✎</span>` : ""}</div>
+            notizen[termin.id]
+              ? ` <span class="kalender-notizzeichen">${
+                  istWichtig(termin.id) ? "★" : "✎"}</span>`
+              : ""}</div>
           <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
@@ -992,6 +1058,7 @@ function kalenderBauen(tage) {
       <div class="kalender" style="grid-template-columns:${spaltenVorlage}">
         <div class="kalender-ecke"></div>
         ${kopfSpalten}
+        ${ganztagsZeile}
         <div class="kalender-zeitachse" style="height:${hoehe}px">
           ${stundenBeschriftung.join("")}
         </div>
@@ -1035,6 +1102,7 @@ function aufgabenSammeln() {
       art: "notiz",
       text: notizen[kennung].text,
       erledigt: notizen[kennung].erledigt,
+      wichtig: Boolean(notizen[kennung].wichtig),
       termin: termin,
       // Ohne Termin ans Ende sortieren.
       start: termin ? termin.start : "9999",
@@ -1047,13 +1115,22 @@ function aufgabenSammeln() {
       art: "aufgabe",
       text: aufgabe.text,
       erledigt: aufgabe.erledigt,
+      wichtig: Boolean(aufgabe.wichtig),
       termin: null,
       datum: aufgabe.datum,
       start: aufgabe.datum + "T00:00",
     });
   }
 
-  liste.sort((a, b) => a.start.localeCompare(b.start));
+  /* Wichtiges zuerst, innerhalb dessen nach Datum.
+
+     Erledigtes ist davon ausgenommen – es wandert ohnehin in den eigenen
+     Abschnitt weiter unten. Ein abgehaktes "wichtig" soll nicht weiter
+     oben stehen als eine offene normale Aufgabe. */
+  liste.sort((a, b) => {
+    if (a.wichtig !== b.wichtig) return a.wichtig ? -1 : 1;
+    return a.start.localeCompare(b.start);
+  });
   return liste;
 }
 
@@ -1191,7 +1268,8 @@ function aufgabeZeichnen(aufgabe) {
 
   const klassen = "todo"
     + (aufgabe.erledigt ? " todo-erledigt" : "")
-    + (vorbei ? " todo-vorbei" : "");
+    + (vorbei ? " todo-vorbei" : "")
+    + (aufgabe.wichtig && !aufgabe.erledigt ? " todo-wichtig" : "");
 
   return `
     <div class="${klassen}">
@@ -1201,7 +1279,9 @@ function aufgabeZeichnen(aufgabe) {
         ${aufgabe.erledigt ? "✓" : ""}
       </button>
       <div class="todo-inhalt" data-notiz-oeffnen="${sicher(aufgabe.kennung)}">
-        <div class="todo-text">${sicher(aufgabe.text)}</div>
+        <div class="todo-text">${
+          aufgabe.wichtig ? `<span class="todo-stern">★</span>` : ""
+        }${sicher(aufgabe.text)}</div>
         <div class="todo-wann">
           ${vorbei ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
         </div>
