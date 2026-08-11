@@ -79,8 +79,17 @@ HWR selbst etwas vermerkt hat (ONLINE, Klausur, Exkursion). Die sind
 zusammengefasst: der 4. September besteht aus sechs Zeitblöcken, die alle
 „online" sind, und steht deshalb als **eine** Zeile da statt als sechs.
 
-Im Kalender steht bei Terminen mit Notiz nur ein ✎ — für den Text ist im
-Raster kein Platz.
+**Wichtiges markieren.** Im Bearbeitungsfeld gibt es einen Haken „★ Wichtig".
+Markierte Einträge stehen im To-do-Bereich ganz oben, bekommen einen Stern
+und eine rote statt violette Kennfarbe. Beim Abhaken verlieren sie die
+Hervorhebung wieder — eine erledigte Aufgabe soll nicht so laut dastehen wie
+eine offene.
+
+**Im Kalender** erscheinen freie Aufgaben in einer schmalen Ganztagszeile
+zwischen Tageskopf und Zeitraster. Sie haben keine Uhrzeit; sie ins Raster zu
+setzen wäre erfunden. Die Zeile taucht nur auf, wenn in der Woche wirklich
+etwas liegt. Bei Vorlesungen mit Notiz steht ein ✎ im Terminkästchen —
+beziehungsweise ein ★, wenn die Notiz als wichtig markiert ist.
 
 ### Aufgaben ohne Vorlesung
 
