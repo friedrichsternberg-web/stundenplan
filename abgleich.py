@@ -81,6 +81,29 @@ NICHT_BELEGTE_GRUPPEN = [
     "TM+HD",
 ]
 
+# Korrekturen an Zeiten, die im HWR-Plan falsch stehen.
+#
+# Beispiel: "Nachhaltiges Wirtschaften (Do)" faengt donnerstags erst um 8:45
+# an. Die HWR traegt das selbst uneinheitlich ein - ab dem 17.09. steht dort
+# 08:45, davor 08:00. Diese Liste zieht die Ausreisser gerade.
+#
+# WICHTIG: Die Korrektur greift NUR fuer die Anzeige (Dashboard und
+# Kalenderdatei). Der gespeicherte Vergleichsstand bleibt der Originalplan -
+# sonst wuerde jeder Abgleich eine Aenderung melden, die es nie gab, oder
+# umgekehrt eine echte Aenderung verschlucken.
+#
+# "von" verhindert doppeltes Verschieben: korrigiert die HWR die Zeit
+# irgendwann selbst auf 08:45, passt die Regel nicht mehr und tut nichts.
+ZEITKORREKTUREN = [
+    {
+        "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
+        "wochentag": 3,          # 0 = Montag, also 3 = Donnerstag
+        "von": "08:00",
+        "nach": "08:45",
+        "hinweis": "Beginn 8:45 (im Plan steht 8:00)",
+    },
+]
+
 # Laeuft das Skript auf deinem Mac oder bei GitHub?
 #
 # Beide tun dasselbe, aber mit unterschiedlichem Zweck:
@@ -726,6 +749,8 @@ def kalender_schreiben(termine):
             beschreibung.append("Art: " + termin["art"])
         if termin["anmerkung"]:
             beschreibung.append("Anmerkung: " + termin["anmerkung"])
+        if termin.get("korrektur"):
+            beschreibung.append("Korrigiert: " + termin["korrektur"])
 
         zeilen.extend([
             "BEGIN:VEVENT",
@@ -777,16 +802,61 @@ def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
         datei.write(";\n")
 
 
+def korrekturen_anwenden(termine):
+    """
+    Wendet ZEITKORREKTUREN an und gibt eine NEUE Liste zurueck.
+
+    Die uebergebene Liste bleibt unangetastet - das ist der Kern der Sache:
+    gespeichert und verglichen wird der Originalplan, angezeigt die
+    korrigierte Fassung. Wer das vertauscht, bekommt bei jedem Lauf eine
+    erfundene Aenderungsmeldung.
+
+    Korrigierte Termine bekommen ein Feld "korrektur" mit dem Grund, damit
+    im Dashboard sichtbar ist, dass hier etwas von Hand geradegezogen wurde.
+    """
+    ergebnis = []
+    getroffen = 0
+
+    for termin in termine:
+        neuer = dict(termin)
+
+        for regel in ZEITKORREKTUREN:
+            if neuer["titel"] != regel["titel"]:
+                continue
+            if neuer["start"][11:16] != regel["von"]:
+                continue
+
+            wochentag = datetime.strptime(neuer["start"][:10], "%Y-%m-%d").weekday()
+            if regel.get("wochentag") is not None and wochentag != regel["wochentag"]:
+                continue
+
+            neuer["start"] = neuer["start"][:11] + regel["nach"]
+            neuer["korrektur"] = regel["hinweis"]
+            getroffen += 1
+
+        ergebnis.append(neuer)
+
+    if getroffen:
+        print("   " + str(getroffen) + " Termin(e) zeitlich korrigiert")
+
+    return ergebnis
+
+
 def anzeige_schreiben(termine, verlauf, geprueft_am, fenster):
     """
     Schreibt beide Dateien, die angezeigt werden: die fuers Dashboard und die
     fuer den Kalender. Steht als eigene Funktion da, damit an den zwei
     Stellen, die sie aufrufen, nicht eine der beiden vergessen werden kann.
+
+    Hier - und nur hier - werden die Zeitkorrekturen angewandt. Beide
+    Anzeigen bekommen dadurch dieselbe korrigierte Fassung, waehrend der
+    gespeicherte Vergleichsstand der Originalplan bleibt.
     """
     if not os.path.isdir(DATENORDNER):
         os.makedirs(DATENORDNER)
-    dashboard_schreiben(termine, verlauf, geprueft_am, fenster)
-    kalender_schreiben(termine)
+    korrigierte = korrekturen_anwenden(termine)
+    dashboard_schreiben(korrigierte, verlauf, geprueft_am, fenster)
+    kalender_schreiben(korrigierte)
 
 
 # ===========================================================================

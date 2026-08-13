@@ -620,6 +620,15 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   font-weight: 500;
 }
 
+/* Eine von Hand geradegezogene Zeit. Bewusst zurückhaltend und in der
+   Notizfarbe: das kommt nicht von der HWR, sondern von uns – und man soll
+   sehen, dass die angezeigte Zeit vom Originalplan abweicht. */
+.termin-korrektur {
+  font-size: 12px;
+  margin-top: 4px;
+  color: var(--notiz-rand);
+}
+
 .tag-leer {
   padding: 12px 14px;
   color: var(--schrift-leise);

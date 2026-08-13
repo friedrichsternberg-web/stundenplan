@@ -254,6 +254,34 @@ Zwei Eigenheiten dieser Datei, die im Code berücksichtigt sind:
   nicht mehr drin. `plaene_vergleichen()` in `abgleich.py` kennt die
   Fenstergrenzen und meldet solche Randfälle bewusst nicht.
 
+## Zeiten, die im Plan falsch stehen
+
+Manches trägt die HWR falsch ein. *Nachhaltiges Wirtschaften (Do)* beginnt
+donnerstags um 8:45, im Plan steht bei den ersten fünf Terminen aber 8:00 —
+ab dem 17.09. dann korrekt 8:45. Solche Ausreißer zieht `ZEITKORREKTUREN`
+in `abgleich.py` gerade.
+
+**Die Korrektur greift nur für die Anzeige.** `korrekturen_anwenden()` gibt
+eine neue Liste zurück; gespeichert und verglichen wird weiter der
+Originalplan. Täte man es andersherum, meldete jeder Abgleich eine Änderung,
+die es nie gab — oder schlimmer, eine echte Änderung ginge unter.
+
+Das Feld `von` verhindert doppeltes Verschieben: korrigiert die HWR die Zeit
+irgendwann selbst auf 8:45, passt die Regel nicht mehr und tut nichts.
+Korrigierte Termine tragen im Dashboard einen Vermerk und in der
+Kalenderdatei eine Zeile in der Beschreibung — die abweichende Zeit soll
+nicht heimlich passieren.
+
+## Tests
+
+```bash
+python3 tests/test_korrektur.py
+```
+
+Die Tests gehören ins Repository, nicht in einen temporären Ordner. Eine
+frühere Sammlung lag im Sitzungs-Zwischenspeicher und war beim
+Sitzungswechsel weg.
+
 ## Semesterwechsel
 
 In `abgleich.py` ganz oben `SEMESTER` ändern, z. B. auf `"semester6"`.

@@ -453,6 +453,9 @@ function terminZeichnen(termin) {
         ${termin.anmerkung
           ? `<div class="termin-anmerkung">${sicher(termin.anmerkung)}</div>`
           : ""}
+        ${termin.korrektur
+          ? `<div class="termin-korrektur">✎ ${sicher(termin.korrektur)}</div>`
+          : ""}
         ${notizZeichnen(termin)}
       </div>
     </div>`;
