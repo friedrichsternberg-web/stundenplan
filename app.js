@@ -25,7 +25,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "f39223ac";
+const GEBAUTE_VERSION = "9a60302d";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -452,6 +452,9 @@ function terminZeichnen(termin) {
         <div class="termin-details">${sicher(details)}</div>
         ${termin.anmerkung
           ? `<div class="termin-anmerkung">${sicher(termin.anmerkung)}</div>`
+          : ""}
+        ${termin.korrektur
+          ? `<div class="termin-korrektur">✎ ${sicher(termin.korrektur)}</div>`
           : ""}
         ${notizZeichnen(termin)}
       </div>
