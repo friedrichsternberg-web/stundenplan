@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-08-13T07:24",
+ "geprueftAm": "2026-08-13T08:21",
  "fensterVon": "2026-08-10T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -205,14 +205,15 @@ const STUNDENPLAN = {
   },
   {
    "id": "sked.de1207973",
-   "start": "2026-08-13T08:00",
+   "start": "2026-08-13T08:45",
    "ende": "2026-08-13T13:15",
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
    "raum": "CL: 6A.207",
    "anmerkung": "",
-   "gruppe": ""
+   "gruppe": "",
+   "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
   {
    "id": "sked.de1210587",
@@ -480,14 +481,15 @@ const STUNDENPLAN = {
   },
   {
    "id": "sked.de1207974",
-   "start": "2026-08-20T08:00",
+   "start": "2026-08-20T08:45",
    "ende": "2026-08-20T13:15",
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
    "raum": "CL: 6A.207",
    "anmerkung": "",
-   "gruppe": ""
+   "gruppe": "",
+   "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
   {
    "id": "sked.de1210588",
@@ -832,14 +834,15 @@ const STUNDENPLAN = {
   },
   {
    "id": "sked.de1207975",
-   "start": "2026-08-27T08:00",
+   "start": "2026-08-27T08:45",
    "ende": "2026-08-27T13:15",
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
    "raum": "CL: 6A.207",
    "anmerkung": "",
-   "gruppe": ""
+   "gruppe": "",
+   "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
   {
    "id": "sked.de1210589",
@@ -1195,14 +1198,15 @@ const STUNDENPLAN = {
   },
   {
    "id": "sked.de1207976",
-   "start": "2026-09-03T08:00",
+   "start": "2026-09-03T08:45",
    "ende": "2026-09-03T13:15",
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
    "raum": "CL: 6A.207",
    "anmerkung": "",
-   "gruppe": ""
+   "gruppe": "",
+   "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
   {
    "id": "sked.de1210590",
@@ -1635,14 +1639,15 @@ const STUNDENPLAN = {
   },
   {
    "id": "sked.de1207977",
-   "start": "2026-09-10T08:00",
+   "start": "2026-09-10T08:45",
    "ende": "2026-09-10T13:15",
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
    "raum": "CL: 6A.207",
    "anmerkung": "",
-   "gruppe": ""
+   "gruppe": "",
+   "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
   {
    "id": "sked.de1210591",

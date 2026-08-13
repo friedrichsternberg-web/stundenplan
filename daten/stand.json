@@ -1,7 +1,7 @@
 {
  "etag": "\"2644a-658dd8912eec0\"",
- "geprueftAm": "2026-08-13T08:10",
- "geschriebenAm": "2026-08-13T07:24",
+ "geprueftAm": "2026-08-13T08:21",
+ "geschriebenAm": "2026-08-13T08:21",
  "nichtBelegteFaecher": [
   "Personalmanagement- und -entwicklung",
   "WPF - Angewandte Wohlfahrtsstaatentheorie",
@@ -3467,5 +3467,34 @@
    "gruppe": ""
   }
  ],
- "aenderungen": []
+ "aenderungen": [],
+ "einstellungen": {
+  "nichtBelegteFaecher": [
+   "Personalmanagement- und -entwicklung",
+   "WPF - Angewandte Wohlfahrtsstaatentheorie",
+   "WPF - Cross Cultural Management",
+   "WPF - Ethik in Wirtschaft und Gesellschaft",
+   "WPF - IRFS Rechnungslegung",
+   "WPF - Nachhaltiges Wirtschaften (Die)",
+   "WPF - Praxisorientierte Methoden der empirischen W",
+   "WPF - Recht der Künstlichen Intelligenz",
+   "WPF - Supply Chain Management",
+   "WPF - Wirtschaftsenglisch B2 (Do)",
+   "WPF - Wirtschaftsenglisch C1 (Do)",
+   "WPF - Wirtschaftspsychologie (Die)",
+   "WPF - Wirtschaftspsychologie (Do) Kurs 1"
+  ],
+  "nichtBelegteGruppen": [
+   "TM+HD"
+  ],
+  "zeitkorrekturen": [
+   {
+    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
+    "wochentag": 3,
+    "von": "08:00",
+    "nach": "08:45",
+    "hinweis": "Beginn 8:45 (im Plan steht 8:00)"
+   }
+  ]
+ }
 }
