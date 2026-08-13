@@ -802,6 +802,26 @@ def dashboard_schreiben(termine, aenderungsverlauf, geprueft_am, fenster):
         datei.write(";\n")
 
 
+def anzeige_einstellungen():
+    """
+    Alles, was die Anzeige beeinflusst, ohne aus dem HWR-Plan zu stammen.
+
+    Aendert sich hier etwas, muessen die Anzeigedateien neu geschrieben
+    werden - auch wenn der Plan selbst gleich geblieben ist.
+
+    Warum als EINE Sammlung und nicht als einzelne Vergleiche: genau daran
+    ist es schon zweimal gescheitert. Erst kannte die Pruefung die
+    Faecherliste nicht, dann die Zeitkorrekturen. Wer kuenftig eine weitere
+    Einstellung ergaenzt, muss sie nur hier eintragen - und nicht daran
+    denken, an zwei weiteren Stellen einen Vergleich nachzuziehen.
+    """
+    return {
+        "nichtBelegteFaecher": list(NICHT_BELEGTE_FAECHER),
+        "nichtBelegteGruppen": list(NICHT_BELEGTE_GRUPPEN),
+        "zeitkorrekturen": ZEITKORREKTUREN,
+    }
+
+
 def korrekturen_anwenden(termine):
     """
     Wendet ZEITKORREKTUREN an und gibt eine NEUE Liste zurueck.
@@ -897,8 +917,7 @@ def main():
         # Eine Ausnahme: wurde NICHT_BELEGTE_FAECHER von Hand geaendert, muss
         # das sofort sichtbar werden und nicht erst morgen.
         faecher_geaendert = (
-            alter_stand.get("nichtBelegteFaecher") != NICHT_BELEGTE_FAECHER
-            or alter_stand.get("nichtBelegteGruppen") != NICHT_BELEGTE_GRUPPEN)
+            alter_stand.get("einstellungen") != anzeige_einstellungen())
         if faecher_geaendert:
             print("   Faecherliste wurde geaendert")
         if (faecher_geaendert
@@ -911,8 +930,7 @@ def main():
                 (alter_stand.get("fensterVon", ""), alter_stand.get("fensterBis", "")),
             )
             alter_stand["geschriebenAm"] = jetzt
-            alter_stand["nichtBelegteFaecher"] = list(NICHT_BELEGTE_FAECHER)
-            alter_stand["nichtBelegteGruppen"] = list(NICHT_BELEGTE_GRUPPEN)
+            alter_stand["einstellungen"] = anzeige_einstellungen()
             print("   Anzeigedateien aufgefrischt")
 
         stand_speichern(alter_stand)
@@ -975,12 +993,10 @@ def main():
     # trotzdem stimmen.
     alte_termine = [] if erstlauf else alter_stand.get("termine", [])
     geschrieben_am = "" if erstlauf else alter_stand.get("geschriebenAm", "")
-    alte_faecher = None if erstlauf else alter_stand.get("nichtBelegteFaecher")
-    alte_gruppen = None if erstlauf else alter_stand.get("nichtBelegteGruppen")
+    alte_einstellungen = None if erstlauf else alter_stand.get("einstellungen")
 
     if (erstlauf or aenderungen or neue_termine != alte_termine
-            or alte_faecher != NICHT_BELEGTE_FAECHER
-            or alte_gruppen != NICHT_BELEGTE_GRUPPEN
+            or alte_einstellungen != anzeige_einstellungen()
             or stunden_seit(geschrieben_am) >= AUFFRISCHEN_NACH_STUNDEN):
         anzeige_schreiben(neue_termine, verlauf, jetzt, (fenster_von, fenster_bis))
         geschrieben_am = jetzt
@@ -989,8 +1005,7 @@ def main():
         "etag": etag,
         "geprueftAm": jetzt,
         "geschriebenAm": geschrieben_am,
-        "nichtBelegteFaecher": list(NICHT_BELEGTE_FAECHER),
-        "nichtBelegteGruppen": list(NICHT_BELEGTE_GRUPPEN),
+        "einstellungen": anzeige_einstellungen(),
         "fensterVon": fenster_von,
         "fensterBis": fenster_bis,
         "termine": neue_termine,

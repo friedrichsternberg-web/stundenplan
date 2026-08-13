@@ -266,6 +266,16 @@ eine neue Liste zurück; gespeichert und verglichen wird weiter der
 Originalplan. Täte man es andersherum, meldete jeder Abgleich eine Änderung,
 die es nie gab — oder schlimmer, eine echte Änderung ginge unter.
 
+**Jede Einstellung, die die Anzeige beeinflusst, gehört in
+`anzeige_einstellungen()`** — Fächerliste, Gruppenliste, Zeitkorrekturen.
+Der gespeicherte Stand merkt sich diese Sammlung; weicht sie ab, werden die
+Anzeigedateien neu geschrieben, auch wenn der Plan selbst gleich blieb.
+
+Das ist kein Schmuck: genau daran ist das Projekt zweimal gescheitert. Erst
+kannte die Prüfung die Fächerliste nicht, dann die Zeitkorrekturen — in
+beiden Fällen blieb die alte Anzeige stehen und die Änderung schien nicht
+anzukommen. Wer künftig eine Einstellung ergänzt, trägt sie nur dort ein.
+
 Das Feld `von` verhindert doppeltes Verschieben: korrigiert die HWR die Zeit
 irgendwann selbst auf 8:45, passt die Regel nicht mehr und tut nichts.
 Korrigierte Termine tragen im Dashboard einen Vermerk und in der

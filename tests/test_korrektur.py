@@ -91,6 +91,30 @@ if os.path.exists(abgleich.DATEI_STAND):
 else:
     print("  (uebersprungen - noch kein Stand vorhanden)")
 
+print("\n8. Eine geaenderte Einstellung erzwingt ein Neuschreiben")
+# Das ist die Falle, in die dieses Projekt zweimal getappt ist: die
+# Anzeigedateien werden nur bei Bedarf geschrieben - und "Bedarf" hiess
+# lange nur "der Plan hat sich geaendert". Aendert man dagegen eine
+# Einstellung, blieb die alte Anzeige stehen.
+einstellungen = abgleich.anzeige_einstellungen()
+pruefe("Faecherliste steckt drin", "nichtBelegteFaecher" in einstellungen)
+pruefe("Gruppenliste steckt drin", "nichtBelegteGruppen" in einstellungen)
+pruefe("Zeitkorrekturen stecken drin", "zeitkorrekturen" in einstellungen)
+
+# Ein alter Stand mit anderen Einstellungen muss als "veraendert" gelten.
+alter = copy.deepcopy(einstellungen)
+alter["zeitkorrekturen"] = []
+pruefe("fehlende Korrekturen werden als Unterschied erkannt",
+       alter != abgleich.anzeige_einstellungen())
+
+alter2 = copy.deepcopy(einstellungen)
+alter2["nichtBelegteFaecher"] = alter2["nichtBelegteFaecher"][:-1]
+pruefe("geaenderte Faecherliste ebenso",
+       alter2 != abgleich.anzeige_einstellungen())
+
+pruefe("unveraendert bleibt unveraendert",
+       copy.deepcopy(einstellungen) == abgleich.anzeige_einstellungen())
+
 print("\n" + ("ALLE TESTS BESTANDEN" if not fehler
               else "FEHLGESCHLAGEN: " + ", ".join(fehler)))
 sys.exit(1 if fehler else 0)
