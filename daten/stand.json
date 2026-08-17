@@ -1,7 +1,7 @@
 {
- "etag": "\"2644a-6592e0042a800\"",
- "geprueftAm": "2026-08-17T20:02",
- "geschriebenAm": "2026-08-17T20:02",
+ "etag": "\"2372f-659421dec4140\"",
+ "geprueftAm": "2026-08-17T21:37",
+ "geschriebenAm": "2026-08-17T21:37",
  "einstellungen": {
   "nichtBelegteFaecher": [
    "Personalmanagement- und -entwicklung",
@@ -31,262 +31,9 @@
    }
   ]
  },
- "fensterVon": "2026-08-10T00:00",
+ "fensterVon": "2026-08-17T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
-  {
-   "id": "sked.de1200291",
-   "start": "2026-08-10T08:00",
-   "ende": "2026-08-10T09:30",
-   "art": "SU",
-   "titel": "Nationale und internationale Leistungsanbieter I",
-   "dozent": "Nabi",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200293",
-   "start": "2026-08-10T09:45",
-   "ende": "2026-08-10T11:15",
-   "art": "SU",
-   "titel": "Nationale und internationale Leistungsanbieter I",
-   "dozent": "Nabi",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200295",
-   "start": "2026-08-10T11:30",
-   "ende": "2026-08-10T13:00",
-   "art": "SU",
-   "titel": "Nationale und internationale Leistungsanbieter I",
-   "dozent": "Nabi",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200274",
-   "start": "2026-08-10T14:00",
-   "ende": "2026-08-10T15:30",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200276",
-   "start": "2026-08-10T15:45",
-   "ende": "2026-08-10T17:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200278",
-   "start": "2026-08-10T17:30",
-   "ende": "2026-08-10T19:00",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207957",
-   "start": "2026-08-11T08:00",
-   "ende": "2026-08-11T13:15",
-   "art": "SI",
-   "titel": "WPF - Nachhaltiges Wirtschaften (Die)",
-   "dozent": "Matheis",
-   "raum": "CL: 6A.224",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208499",
-   "start": "2026-08-11T08:00",
-   "ende": "2026-08-11T13:15",
-   "art": "SI",
-   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
-   "dozent": "Buschong",
-   "raum": "CL: 6A.002",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207992",
-   "start": "2026-08-11T08:00",
-   "ende": "2026-08-11T13:15",
-   "art": "SI",
-   "titel": "WPF - Social Innovation",
-   "dozent": "Druffel, WagnerL",
-   "raum": "CL: 6A.014",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208404",
-   "start": "2026-08-11T08:45",
-   "ende": "2026-08-11T13:00",
-   "art": "SI",
-   "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
-   "dozent": "Knobloch",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1206748",
-   "start": "2026-08-12T14:00",
-   "ende": "2026-08-12T15:30",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1206750",
-   "start": "2026-08-12T15:45",
-   "ende": "2026-08-12T17:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207141",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:00",
-   "art": "SI",
-   "titel": "Personalmanagement- und -entwicklung",
-   "dozent": "Gruber-Beerfeltz",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207718",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - Cross Cultural Management",
-   "dozent": "also for Incomings DLM 1, WeissD",
-   "raum": "CL: 6A.020",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207118",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
-   "dozent": "Hüper",
-   "raum": "CL: 6A.014",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207087",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - IRFS Rechnungslegung",
-   "dozent": "Schültke",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207973",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
-   "dozent": "Gläser",
-   "raum": "CL: 6A.207",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1210587",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
-   "dozent": "Casselle",
-   "raum": "CL: 6B.453",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1210577",
-   "start": "2026-08-13T08:00",
-   "ende": "2026-08-13T13:15",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
-   "dozent": "Buchanan, for Incomings L&T",
-   "raum": "CL: 6B.468",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1203728",
-   "start": "2026-08-13T14:00",
-   "ende": "2026-08-13T15:30",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1203730",
-   "start": "2026-08-13T15:45",
-   "ende": "2026-08-13T17:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1205175",
-   "start": "2026-08-14T11:30",
-   "ende": "2026-08-14T13:00",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Knoll, TM+HD",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1205176",
-   "start": "2026-08-14T13:15",
-   "ende": "2026-08-14T14:45",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Knoll, TM+HD",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
   {
    "id": "sked.de1202376",
    "start": "2026-08-17T08:00",
@@ -360,7 +107,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -668,7 +415,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -1020,7 +767,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -1432,17 +1179,6 @@
    "gruppe": ""
   },
   {
-   "id": "sked.de1208503",
-   "start": "2026-09-08T08:00",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
-   "dozent": "Buschong",
-   "raum": "",
-   "anmerkung": "ONLINE",
-   "gruppe": ""
-  },
-  {
    "id": "sked.de1207996",
    "start": "2026-09-08T08:00",
    "ende": "2026-09-08T13:15",
@@ -1484,6 +1220,17 @@
    "dozent": "Knobloch",
    "raum": "CL: 6A.001",
    "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1208503",
+   "start": "2026-09-08T08:45",
+   "ende": "2026-09-08T13:15",
+   "art": "SI",
+   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+   "dozent": "Buschong",
+   "raum": "CL: 6B.468",
+   "anmerkung": "ONLINE",
    "gruppe": ""
   },
   {
@@ -1839,6 +1586,17 @@
    "gruppe": ""
   },
   {
+   "id": "sked.de1208504",
+   "start": "2026-09-15T08:00",
+   "ende": "2026-09-15T13:15",
+   "art": "SI",
+   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+   "dozent": "Buschong",
+   "raum": "CL: 6B.468",
+   "anmerkung": "ONLINE",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1207112",
    "start": "2026-09-15T08:00",
    "ende": "2026-09-15T13:15",
@@ -1880,17 +1638,6 @@
    "dozent": "Matheis",
    "raum": "CL: 6A.224",
    "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208504",
-   "start": "2026-09-15T08:45",
-   "ende": "2026-09-15T13:15",
-   "art": "SI",
-   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
-   "dozent": "Buschong",
-   "raum": "",
-   "anmerkung": "ONLINE",
    "gruppe": ""
   },
   {
@@ -2186,7 +1933,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -2538,7 +2285,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -2846,7 +2593,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -3132,7 +2879,7 @@
    "art": "SI",
    "titel": "WPF - Praxisorientierte Methoden der empirischen W",
    "dozent": "Buschong",
-   "raum": "",
+   "raum": "CL: 6B.468",
    "anmerkung": "ONLINE",
    "gruppe": ""
   },
@@ -3478,5 +3225,211 @@
    "gruppe": ""
   }
  ],
- "aenderungen": []
+ "aenderungen": [
+  {
+   "erkanntAm": "2026-08-17T21:37",
+   "anzahl": 9,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208500",
+      "start": "2026-08-18T08:00",
+      "ende": "2026-08-18T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208501",
+      "start": "2026-08-25T08:00",
+      "ende": "2026-08-25T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208502",
+      "start": "2026-09-01T08:00",
+      "ende": "2026-09-01T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208503",
+      "start": "2026-09-08T08:45",
+      "ende": "2026-09-08T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Beginn",
+       "vorher": "2026-09-08T08:00",
+       "nachher": "2026-09-08T08:45"
+      },
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208504",
+      "start": "2026-09-15T08:00",
+      "ende": "2026-09-15T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Beginn",
+       "vorher": "2026-09-15T08:45",
+       "nachher": "2026-09-15T08:00"
+      },
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208505",
+      "start": "2026-09-22T08:45",
+      "ende": "2026-09-22T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208506",
+      "start": "2026-09-29T08:45",
+      "ende": "2026-09-29T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208507",
+      "start": "2026-10-06T08:45",
+      "ende": "2026-10-06T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208508",
+      "start": "2026-10-13T08:45",
+      "ende": "2026-10-13T13:15",
+      "art": "SI",
+      "titel": "WPF - Praxisorientierte Methoden der empirischen W",
+      "dozent": "Buschong",
+      "raum": "CL: 6B.468",
+      "anmerkung": "ONLINE",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6B.468"
+      }
+     ]
+    }
+   ]
+  }
+ ]
 }
