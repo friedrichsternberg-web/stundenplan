@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-08-19T16:07",
+ "geprueftAm": "2026-08-19T21:12",
  "fensterVon": "2026-08-17T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -3145,6 +3145,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1215983",
+   "start": "2026-10-20T09:00",
+   "ende": "2026-10-20T10:00",
+   "art": "Klausur",
+   "titel": "WPF - Angewandte Wohlfahrtsstaatentheorie",
+   "dozent": "Fechter",
+   "raum": "CL: 6B.369 (L1)",
+   "anmerkung": "E-Klausur",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1215572",
    "start": "2026-10-20T15:00",
    "ende": "2026-10-20T16:00",
@@ -3223,6 +3234,27 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-19T21:12",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1215983",
+      "start": "2026-10-20T09:00",
+      "ende": "2026-10-20T10:00",
+      "art": "Klausur",
+      "titel": "WPF - Angewandte Wohlfahrtsstaatentheorie",
+      "dozent": "Fechter",
+      "raum": "CL: 6B.369 (L1)",
+      "anmerkung": "E-Klausur",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-17T21:37",
    "anzahl": 9,
