@@ -1,7 +1,7 @@
 {
- "etag": "\"2395c-6597e7781a380\"",
- "geprueftAm": "2026-08-21T21:08",
- "geschriebenAm": "2026-08-21T21:08",
+ "etag": "\"2394e-6599294fd7600\"",
+ "geprueftAm": "2026-08-21T21:53",
+ "geschriebenAm": "2026-08-21T21:53",
  "einstellungen": {
   "nichtBelegteFaecher": [
    "Personalmanagement- und -entwicklung",
@@ -954,8 +954,8 @@
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
-   "raum": "CL: 6A.207",
-   "anmerkung": "",
+   "raum": "",
+   "anmerkung": "Exkursion",
    "gruppe": ""
   },
   {
@@ -3237,6 +3237,38 @@
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-21T21:53",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207976",
+      "start": "2026-09-03T08:00",
+      "ende": "2026-09-03T13:15",
+      "art": "SI",
+      "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
+      "dozent": "Gläser",
+      "raum": "",
+      "anmerkung": "Exkursion",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.207",
+       "nachher": ""
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "",
+       "nachher": "Exkursion"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-19T21:12",
    "anzahl": 1,

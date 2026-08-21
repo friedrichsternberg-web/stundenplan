@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-08-21T21:08",
+ "geprueftAm": "2026-08-21T21:53",
  "fensterVon": "2026-08-17T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -949,8 +949,8 @@ const STUNDENPLAN = {
    "art": "SI",
    "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
    "dozent": "Gläser",
-   "raum": "CL: 6A.207",
-   "anmerkung": "",
+   "raum": "",
+   "anmerkung": "Exkursion",
    "gruppe": "",
    "korrektur": "Beginn 8:45 (im Plan steht 8:00)"
   },
@@ -3234,6 +3234,38 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-21T21:53",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207976",
+      "start": "2026-09-03T08:00",
+      "ende": "2026-09-03T13:15",
+      "art": "SI",
+      "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
+      "dozent": "Gläser",
+      "raum": "",
+      "anmerkung": "Exkursion",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.207",
+       "nachher": ""
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "",
+       "nachher": "Exkursion"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-19T21:12",
    "anzahl": 1,
