@@ -11,8 +11,31 @@
      3. "Als Nächstes"
      4. Wochenansicht
      5. Änderungen
-     6. Start
+     6. Geräteabgleich
+     7. Start
    ========================================================================= */
+
+/* Notbehelf, falls sync.js nicht geladen werden konnte.
+
+   Ohne ihn stünde die ganze App still: notizenSpeichern() ruft
+   Abgleich.anstossen() auf, und ein Fehler dort risse alles mit. So bleibt
+   im schlimmsten Fall der Abgleich aus – Plan, Notizen und Aufgaben
+   funktionieren weiter wie vorher, nur eben lokal. */
+if (typeof Abgleich === "undefined") {
+  var Abgleich = {
+    jetzt: () => Date.now(),
+    anstossen: () => {},
+    sofort: () => Promise.resolve(),
+    einrichten: () => {},
+    code: () => "",
+    codeSetzen: () => false,
+    codeLoeschen: () => {},
+    codeErzeugen: () => "",
+    codeLesbar: wert => wert,
+    codeNormalisieren: wert => String(wert || ""),
+    auskunft: () => ({ stand: "fehler", text: "sync.js fehlt" }),
+  };
+}
 
 const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
                     "Donnerstag", "Freitag", "Samstag"];
@@ -86,6 +109,20 @@ const SPEICHER_NOTIZEN = "stundenplan.notizen";
    eine Liste und keine Zuordnung. */
 const SPEICHER_AUFGABEN = "stundenplan.aufgaben";
 
+/* Was du gelöscht hast, und wann.
+
+   Für ein einzelnes Gerät wäre das überflüssig – gelöscht ist gelöscht. Beim
+   Abgleich mehrerer Geräte aber ist "hier steht nichts" mehrdeutig: hat das
+   Handy die Aufgabe gelöscht, oder kennt es sie einfach noch nicht? Ohne
+   Antwort darauf käme jede gelöschte Aufgabe beim nächsten Abgleich vom
+   anderen Gerät zurück.
+
+   Ein Grabstein beantwortet das: "diese Kennung wurde am … gelöscht". Er
+   gewinnt gegen jede ältere Fassung und verliert gegen jede neuere – falls
+   du dieselbe Notiz anderswo gerade neu geschrieben hast. Ausführlicher
+   steht das in sync.js. */
+const SPEICHER_GRABSTEINE = "stundenplan.grabsteine";
+
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
@@ -106,6 +143,9 @@ let notizen = {};
 
 // Freie Aufgaben: [{ id, text, datum: "2026-08-11", erledigt: false }, ...]
 let aufgaben = [];
+
+// Gelöschtes: { "eigen-1756…": 1756312800000 } – Kennung und Zeitpunkt.
+let grabsteine = {};
 
 // Die Kennung des Termins, dessen Notiz gerade bearbeitet wird – oder null.
 // Solange etwas offen ist, wird die Woche nicht neu gezeichnet, sonst wäre
@@ -482,13 +522,19 @@ function notizenLaden() {
     for (const kennung of Object.keys(gelesen)) {
       const wert = gelesen[kennung];
       if (typeof wert === "string") {
-        ergebnis[kennung] = { text: wert, erledigt: false, wichtig: false };
+        ergebnis[kennung] = { text: wert, erledigt: false, wichtig: false,
+                              geaendert: 0 };
       } else if (wert && typeof wert.text === "string") {
         ergebnis[kennung] = {
           text: wert.text,
           erledigt: Boolean(wert.erledigt),
           // Fehlt das Feld, ist die Notiz aus einer älteren Fassung.
           wichtig: Boolean(wert.wichtig),
+          /* Wann diese Notiz zuletzt angefasst wurde – der Schiedsrichter
+             beim Geräteabgleich. Notizen aus der Zeit davor bekommen eine 0
+             und verlieren damit gegen jede Fassung, die seither irgendwo
+             bearbeitet wurde. Genau richtig: die 0 heißt "unbekannt alt". */
+          geaendert: Number(wert.geaendert) || 0,
         };
       }
     }
@@ -521,6 +567,7 @@ function istWichtig(kennung) {
 function erledigtUmschalten(kennung) {
   if (!notizen[kennung]) return;
   notizen[kennung].erledigt = !notizen[kennung].erledigt;
+  notizen[kennung].geaendert = Abgleich.jetzt();
   notizenSpeichern();
 }
 
@@ -532,6 +579,7 @@ function notizenSpeichern() {
     // Dann steht die Notiz noch auf dem Bildschirm, ist aber nach dem
     // Neuladen weg. Besser als ein Absturz.
   }
+  Abgleich.anstossen();
 }
 
 /* Setzt oder entfernt eine Notiz. Ein leerer Text löscht sie – so braucht es
@@ -544,9 +592,15 @@ function notizSetzen(kennung, text, wichtig) {
       text: sauber,
       erledigt: notizErledigt(kennung),
       wichtig: wichtig === undefined ? istWichtig(kennung) : Boolean(wichtig),
+      geaendert: Abgleich.jetzt(),
     };
+    // Schreibt man an derselben Stelle wieder etwas hin, ist der Grabstein
+    // hinfällig. Bliebe er stehen, würde er die neue Notiz beim Abgleich
+    // gleich wieder beerdigen.
+    grabsteinEntfernen(kennung);
   } else {
     delete notizen[kennung];
+    grabsteinSetzen(kennung);
   }
   notizenSpeichern();
 }
@@ -571,6 +625,8 @@ function aufgabenLaden() {
         datum: a.datum,
         erledigt: Boolean(a.erledigt),
         wichtig: Boolean(a.wichtig),
+        // Siehe notizenLaden() – 0 heißt "von vor dem Geräteabgleich".
+        geaendert: Number(a.geaendert) || 0,
       }));
   } catch (fehler) {
     return [];
@@ -581,6 +637,46 @@ function aufgabenSpeichern() {
   try {
     localStorage.setItem(SPEICHER_AUFGABEN, JSON.stringify(aufgaben));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+
+/* --- Grabsteine ----------------------------------------------------------
+
+   Warum es sie gibt, steht bei SPEICHER_GRABSTEINE weiter oben.
+   ---------------------------------------------------------------------- */
+
+function grabsteineLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_GRABSTEINE);
+    const gelesen = roh ? JSON.parse(roh) : {};
+    if (!gelesen || typeof gelesen !== "object") return {};
+    const ergebnis = {};
+    for (const kennung of Object.keys(gelesen)) {
+      const zeitpunkt = Number(gelesen[kennung]);
+      if (isFinite(zeitpunkt) && zeitpunkt > 0) ergebnis[kennung] = zeitpunkt;
+    }
+    return ergebnis;
+  } catch (fehler) {
+    return {};
+  }
+}
+
+function grabsteineSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
+  } catch (fehler) { /* siehe notizenSpeichern() */ }
+}
+
+function grabsteinSetzen(kennung) {
+  grabsteine[kennung] = Abgleich.jetzt();
+  grabsteineSpeichern();
+}
+
+function grabsteinEntfernen(kennung) {
+  if (!(kennung in grabsteine)) return;
+  delete grabsteine[kennung];
+  grabsteineSpeichern();
 }
 
 /* Eine Kennung für eine neue Aufgabe. Die Zeit allein reicht nicht: legt man
@@ -606,6 +702,7 @@ function aufgabeSetzen(kennung, text, datum, wichtig) {
 
   if (!sauber) {
     aufgaben = aufgaben.filter(a => a.id !== kennung);
+    grabsteinSetzen(kennung);
     aufgabenSpeichern();
     return;
   }
@@ -615,6 +712,7 @@ function aufgabeSetzen(kennung, text, datum, wichtig) {
     vorhandene.text = sauber;
     if (datum) vorhandene.datum = datum;
     if (wichtig !== undefined) vorhandene.wichtig = Boolean(wichtig);
+    vorhandene.geaendert = Abgleich.jetzt();
   } else {
     aufgaben.push({
       id: kennung,
@@ -622,8 +720,11 @@ function aufgabeSetzen(kennung, text, datum, wichtig) {
       datum: datum || tagesSchluessel(new Date()),
       erledigt: false,
       wichtig: Boolean(wichtig),
+      geaendert: Abgleich.jetzt(),
     });
   }
+  // Siehe notizSetzen(): ein Grabstein an derselben Kennung ist jetzt falsch.
+  grabsteinEntfernen(kennung);
   aufgabenSpeichern();
 }
 
@@ -631,6 +732,7 @@ function aufgabeErledigtUmschalten(kennung) {
   const aufgabe = aufgabeZuKennung(kennung);
   if (!aufgabe) return;
   aufgabe.erledigt = !aufgabe.erledigt;
+  aufgabe.geaendert = Abgleich.jetzt();
   aufgabenSpeichern();
 }
 
@@ -1420,7 +1522,365 @@ function eintragZeichnen(eintrag) {
 
 
 /* -------------------------------------------------------------------------
-   6. Start
+   6. Geräteabgleich
+
+   Die Mechanik steckt in sync.js – Netz, Zusammenführen, Grabsteine. Hier
+   steht nur die Übersetzung in beide Richtungen: aus Notizen und Aufgaben
+   eine gemeinsame Sammlung machen, und aus einer gemeinsamen Sammlung
+   wieder Notizen und Aufgaben.
+
+   Der Zwischenschritt lohnt sich, weil sync.js dadurch nichts über
+   Stundenpläne wissen muss. Für sie ist alles nur "Kennung, Zeitstempel,
+   ein paar Felder".
+   ------------------------------------------------------------------------- */
+
+/* Trägt alles zusammen, was auf diesem Gerät steht.
+
+   Notizen und Aufgaben landen in einer Sammlung, obwohl sie getrennt
+   gespeichert sind. Das geht, weil ihre Kennungen sich nie überschneiden:
+   Notizen hängen an Termin-Kennungen der HWR ("sked.de…"), freie Aufgaben
+   fangen immer mit "eigen-" an. Beim Auspacken unten wird daran wieder
+   auseinandersortiert. */
+function abgleichSammeln() {
+  const eintraege = {};
+
+  for (const kennung of Object.keys(notizen)) {
+    const notiz = notizen[kennung];
+    eintraege[kennung] = {
+      art: "notiz",
+      text: notiz.text,
+      erledigt: Boolean(notiz.erledigt),
+      wichtig: Boolean(notiz.wichtig),
+      geaendert: Number(notiz.geaendert) || 0,
+    };
+  }
+
+  for (const aufgabe of aufgaben) {
+    eintraege[aufgabe.id] = {
+      art: "aufgabe",
+      text: aufgabe.text,
+      datum: aufgabe.datum,
+      erledigt: Boolean(aufgabe.erledigt),
+      wichtig: Boolean(aufgabe.wichtig),
+      geaendert: Number(aufgabe.geaendert) || 0,
+    };
+  }
+
+  for (const kennung of Object.keys(grabsteine)) {
+    /* Ein Grabstein zählt nur, wenn an derselben Kennung nichts Neueres
+       steht. Normalerweise kann das gar nicht vorkommen – notizSetzen()
+       und aufgabeSetzen() räumen den Grabstein weg, sobald wieder etwas
+       geschrieben wird. Sollte doch einmal beides dastehen, gewinnt hier
+       das Jüngere, statt dass ein alter Grabstein einen frischen Eintrag
+       verschluckt. */
+    const lebend = eintraege[kennung];
+    if (lebend && (Number(lebend.geaendert) || 0) > grabsteine[kennung]) continue;
+    eintraege[kennung] = { geloescht: true, geaendert: grabsteine[kennung] };
+  }
+
+  return { v: 1, eintraege: eintraege };
+}
+
+/* Der Rückweg: den zusammengeführten Stand in die Form bringen, mit der der
+   Rest der App arbeitet.
+
+   Alles wird dabei neu aufgebaut statt ergänzt. Das ist Absicht: was in der
+   Sammlung nicht mehr vorkommt, ist auch hier weg – sonst überlebten
+   gelöschte Einträge das Zusammenführen. */
+function abgleichUebernehmen(nutzlast) {
+  const eintraege = (nutzlast && nutzlast.eintraege) || {};
+  const neueNotizen = {};
+  const neueAufgaben = [];
+  const neueGrabsteine = {};
+
+  for (const kennung of Object.keys(eintraege)) {
+    const eintrag = eintraege[kennung] || {};
+    const zeitpunkt = Number(eintrag.geaendert) || 0;
+
+    if (eintrag.geloescht) { neueGrabsteine[kennung] = zeitpunkt; continue; }
+
+    // Kaputte Einträge aussortieren statt anzeigen. Ein halber Eintrag in
+    // der Ablage soll nicht die ganze Liste unbrauchbar machen.
+    if (typeof eintrag.text !== "string" || !eintrag.text) continue;
+
+    if (eintrag.art === "aufgabe" || kennung.indexOf("eigen-") === 0) {
+      if (typeof eintrag.datum !== "string" || !eintrag.datum) continue;
+      neueAufgaben.push({
+        id: kennung,
+        text: eintrag.text,
+        datum: eintrag.datum,
+        erledigt: Boolean(eintrag.erledigt),
+        wichtig: Boolean(eintrag.wichtig),
+        geaendert: zeitpunkt,
+      });
+    } else {
+      neueNotizen[kennung] = {
+        text: eintrag.text,
+        erledigt: Boolean(eintrag.erledigt),
+        wichtig: Boolean(eintrag.wichtig),
+        geaendert: zeitpunkt,
+      };
+    }
+  }
+
+  notizen = neueNotizen;
+  aufgaben = neueAufgaben;
+  grabsteine = neueGrabsteine;
+
+  /* Direkt in den Speicher, nicht über notizenSpeichern() – das würde
+     Abgleich.anstossen() aufrufen und damit einen Abgleich anstoßen, der
+     gerade selbst läuft. Eine Schleife wäre die Folge. */
+  try {
+    localStorage.setItem(SPEICHER_NOTIZEN, JSON.stringify(notizen));
+    localStorage.setItem(SPEICHER_AUFGABEN, JSON.stringify(aufgaben));
+    localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
+  } catch (fehler) { /* siehe notizenSpeichern() */ }
+}
+
+/* In die Zwischenablage legen – mit Rückfallweg.
+
+   navigator.clipboard gibt es nur auf sicheren Verbindungen und nicht in
+   jedem Browser. Der alte Weg über ein unsichtbares Textfeld funktioniert
+   praktisch überall und macht hier den Unterschied zwischen "Knopf tut
+   nichts" und "Knopf tut, was er soll". */
+function inZwischenablage(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true, () => altKopieren(text));
+  }
+  return Promise.resolve(altKopieren(text));
+}
+
+function altKopieren(text) {
+  try {
+    const feld = document.createElement("textarea");
+    feld.value = text;
+    feld.setAttribute("readonly", "");
+    feld.style.position = "fixed";
+    feld.style.opacity = "0";
+    document.body.appendChild(feld);
+    feld.select();
+    const geklappt = document.execCommand("copy");
+    document.body.removeChild(feld);
+    return geklappt;
+  } catch (fehler) {
+    return false;
+  }
+}
+
+// Die Adresse dieser Seite mit angehängtem Code – zum Weiterschicken.
+function abgleichLink() {
+  return location.origin + location.pathname + "#code=" + Abgleich.code();
+}
+
+/* Zeichnet das Geräte-Fenster. Zwei Zustände: eingerichtet oder nicht. */
+function geraeteZeichnen(meldung) {
+  const bereich = document.getElementById("geraeteInhalt");
+  if (!bereich) return;
+
+  const hinweis = meldung
+    ? `<p class="geraete-meldung">${sicher(meldung)}</p>` : "";
+
+  if (!Abgleich.code()) {
+    bereich.innerHTML = `
+      <p class="filter-hinweis">
+        Notizen und Aufgaben liegen bisher nur in diesem Browser. Schalte den
+        Abgleich ein, dann zeigen Handy und Laptop dasselbe.
+      </p>
+      <div class="filter-knoepfe">
+        <button type="button" class="knopf-schlicht knopf-betont" id="abgleichEin">
+          Abgleich einschalten
+        </button>
+      </div>
+      <p class="filter-hinweis">
+        Auf einem anderen Gerät schon eingerichtet? Dann trag hier dessen
+        Code ein – die Einträge beider Geräte werden zusammengeführt, es geht
+        nichts verloren.
+      </p>
+      <div class="code-eingabe">
+        <input type="text" id="codeFeld" placeholder="ABCDE-FGHJK-…"
+               autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <button type="button" class="knopf-schlicht" id="codeUebernehmen">Übernehmen</button>
+      </div>
+      ${hinweis}`;
+    return;
+  }
+
+  const stand = Abgleich.auskunft();
+  bereich.innerHTML = `
+    <p class="abgleich-stand abgleich-${stand.stand}">${sicher(stand.text)}</p>
+
+    <p class="filter-hinweis">
+      Dein Code. Trag ihn auf jedem weiteren Gerät einmal ein, oder schick dir
+      den Link – ein Tippen darauf richtet das Gerät ein.
+    </p>
+    <div class="code-anzeige">${sicher(Abgleich.codeLesbar(Abgleich.code()))}</div>
+
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht" id="codeKopieren">Code kopieren</button>
+      <button type="button" class="knopf-schlicht" id="linkKopieren">Link kopieren</button>
+      <button type="button" class="knopf-schlicht" id="jetztAbgleichen">Jetzt abgleichen</button>
+    </div>
+    ${hinweis}
+
+    <p class="filter-hinweis geraete-warnung">
+      Bewahr den Code auf, etwa im Passwortspeicher. Wer ihn hat, sieht deine
+      Notizen – und ohne ihn kommst du an die abgelegten Einträge nicht mehr
+      heran, falls dieser Browser einmal geleert wird.
+    </p>
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht knopf-gefahr" id="abgleichAus">
+        Abgleich ausschalten
+      </button>
+    </div>`;
+}
+
+/* Der stille Hinweis im To-do-Bereich, solange nichts eingerichtet ist.
+   Steht dort und nicht im Kopf, weil er nur die To-dos betrifft. */
+function abgleichHinweisZeichnen() {
+  const zeile = document.getElementById("abgleichHinweis");
+  if (!zeile) return;
+  const aus = !Abgleich.code();
+  zeile.hidden = !aus;
+  if (aus) {
+    zeile.innerHTML = `Diese Einträge gelten nur auf diesem Gerät.
+      <button type="button" class="knopf-verweis" id="abgleichHinweisKnopf">Abgleich einrichten</button>`;
+  }
+}
+
+/* Ein Code in der Adresse (…#code=ABCDE…) richtet das Gerät ein.
+
+   Das ist der bequeme Weg vom ersten aufs zweite Gerät: Link kopieren,
+   sich selbst schicken, antippen. Danach wird der Anhang aus der Adresse
+   entfernt – er soll nicht im Verlauf oder in einem Lesezeichen landen.
+
+   Steht schon ein anderer Code auf dem Gerät, wird gefragt. Ein Link, den
+   jemand anders schickt, soll nicht unbemerkt deinen Code ersetzen. */
+function codeAusAdresseUebernehmen() {
+  const treffer = /[#&]code=([A-Za-z0-9-]+)/.exec(location.hash || "");
+  if (!treffer) return false;
+
+  const neuerCode = Abgleich.codeNormalisieren(treffer[1]);
+  const alterCode = Abgleich.code();
+
+  // Anhang in jedem Fall wegräumen, auch wenn der Code nicht übernommen wird.
+  try { history.replaceState(null, "", location.pathname + location.search); }
+  catch (fehler) { /* dann bleibt er eben stehen */ }
+
+  if (!neuerCode || neuerCode === alterCode) return false;
+  if (alterCode && !confirm(
+        "Dieser Link richtet den Abgleich mit einem anderen Code ein.\n\n"
+        + "Deine bisherigen Einträge bleiben erhalten und werden mit dem "
+        + "neuen Gerät zusammengeführt. Übernehmen?")) {
+    return false;
+  }
+
+  return Abgleich.codeSetzen(neuerCode);
+}
+
+function geraeteVerbinden() {
+  const fenster = document.getElementById("geraeteHintergrund");
+  if (!fenster) return;
+
+  function oeffnen() { geraeteZeichnen(); fenster.hidden = false; }
+
+  document.getElementById("geraeteOeffnen").addEventListener("click", oeffnen);
+  document.getElementById("geraeteSchliessen").addEventListener("click", () => {
+    fenster.hidden = true;
+  });
+  fenster.addEventListener("click", ereignis => {
+    if (ereignis.target === fenster) fenster.hidden = true;
+  });
+
+  // Alle Knöpfe im Fenster über einen Zuhörer – der Inhalt wird ja bei
+  // jeder Änderung neu gezeichnet, einzeln angehängte Zuhörer wären weg.
+  document.getElementById("geraeteInhalt").addEventListener("click", ereignis => {
+    const ziel = ereignis.target;
+    if (!ziel || !ziel.id) return;
+
+    if (ziel.id === "abgleichEin") {
+      Abgleich.codeSetzen(Abgleich.codeErzeugen());
+      geraeteZeichnen("Eingerichtet. Deine Einträge werden gerade hochgeladen.");
+      Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
+      abgleichHinweisZeichnen();
+      return;
+    }
+
+    if (ziel.id === "codeUebernehmen") {
+      const feld = document.getElementById("codeFeld");
+      if (!Abgleich.codeSetzen(feld ? feld.value : "")) {
+        geraeteZeichnen("Der Code sieht nicht vollständig aus – er hat 25 Zeichen.");
+        return;
+      }
+      geraeteZeichnen("Übernommen. Wird zusammengeführt …");
+      Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
+      abgleichHinweisZeichnen();
+      return;
+    }
+
+    if (ziel.id === "codeKopieren") {
+      inZwischenablage(Abgleich.codeLesbar(Abgleich.code()))
+        .then(geklappt => geraeteZeichnen(geklappt
+          ? "Code kopiert." : "Kopieren ging nicht – markier ihn von Hand."));
+      return;
+    }
+
+    if (ziel.id === "linkKopieren") {
+      inZwischenablage(abgleichLink())
+        .then(geklappt => geraeteZeichnen(geklappt
+          ? "Link kopiert. Schick ihn dir aufs andere Gerät."
+          : "Kopieren ging nicht – markier den Code von Hand."));
+      return;
+    }
+
+    if (ziel.id === "jetztAbgleichen") {
+      geraeteZeichnen("Wird abgeglichen …");
+      Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
+      return;
+    }
+
+    if (ziel.id === "abgleichAus") {
+      if (!confirm("Abgleich ausschalten?\n\n"
+                   + "Die Einträge bleiben auf diesem Gerät und auch in der "
+                   + "Ablage. Sie werden nur nicht mehr abgeglichen.")) return;
+      Abgleich.codeLoeschen();
+      geraeteZeichnen();
+      abgleichHinweisZeichnen();
+      return;
+    }
+  });
+
+  /* Ein Code-Link, der auf eine SCHON OFFENE Seite trifft.
+
+     Beim Ausprobieren aufgefallen: tippt man den Link an, während die Seite
+     bereits offen ist, lädt der Browser sie nicht neu – er tauscht nur den
+     Anhang hinter dem Rautezeichen aus. starten() läuft dann kein zweites
+     Mal, und der Code wird nie übernommen. Der Link wirkt wie kaputt.
+
+     Genau der Fall ist der wahrscheinliche: die App liegt auf dem
+     Home-Bildschirm oder in einem offenen Tab, und der Link kommt per
+     Nachricht hinterher. */
+  window.addEventListener("hashchange", () => {
+    if (!codeAusAdresseUebernehmen()) return;
+    geraeteZeichnen("Übernommen. Wird zusammengeführt …");
+    fenster.hidden = false;
+    Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
+  });
+
+  // Der Verweis aus dem To-do-Bereich öffnet dasselbe Fenster.
+  document.getElementById("todoInhalt").addEventListener("click", ereignis => {
+    if (ereignis.target && ereignis.target.id === "abgleichHinweisKnopf") oeffnen();
+  });
+  const hinweisZeile = document.getElementById("abgleichHinweis");
+  if (hinweisZeile) {
+    hinweisZeile.addEventListener("click", ereignis => {
+      if (ereignis.target && ereignis.target.id === "abgleichHinweisKnopf") oeffnen();
+    });
+  }
+}
+
+
+/* -------------------------------------------------------------------------
+   7. Start
    ------------------------------------------------------------------------- */
 
 /* Zeichnet alles neu, was gerade zu sehen sein könnte. Die Reiterzahlen
@@ -1431,6 +1891,7 @@ function allesZeichnen() {
   todosZeichnen();
   verlaufZeichnen();
   reiterZahlenSetzen();
+  abgleichHinweisZeichnen();
 }
 
 /* Wechselt den Bereich. Die drei Abschnitte liegen alle in der Seite und
@@ -1621,7 +2082,12 @@ function starten() {
   NICHT_BELEGTE_GRUPPEN = STUNDENPLAN.nichtBelegteGruppen || [];
   notizen = notizenLaden();
   aufgaben = aufgabenLaden();
+  grabsteine = grabsteineLaden();
   abgewaehlteFaecher = filterLaden();
+
+  // Ein Code in der Adresse muss vor Abgleich.einrichten() gelesen werden –
+  // sonst startet der Abgleich noch mit dem alten Code oder gar keinem.
+  codeAusAdresseUebernehmen();
 
   try {
     const gemerkt = localStorage.getItem(SPEICHER_ANSICHT);
@@ -1636,11 +2102,22 @@ function starten() {
 
   kopfZeichnen();
   knoepfeVerbinden();
+  geraeteVerbinden();
   // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
   // hier kein weiterer Zeichen-Aufruf.
   ansichtSetzen(ansicht);
   seiteSetzen(seite);
+
+  /* Und erst jetzt der Abgleich: er darf nicht loslaufen, bevor notizen,
+     aufgaben und grabsteine geladen sind. Täte er es, sammelte er einen
+     leeren Stand ein – und würde damit in der Ablage alles überschreiben. */
+  Abgleich.einrichten({
+    sammeln: abgleichSammeln,
+    uebernehmen: abgleichUebernehmen,
+    // Läuft nur, wenn der Abgleich hier tatsächlich etwas verändert hat.
+    fertig: function () { allesZeichnen(); geraeteZeichnen(); },
+  });
 }
 
 /* Lädt daten/plan.js nach und ruft danach starten() auf.

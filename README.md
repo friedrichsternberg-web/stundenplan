@@ -126,6 +126,77 @@ Raum wechselt oder die Vorlesung verschoben wird.
 Sie landen bewusst **nicht** in `daten/meine-termine.ics`: die Datei wird bei
 jedem Abgleich neu geschrieben, eine Notiz darin wäre sofort wieder weg.
 
+## Auf mehreren Geräten
+
+Notizen und Aufgaben lagen anfangs nur im Browser des jeweiligen Geräts. Was
+am Laptop eingetragen wurde, kannte das Handy nicht. Seit dem Geräteabgleich
+sehen beide dasselbe.
+
+**Einrichten** über das ⚙ oben rechts. Auf dem ersten Gerät „Abgleich
+einschalten" — dabei entsteht ein 25-stelliger Code. Auf jedem weiteren Gerät
+denselben Code eintragen, oder bequemer: „Link kopieren", sich den Link selbst
+schicken und antippen.
+
+Beim Verbinden werden die Einträge beider Geräte **zusammengeführt**. Es geht
+nichts verloren, auch nicht, wenn auf beiden schon etwas stand.
+
+**Der Code ist der Schlüssel.** Bewahr ihn auf, etwa im Passwortspeicher. Wer
+ihn hat, sieht deine Notizen — und ohne ihn kommst du an die abgelegten
+Einträge nicht mehr heran, falls ein Browser einmal geleert wird.
+
+### Warum kein Login
+
+Die Seite liegt öffentlich auf GitHub. Der Zugangsschlüssel zur Ablage steht
+damit für jeden lesbar im Quelltext — so ist er auch gedacht. Er allein gibt
+aber nichts frei:
+
+- Die Tabelle liegt in einem Datenbankschema, das die Web-Schnittstelle gar
+  nicht veröffentlicht. Direkt ansprechen lässt sie sich nicht.
+- Erreichbar ist sie nur über zwei Funktionen, und die verlangen deinen Code.
+  Der steht nirgends im Quelltext, sondern nur auf deinen Geräten.
+- 25 Stellen aus einem Alphabet ohne verwechselbare Zeichen sind rund 124 Bit.
+  Raten scheidet aus.
+
+Der Vorteil gegenüber einer richtigen Anmeldung: kein Passwort, keine
+Bestätigungsmail, nichts zu tippen außer einmal pro Gerät.
+
+### Warum zusammenführen und nicht überschreiben
+
+Der naheliegende Weg wäre „wer zuletzt speichert, gewinnt". Der verliert aber
+Daten: schreibst du am Laptop eine Notiz, während das Handy noch den alten
+Stand hat, würde der nächste Handy-Stand deine Notiz auslöschen — lautlos.
+
+Deshalb wird pro **Eintrag** entschieden, nicht pro Gesamtstand. Jede Notiz
+und jede Aufgabe trägt einen eigenen Zeitstempel; beim Zusammenführen gewinnt
+die jüngere Fassung. Zwei Geräte können gleichzeitig etwas eintragen, ohne
+sich gegenseitig zu löschen.
+
+Damit die Zeitstempel vergleichbar sind, holt sich jedes Gerät bei jedem
+Abgleich die Uhrzeit des Servers und rechnet seinen eigenen Uhrenversatz
+heraus. Ohne das gewänne schlicht das Gerät, dessen Uhr am weitesten vorgeht.
+
+**Löschen** braucht einen eigenen Eintrag — einen Grabstein. Ohne ihn wäre
+„hier steht nichts" nicht von „davon weiß ich noch nichts" zu unterscheiden,
+und eine gelöschte Aufgabe käme beim nächsten Abgleich vom anderen Gerät
+zurück. Grabsteine verfallen nach 120 Tagen; das deckt auch die
+Semesterferien ab.
+
+**Gleichzeitiges Schreiben** fängt eine Fassungsnummer ab. Wer mit einem
+veralteten Stand schreiben will, wird abgewiesen und bekommt den aktuellen
+Stand mitgeliefert, führt zusammen und versucht es erneut.
+
+### Wann abgeglichen wird
+
+- beim Öffnen der App
+- sobald du sie wieder in den Vordergrund holst (der wichtigste Fall: genau
+  dann hast du gerade am anderen Gerät etwas eingetragen)
+- 1,2 Sekunden nach einer Eingabe
+- alle 90 Sekunden, solange die App offen und sichtbar ist
+- wenn das Netz zurückkommt
+
+Ohne Netz funktioniert alles weiter, nur eben lokal. Der nächste Abgleich
+holt es nach.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
@@ -288,6 +359,42 @@ nicht heimlich passieren.
 python3 tests/test_korrektur.py
 ```
 
+```bash
+osascript -l JavaScript tests/test_abgleich.js
+```
+
+```bash
+python3 tests/test_abgleich_ablage.py
+```
+
+`test_korrektur.py` prüft die Zeitkorrekturen. `test_abgleich.js` prüft das
+Zusammenführen zweier Stände — die Stelle, an der Daten verlorengehen
+könnten. `test_abgleich_ablage.py` prüft die echte Ablage: Berechtigungen,
+Sperre beim gleichzeitigen Schreiben, Abschottung der Räume gegeneinander.
+
+Der Ablage-Test läuft gegen den echten Server und benutzt dafür zwei feste
+Testräume, die er bei jedem Lauf überschreibt. Mit deinen Daten hat er
+nichts zu tun.
+
+**Warum osascript und nicht node:** auf diesem Mac liegt kein node. Der
+eingebaute JavaScript-Interpreter genügt für Rechenprüfungen. Promises laufen
+dort mangels Ereignisschleife nicht durch — deshalb wird der Netzteil in
+Python gegen den echten Server geprüft und nicht gegen eine Attrappe.
+
+**Die Tests wurden gegengeprüft.** In `sync.js` wurden nacheinander sechs
+Fehler absichtlich eingebaut, um zu sehen, ob die Tests anschlagen. Fünf
+wurden erkannt, einer nicht: die Prüfung „das Jüngere gewinnt" war grün,
+obwohl die Zeitregel ausgebaut war — die Ersatzregel für Gleichstände kam bei
+diesen Testdaten zufällig zum selben Ergebnis. Der Fall steht jetzt so da,
+dass nur die Zeitregel zum richtigen Ergebnis führt (eine Aufgabe, die am
+einen Gerät abgehakt und am anderen später wieder ausgehakt wird).
+
+Zwei weitere Fehler fanden sich erst beim Ausprobieren im Browser und haben
+seitdem eigene Tests: die Zuhörer für den regelmäßigen Abgleich wurden nicht
+angehängt, solange noch kein Code gesetzt war; und ein Code-Link, der auf
+eine bereits offene Seite trifft, löste kein Neuladen aus und wurde deshalb
+ignoriert.
+
 Die Tests gehören ins Repository, nicht in einen temporären Ordner. Eine
 frühere Sammlung lag im Sitzungs-Zwischenspeicher und war beim
 Sitzungswechsel weg.
@@ -304,6 +411,7 @@ Plan als „entfallen" gemeldet wird.
 |---|---|
 | `abgleich.py` | holt den Plan, vergleicht, benachrichtigt |
 | `index.html` · `style.css` · `app.js` | das Dashboard |
+| `sync.js` | der Geräteabgleich: Netz, Zusammenführen, Grabsteine |
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |
@@ -364,3 +472,17 @@ Die Mitteilungen richten sich immer nach der Liste in `abgleich.py`.
 - Ein **neu hinzukommendes** Wahlpflichtfach steht nicht in der Liste und
   wird deshalb angezeigt und gemeldet. Das ist Absicht: lieber einmal zu
   viel sehen als etwas verpassen.
+- **Der Fächerfilter wird nicht abgeglichen**, nur Notizen und Aufgaben. Die
+  Auswahl ist eher eine Geräteeinstellung, und ein stiller Wechsel wäre
+  verwirrender als ein zweites Häkchensetzen.
+- **Ohne den Code kommst du nicht an die abgelegten Einträge.** Es gibt
+  absichtlich keine Hintertür — sonst wäre die Absicherung keine. Der Code
+  steht im ⚙-Fenster; er gehört in den Passwortspeicher.
+- **Die Ablage liegt bei Supabase im kostenlosen Tarif.** Solche Projekte
+  schlafen nach sieben ruhigen Tagen ein. Damit das in den Semesterferien
+  nicht passiert, schickt die GitHub-Automatik bei jedem Lauf ein
+  Lebenszeichen mit.
+- **Die Einträge liegen unverschlüsselt in der Datenbank.** Von außen kommt
+  ohne Code niemand heran, Supabase als Betreiber grundsätzlich schon. Für
+  Vorlesungsnotizen ist das vertretbar; eine Verschlüsselung hätte bedeutet,
+  dass ein verlorener Code die Daten endgültig unlesbar macht.

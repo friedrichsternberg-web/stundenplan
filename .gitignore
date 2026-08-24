@@ -7,3 +7,6 @@
 # überschreiben, sobald man einmal "git pull" macht.
 daten/
 .DS_Store
+
+# Rechtefreigaben gelten nur auf diesem Mac.
+.claude/settings.local.json

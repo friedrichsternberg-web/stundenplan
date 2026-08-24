@@ -86,11 +86,12 @@ jobs:
         # dann, wenn sich am Quellcode etwas getan hat - und eben nicht bei
         # jedem Lauf, sonst gaebe es alle 30 Minuten eine neue index.html.
         run: |
-          cp index.html app.js style.css symbol.png veroeffentlichung/
+          cp index.html app.js sync.js style.css symbol.png veroeffentlichung/
           VERSION="${GITHUB_SHA:0:8}"
           sed -i \
             -e "s|href=\"style.css\"|href=\"style.css?v=$VERSION\"|" \
             -e "s|src=\"app.js\"|src=\"app.js?v=$VERSION\"|" \
+            -e "s|src=\"sync.js\"|src=\"sync.js?v=$VERSION\"|" \
             veroeffentlichung/index.html
           # Dieselbe Kennung in app.js hineinschreiben und in eine winzige
           # Datei daneben. app.js vergleicht beides beim Start und laedt sich
@@ -105,6 +106,33 @@ jobs:
           grep -o 'v=[0-9a-f]*' veroeffentlichung/index.html
           grep -o 'GEBAUTE_VERSION = "[0-9a-f]*"' veroeffentlichung/app.js
           cat veroeffentlichung/version.js
+
+          # Ohne sync.js laufen Notizen und Aufgaben nur noch oertlich. Das
+          # faellt beim Benutzen kaum auf - deshalb hier hart abbrechen,
+          # statt es stillschweigend zu veroeffentlichen.
+          test -s veroeffentlichung/sync.js \
+            || { echo "sync.js fehlt in der Veroeffentlichung"; exit 1; }
+          grep -q 'src="sync.js?v=' veroeffentlichung/index.html \
+            || { echo "sync.js ist in index.html nicht eingebunden"; exit 1; }
+
+      - name: Ablage wachhalten
+        # Kostenlose Supabase-Projekte schlafen nach sieben ruhigen Tagen
+        # ein - ausgerechnet in den Semesterferien also, wenn keiner
+        # hinschaut. Dieser Aufruf zaehlt als Aktivitaet und verhindert das.
+        #
+        # Der Schluessel darf oeffentlich sein: er gibt fuer sich genommen
+        # nichts frei, siehe Kopf von sync.js.
+        #
+        # "|| true": schlaegt der Aufruf fehl, ist das kein Grund, die
+        # Veroeffentlichung des Stundenplans scheitern zu lassen.
+        continue-on-error: true
+        run: |
+          SCHLUESSEL="sb_publishable_d7pxVkeMCqwhFsLrupDovA_ag2SmffE"
+          curl -s -S -m 20 -o /dev/null -w "Ablage antwortet: %{http_code}\n" \
+            -X POST "https://copydwpdqpnwjvknsakz.supabase.co/rest/v1/rpc/dashboard_wach" \
+            -H "apikey: $SCHLUESSEL" \
+            -H "Content-Type: application/json" \
+            -d '{}' || true
 
       - name: Ergebnis hochladen
         working-directory: veroeffentlichung
