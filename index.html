@@ -23,7 +23,7 @@
 <link rel="icon" href="symbol.png">
 
 <title>Uni-Dashboard</title>
-<link rel="stylesheet" href="style.css?v=201df7a5">
+<link rel="stylesheet" href="style.css?v=63ad367e">
 </head>
 <body>
 
@@ -33,11 +33,19 @@
     <h1 id="planName">Uni-Dashboard</h1>
     <p class="kopf-stand" id="planStand">wird geladen …</p>
   </div>
-  <!-- Erzwingt ein wirklich frisches Laden. Auf dem Home-Bildschirm gibt es
-       keine Adressleiste, mit der man das sonst erreichen könnte. -->
-  <button type="button" class="knopf-schlicht" id="neuLaden" title="Seite frisch laden">
-    ↻
-  </button>
+  <div class="kopf-knoepfe">
+    <!-- Geräteabgleich einrichten. Steht im Kopf und nicht in der
+         Werkzeugleiste, weil es die ganze App betrifft und nicht nur den
+         Plan. -->
+    <button type="button" class="knopf-schlicht" id="geraeteOeffnen" title="Geräte abgleichen">
+      ⚙
+    </button>
+    <!-- Erzwingt ein wirklich frisches Laden. Auf dem Home-Bildschirm gibt es
+         keine Adressleiste, mit der man das sonst erreichen könnte. -->
+    <button type="button" class="knopf-schlicht" id="neuLaden" title="Seite frisch laden">
+      ↻
+    </button>
+  </div>
 </header>
 
 <!-- Die Hauptnavigation. Jeder Knopf blendet einen der drei Bereiche ein.
@@ -91,6 +99,8 @@
       Alles, was du dir zu einzelnen Terminen notiert hast – und die Hinweise,
       die schon im Stundenplan der HWR stehen.
     </p>
+    <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
+    <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
     <div id="todoInhalt"></div>
   </section>
 
@@ -123,9 +133,26 @@
   </div>
 </div>
 
+<!-- Der Geräteabgleich, ebenfalls über der Seite. Sein Inhalt wechselt je
+     nachdem, ob schon etwas eingerichtet ist – gefüllt wird er von
+     geraeteZeichnen() in app.js. -->
+<div class="filter-hintergrund" id="geraeteHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Geräte abgleichen</h2>
+      <button type="button" class="knopf-schlicht" id="geraeteSchliessen">Fertig</button>
+    </div>
+    <div id="geraeteInhalt"></div>
+  </div>
+</div>
+
+<!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
+     Notizen und Aufgaben Abgleich.jetzt() auf. -->
+<script src="sync.js?v=63ad367e"></script>
+
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=201df7a5"></script>
+<script src="app.js?v=63ad367e"></script>
 
 </body>
 </html>

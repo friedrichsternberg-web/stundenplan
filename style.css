@@ -1089,3 +1089,118 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
     padding-bottom: 8px;
   }
 }
+
+
+/* --- Geräteabgleich ---------------------------------------------------- */
+
+/* Der Inhalt des Geräte-Fensters wechselt und kann laenger werden als der
+   Bildschirm - vor allem auf dem Handy, wo das Fenster von unten kommt.
+   Ohne das hier waere der untere Teil nicht erreichbar. */
+#geraeteInhalt { overflow-y: auto; }
+
+/* Wie es um den Abgleich steht. Eine Zeile, gefaerbt nach Lage. */
+.abgleich-stand {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 4px 0 14px;
+  padding: 8px 12px;
+  border-radius: var(--rundung);
+  background: var(--flaeche-gedaempft);
+  color: var(--schrift-leise);
+}
+
+.abgleich-gut    { color: var(--neu); }
+.abgleich-fehler { color: var(--entfallen); }
+.abgleich-bereit { color: var(--akzent); }
+
+/* Der Code selbst.
+
+   "user-select: all" laesst einen einzigen Tipper den ganzen Code
+   markieren. Auf dem Handy ist das der Unterschied zwischen "einmal tippen"
+   und "mit zwei Fingern die Enden suchen" - und falls das Kopieren ueber
+   den Knopf einmal nicht geht, ist es der Rettungsweg. */
+.code-anzeige {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  letter-spacing: .08em;
+  text-align: center;
+  padding: 14px 10px;
+  margin-bottom: 14px;
+  border: 1px solid var(--notiz-rand);
+  border-radius: var(--rundung);
+  background: var(--notiz-flaeche);
+  color: var(--schrift);
+  overflow-wrap: anywhere;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.code-eingabe { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.code-eingabe input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  padding: 9px 11px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+}
+
+.code-eingabe input:focus {
+  outline: none;
+  border-color: var(--akzent);
+}
+
+/* Rueckmeldung auf einen Knopfdruck - "Code kopiert", "Wird abgeglichen". */
+.geraete-meldung {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--akzent);
+  margin: 0 0 12px;
+}
+
+.geraete-warnung { border-top: 1px solid var(--linie); padding-top: 12px; }
+
+/* Der stille Hinweis im To-do-Bereich, solange nichts eingerichtet ist. */
+.abgleich-hinweis {
+  font-size: 13px;
+  color: var(--schrift-leise);
+  background: var(--flaeche-gedaempft);
+  border-radius: var(--rundung);
+  padding: 9px 12px;
+  margin: 0 0 14px;
+}
+
+.abgleich-hinweis[hidden] { display: none; }
+
+/* Ein Knopf, der aussieht wie ein Verweis. Fuer Nebensaechliches, das keinen
+   eigenen Kasten verdient. */
+.knopf-verweis {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--akzent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.knopf-betont {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-schrift);
+}
+
+.knopf-betont:hover { background: var(--akzent); opacity: .9; }
+
+.knopf-gefahr { color: var(--entfallen); }
+
+@media (max-width: 520px) {
+  /* Auf dem Handy stehen die Knoepfe sonst zu eng nebeneinander und der
+     Text darin bricht mitten im Wort um. */
+  .filter-knoepfe { flex-wrap: wrap; }
+  .code-anzeige { font-size: 15px; letter-spacing: .05em; }
+}
