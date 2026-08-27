@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-08-27T16:29",
+ "geprueftAm": "2026-08-28T01:54",
  "fensterVon": "2026-08-24T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -2061,8 +2061,8 @@ const STUNDENPLAN = {
    "art": "SI",
    "titel": "WPF - IRFS Rechnungslegung",
    "dozent": "Schültke",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
+   "raum": "",
+   "anmerkung": "Raum 6A.109",
    "gruppe": ""
   },
   {
@@ -2936,6 +2936,38 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-28T01:54",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207094",
+      "start": "2026-10-01T08:00",
+      "ende": "2026-10-01T13:15",
+      "art": "SI",
+      "titel": "WPF - IRFS Rechnungslegung",
+      "dozent": "Schültke",
+      "raum": "",
+      "anmerkung": "Raum 6A.109",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.001",
+       "nachher": ""
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "",
+       "nachher": "Raum 6A.109"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-21T21:53",
    "anzahl": 1,

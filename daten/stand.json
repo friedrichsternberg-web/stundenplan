@@ -1,7 +1,7 @@
 {
- "etag": "\"203f9-659f72a325600\"",
- "geprueftAm": "2026-08-27T16:29",
- "geschriebenAm": "2026-08-27T16:29",
+ "etag": "\"203ef-65a0b478061c0\"",
+ "geprueftAm": "2026-08-28T01:54",
+ "geschriebenAm": "2026-08-28T01:54",
  "einstellungen": {
   "nichtBelegteFaecher": [
    "Personalmanagement- und -entwicklung",
@@ -2065,8 +2065,8 @@
    "art": "SI",
    "titel": "WPF - IRFS Rechnungslegung",
    "dozent": "Schültke",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
+   "raum": "",
+   "anmerkung": "Raum 6A.109",
    "gruppe": ""
   },
   {
@@ -2940,6 +2940,38 @@
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-28T01:54",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207094",
+      "start": "2026-10-01T08:00",
+      "ende": "2026-10-01T13:15",
+      "art": "SI",
+      "titel": "WPF - IRFS Rechnungslegung",
+      "dozent": "Schültke",
+      "raum": "",
+      "anmerkung": "Raum 6A.109",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.001",
+       "nachher": ""
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "",
+       "nachher": "Raum 6A.109"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-21T21:53",
    "anzahl": 1,
