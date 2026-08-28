@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-08-28T12:25",
+ "geprueftAm": "2026-08-28T23:12",
  "fensterVon": "2026-08-24T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -1301,8 +1301,8 @@ const STUNDENPLAN = {
    "ende": "2026-09-15T13:15",
    "art": "SI",
    "titel": "WPF - Supply Chain Management",
-   "dozent": "Wringe",
-   "raum": "CL: 6A.207",
+   "dozent": "Woogt, Wringe",
+   "raum": "CL: 6A.205, CL: 6A.207",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -2936,6 +2936,38 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-08-28T23:12",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207112",
+      "start": "2026-09-15T08:00",
+      "ende": "2026-09-15T13:15",
+      "art": "SI",
+      "titel": "WPF - Supply Chain Management",
+      "dozent": "Woogt, Wringe",
+      "raum": "CL: 6A.205, CL: 6A.207",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Dozent",
+       "vorher": "Wringe",
+       "nachher": "Woogt, Wringe"
+      },
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.207",
+       "nachher": "CL: 6A.205, CL: 6A.207"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-28T01:54",
    "anzahl": 1,
