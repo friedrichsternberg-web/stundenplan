@@ -274,15 +274,57 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 .todo-ueberschrift:first-child { margin-top: 0; }
 
-.todo-unterueberschrift {
+/* Die Zeitfaecher im To-do-Bereich: Ueberfaellig, Heute, Morgen, Diese
+   Woche, Naechste Woche, Spaeter.
+
+   Sie kleben beim Scrollen oben fest. Bei zwanzig Aufgaben scrollt man
+   sonst an einer Ueberschrift vorbei und weiss drei Eintraege spaeter nicht
+   mehr, ob man noch in "Diese Woche" ist oder schon in "Spaeter". */
+.todo-gruppe {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
   color: var(--schrift-leise);
-  margin: 18px 0 8px;
+  background: var(--hintergrund);
+  margin: 20px 0 8px;
+  padding: 6px 0 6px;
   display: flex;
   align-items: center;
   gap: 7px;
+  cursor: default;
 }
+
+/* Ueberfaelliges soll man nicht uebersehen koennen. */
+.todo-gruppe-dringend {
+  color: var(--entfallen);
+}
+
+.todo-gruppe-dringend .todo-anzahl {
+  background: var(--wichtig-flaeche);
+  color: var(--entfallen);
+}
+
+/* Erledigtes ist zugeklappt und laesst sich aufklappen. */
+.todo-erledigt-fach > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.todo-erledigt-fach > summary::-webkit-details-marker { display: none; }
+
+.todo-erledigt-fach > summary::before {
+  content: "›";
+  display: inline-block;
+  font-size: 15px;
+  line-height: 1;
+  transition: transform .12s;
+}
+
+.todo-erledigt-fach[open] > summary::before { transform: rotate(90deg); }
 
 .todo-anzahl {
   background: var(--flaeche-gedaempft);
@@ -880,6 +922,10 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 /* Die Uhrzeit steht in jedem Kästchen ganz oben. Sie bekommt eine eigene
    Klasse, weil sie nie umbrechen darf: "09:45–11:15" auf zwei Zeilen wäre
    schlechter lesbar als abgeschnitten. */
+/* Die Endzeit weicht, wenn die Spalte zu schmal ist - siehe
+   kalenderTexteAnpassen() in app.js. */
+.kalender-zeit-ende[hidden] { display: none; }
+
 .kalender-termin-zeit {
   font-weight: 700;
   font-size: 10.5px;
@@ -891,14 +937,45 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .kalender-termin-titel {
   font-weight: 600;
   font-size: 11.5px;
-  /* Lange Modulnamen dürfen umbrechen, aber nicht den Kasten sprengen. */
-  overflow-wrap: anywhere;
+
+  /* Umbrechen ja, aber nicht mitten im Wort.
+
+     Vorher stand hier "overflow-wrap: anywhere". Das trennt an jeder
+     beliebigen Stelle, auch wenn es gar nicht nötig ist - heraus kam
+     "Schlüsselkompete / nzen V". Mit "break-word" wird ein Wort nur dann
+     zerlegt, wenn es allein keine Zeile füllt, und "hyphens: auto" setzt
+     dabei einen Trennstrich an eine sinnvolle Stelle. Die Sprache dafür
+     steht im <html lang="de">. */
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+
+  /* Was nicht mehr hineinpasst, endet mit drei Pünktchen statt waagerecht
+     durchgeschnitten zu werden. Wie viele Zeilen erlaubt sind, rechnet
+     kalenderBauen() aus und setzt es am Element. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .kalender-termin-zeile {
   opacity: .9;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  /* Raum und Hinweis sind kurz - eine Zeile genuegt, der Rest waere ohnehin
+     abgeschnitten und stuende dann halb da. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Antippbar: der Zeiger und ein leichtes Aufhellen sagen, dass hier mehr
+   zu holen ist. */
+.kalender-termin { cursor: pointer; }
+.kalender-termin:hover { filter: brightness(1.08); }
+.kalender-termin:focus-visible {
+  outline: 2px solid var(--schrift);
+  outline-offset: 1px;
 }
 
 
@@ -1203,4 +1280,57 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
      Text darin bricht mitten im Wort um. */
   .filter-knoepfe { flex-wrap: wrap; }
   .code-anzeige { font-size: 15px; letter-spacing: .05em; }
+}
+
+
+/* --- Detailfenster eines Kalendertermins -------------------------------- */
+
+/* Schmaler als der Faecherfilter: hier stehen ein paar Zeilen, keine Liste. */
+.filter-fenster-schmal { max-width: 420px; }
+
+.termin-titel {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 4px 0 14px;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Zwei Spalten: Bezeichnung links, Wert rechts. Bricht auf dem Handy nicht
+   um, weil die linke Spalte fest ist und die rechte den Rest bekommt. */
+.termin-liste {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.termin-liste dt {
+  color: var(--schrift-leise);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.termin-liste dd {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
+.termin-notiz {
+  border-left: 3px solid var(--notiz-rand);
+  background: var(--notiz-flaeche);
+  border-radius: 0 var(--rundung) var(--rundung) 0;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  overflow-wrap: break-word;
+}
+
+.termin-notiz-kopf {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--notiz-rand);
+  margin-bottom: 4px;
 }
