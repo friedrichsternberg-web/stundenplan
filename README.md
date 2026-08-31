@@ -419,6 +419,10 @@ python3 tests/test_korrektur.py
 ```
 
 ```bash
+python3 tests/test_erkennung.py
+```
+
+```bash
 osascript -l JavaScript tests/test_abgleich.js
 ```
 
@@ -430,7 +434,10 @@ osascript -l JavaScript tests/test_ansicht.js
 python3 tests/test_abgleich_ablage.py
 ```
 
-`test_korrektur.py` prüft die Zeitkorrekturen. `test_abgleich.js` prüft das
+`test_korrektur.py` prüft die Zeitkorrekturen. `test_erkennung.py` prüft, ob
+Änderungen und Ausfälle im Stundenplan noch erkannt werden — und ebenso
+wichtig, dass am Rand des gleitenden Zeitfensters **kein** Fehlalarm
+entsteht. `test_abgleich.js` prüft das
 Zusammenführen zweier Stände — die Stelle, an der Daten verlorengehen
 könnten. `test_ansicht.js` prüft die Zeitfächer im To-do-Bereich und die
 Karte „Als Nächstes". `test_abgleich_ablage.py` prüft die echte Ablage:

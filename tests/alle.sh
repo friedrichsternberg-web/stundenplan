@@ -14,6 +14,10 @@ echo "== Zeitkorrekturen im Plan =="
 python3 tests/test_korrektur.py
 
 echo
+echo "== Aenderungserkennung im Stundenplan =="
+python3 tests/test_erkennung.py
+
+echo
 echo "== Geraeteabgleich: Zusammenfuehren, Grabsteine, Code =="
 osascript -l JavaScript tests/test_abgleich.js
 
