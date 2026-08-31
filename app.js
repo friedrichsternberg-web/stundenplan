@@ -147,6 +147,13 @@ let aufgaben = [];
 // Gelöschtes: { "eigen-1756…": 1756312800000 } – Kennung und Zeitpunkt.
 let grabsteine = {};
 
+/* Ob das Fach "Erledigt" im To-do-Bereich aufgeklappt ist.
+
+   Nicht gespeichert, wie der Bearbeiten-Modus: beim Start soll es zu sein.
+   Innerhalb einer Sitzung muss es sich das aber merken, sonst klappte es
+   bei jedem Abhaken wieder zu – der Bereich wird ja neu gezeichnet. */
+let erledigteOffen = false;
+
 // Die Kennung des Termins, dessen Notiz gerade bearbeitet wird – oder null.
 // Solange etwas offen ist, wird die Woche nicht neu gezeichnet, sonst wäre
 // das Getippte weg.
@@ -381,8 +388,9 @@ function naechstenZeichnen() {
       ${treffer.anmerkung
         ? `<div class="naechster-zeile"><strong>${sicher(treffer.anmerkung)}</strong></div>`
         : ""}
-      ${notizen[treffer.id]
-        ? `<div class="naechster-notiz">✎ ${sicher(notizen[treffer.id])}</div>`
+      ${notizText(treffer.id)
+        ? `<div class="naechster-notiz">${
+             istWichtig(treffer.id) ? "★" : "✎"} ${sicher(notizText(treffer.id))}</div>`
         : ""}
     </div>`;
 }
@@ -437,6 +445,98 @@ function wocheZeichnen() {
 
   document.getElementById("tage").innerHTML =
     ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
+
+  if (ansicht === "kalender") kalenderTexteAnpassen();
+}
+
+
+/* Nachmessen, wie viel Text wirklich in jedes Kalenderkästchen passt.
+
+   kalenderBauen() schätzt das schon beim Zeichnen – aber eben nur geschätzt,
+   aus fest eingetragenen Zeilenhöhen. Die stehen doppelt: einmal im CSS,
+   einmal im JavaScript. Beim Ausprobieren kam heraus, dass die Schätzung
+   die Raum- und Hinweiszeile UNTER dem Titel vergaß: zwölf von achtzehn
+   Kästchen liefen unten über, der Text wurde waagerecht durchgeschnitten.
+
+   Statt die Zahlen nachzubessern und beim nächsten CSS-Umbau wieder falsch
+   zu haben, fragt diese Funktion den Browser. Er weiß es genau.
+
+   Die Reihenfolge beim Kürzen ist eine Rangfolge: Uhrzeit und Titel bleiben
+   immer, danach fliegt der Raum, dann der HWR-Hinweis. Alles zusammen steht
+   ohnehin im Fenster, das ein Tippen öffnet. */
+function kalenderTexteAnpassen() {
+  for (const kasten of document.querySelectorAll(".kalender-termin")) {
+    const titel = kasten.querySelector(".kalender-termin-titel");
+
+    /* Ist der Kalender gerade gar nicht sichtbar – etwa weil der To-do-
+       Bereich offen ist –, misst der Browser überall null. Dann bliebe
+       jedes Kästchen auf einer Zeile stehen. Lieber die Schätzung aus
+       kalenderBauen() behalten und später neu messen, wenn er sichtbar
+       ist; seiteSetzen() zeichnet dann ohnehin neu. */
+    if (!titel || kasten.clientHeight === 0) continue;
+
+    const zusatzZeilen = kasten.querySelectorAll(".kalender-termin-zeile");
+    for (const zeile of zusatzZeilen) zeile.hidden = false;
+
+    /* Passt die Zeitspanne nicht in die Spaltenbreite, bleibt nur die
+       Anfangszeit stehen.
+
+       Vorher wurde sie einfach abgeschnitten - auf dem Handy stand dann
+       "08:00-09:3" da. Eine halbe Endzeit ist schlimmer als gar keine: sie
+       sieht aus wie eine Angabe und ist doch keine. Die Anfangszeit allein
+       ist vollstaendig und richtig, und genau sie war der Grund, die Zeit
+       ueberhaupt in jedes Kaestchen zu schreiben - 9:45 liest man am
+       Stundenraster nicht ab. */
+    const zeitZeile = kasten.querySelector(".kalender-termin-zeit");
+    const endzeit = zeitZeile && zeitZeile.querySelector(".kalender-zeit-ende");
+    if (endzeit) {
+      endzeit.hidden = false;
+      if (zeitZeile.scrollWidth > zeitZeile.clientWidth + 1) endzeit.hidden = true;
+    }
+
+    const zeilenHoehe =
+      parseFloat(getComputedStyle(titel).lineHeight) || 14;
+
+    /* Wie viel Platz bleibt dem Titel?
+
+       Naheliegend wäre "Kastenhöhe minus scrollHeight". Das geht aber
+       nicht: der Kasten hat overflow:hidden, und dann ist scrollHeight nie
+       kleiner als der Kasten selbst. Bei einem hohen Kästchen mit wenig
+       Inhalt kommt so immer null heraus – gemessen wurde beim Ausprobieren
+       genau eine Zeile, auch in einem 208 Bildpunkte hohen Kasten.
+
+       Also andersherum: die Geschwister des Titels einzeln messen und von
+       der Innenhöhe abziehen. Die kennt der Browser exakt. */
+    const kastenStil = getComputedStyle(kasten);
+    function platzFuerTitel() {
+      let belegt = parseFloat(kastenStil.paddingTop)
+                 + parseFloat(kastenStil.paddingBottom);
+      for (const geschwister of kasten.children) {
+        if (geschwister === titel || geschwister.hidden) continue;
+        belegt += geschwister.getBoundingClientRect().height;
+      }
+      return kasten.clientHeight - belegt;
+    }
+
+    /* Angestrebt werden zwei Titelzeilen, nicht nur eine.
+
+       Der Grund ist der Anlass für diesen ganzen Umbau: "34 - Schlüssel-
+       kompetenzen V" auf einer Zeile ist "34 - Schlüsselkompe…" und damit
+       kaum von einem anderen Fach zu unterscheiden. Zwei Zeilen reichen für
+       fast jeden Modulnamen.
+
+       Bezahlt wird das mit der Raumzeile, die dann weichen muss. Im Kalender
+       sucht man den Termin, nicht den Raum – und wer ihn braucht, tippt das
+       Kästchen an oder schaut in die Liste, wo er immer steht. */
+    let naechste = 0;
+    while (platzFuerTitel() < zeilenHoehe * 2 && naechste < zusatzZeilen.length) {
+      zusatzZeilen[naechste].hidden = true;
+      naechste++;
+    }
+
+    titel.style.webkitLineClamp =
+      String(Math.max(1, Math.floor(platzFuerTitel() / zeilenHoehe)));
+  }
 }
 
 
@@ -858,9 +958,16 @@ function notizKlick(ereignis) {
   const ziel = ereignis.target && ereignis.target.closest
     ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
                               + "[data-notiz-abbrechen],[data-notiz-loeschen],"
-                              + "[data-todo-haken],[data-aufgabe-neu]")
+                              + "[data-todo-haken],[data-aufgabe-neu],[data-termin]")
     : null;
   if (!ziel) return;
+
+  // Ein Kästchen im Kalenderraster: alles zeigen, was dort nicht hinpasst.
+  const angetippterTermin = ziel.getAttribute("data-termin");
+  if (angetippterTermin) {
+    terminFensterZeigen(angetippterTermin);
+    return;
+  }
 
   /* Neue freie Aufgabe anlegen.
 
@@ -1124,18 +1231,47 @@ function kalenderBauen(tage) {
       // Was darunter noch Platz findet, hängt von der Höhe ab.
       const knapp = kastenHoehe < stundeHoehe * 0.8;
 
+      /* Wie viele Zeilen der Titel bekommen darf.
+
+         Vorher war das nicht ausgerechnet, sondern dem "overflow: hidden"
+         des Kastens überlassen. Das schnitt die letzte Zeile waagerecht
+         durch – man sah eine halbe Buchstabenreihe und wusste nicht, ob da
+         noch etwas kommt. Jetzt wird gezählt, was hineinpasst, und der Rest
+         bekommt drei Pünktchen. Abgeschnitten wird also immer noch, aber
+         sichtbar statt heimlich.
+
+         Die Zahlen sind die im CSS gesetzten Zeilenhöhen. Sie stehen hier
+         doppelt, weil JavaScript sie vor dem Zeichnen nicht messen kann. */
+      const schmal = SCHMALER_BILDSCHIRM.matches;
+      const polsterung = schmal ? 4 : 6;
+      const zeitZeile = schmal ? 12 : 14;
+      const titelZeile = schmal ? 12 : 15;
+      const titelZeilen = Math.max(1, Math.floor(
+        (kastenHoehe - polsterung - zeitZeile) / titelZeile));
+
+      const volltext = uhrzeit(termin.start) + "–" + uhrzeit(termin.ende)
+                     + " " + termin.titel
+                     + (termin.raum ? " · " + termin.raum : "")
+                     + (termin.dozent ? " · " + termin.dozent : "")
+                     + (termin.anmerkung ? " · " + termin.anmerkung : "");
+
+      /* Antippbar. Auf dem Handy gibt es kein Überfahren mit der Maus, also
+         auch keinen Hinweistext – ohne das hier bliebe ein knapper Kasten
+         schlicht unlesbar. */
       return `
         <div class="kalender-termin ${termin.anmerkung ? "kalender-termin-hinweis" : ""}"
              style="top:${oben}px; height:${kastenHoehe}px; left:${links}%; width:calc(${breite}% - 2px)"
-             title="${sicher(uhrzeit(termin.start) + "–" + uhrzeit(termin.ende) + " " + termin.titel
-                            + (termin.raum ? " · " + termin.raum : "")
-                            + (termin.anmerkung ? " · " + termin.anmerkung : ""))}">
-          <div class="kalender-termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}${
-            notizen[termin.id]
+             data-termin="${sicher(termin.id)}"
+             role="button" tabindex="0"
+             title="${sicher(volltext)}">
+          <div class="kalender-termin-zeit">${uhrzeit(termin.start)}<span
+               class="kalender-zeit-ende">–${uhrzeit(termin.ende)}</span>${
+            notizText(termin.id)
               ? ` <span class="kalender-notizzeichen">${
                   istWichtig(termin.id) ? "★" : "✎"}</span>`
               : ""}</div>
-          <div class="kalender-termin-titel">${sicher(termin.titel)}</div>
+          <div class="kalender-termin-titel"
+               style="-webkit-line-clamp:${titelZeilen}">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
             ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}`}
@@ -1170,6 +1306,73 @@ function kalenderBauen(tage) {
         ${tagSpalten}
       </div>
     </div>`;
+}
+
+
+/* Ein angetipptes Kalenderkästchen ausführlich zeigen.
+
+   Im Kalender ist der Platz begrenzt – ein 45-Minuten-Kästchen ist keine
+   50 Bildpunkte hoch. Am Rechner half der Hinweistext beim Überfahren mit
+   der Maus, auf dem Handy gibt es den nicht. Deshalb dieses Fenster: das
+   Raster zeigt, was hineinpasst, ein Tippen zeigt alles. */
+function terminFensterZeigen(kennung) {
+  const termin = terminZuKennung(kennung);
+  const fenster = document.getElementById("terminHintergrund");
+  const inhalt = document.getElementById("terminInhalt");
+  if (!termin || !fenster || !inhalt) return;
+
+  const zeilen = [
+    ["Wann", zeitpunktLesbar(termin.start) + "–" + uhrzeit(termin.ende)],
+    ["Raum", termin.raum],
+    ["Dozent", termin.dozent],
+    ["Gruppe", termin.gruppe],
+    ["Art", termin.art],
+    ["Hinweis der HWR", termin.anmerkung],
+    ["Korrigiert", termin.korrektur],
+  ].filter(zeile => zeile[1]);
+
+  inhalt.innerHTML = `
+    <h3 class="termin-titel">${sicher(termin.titel)}</h3>
+    <dl class="termin-liste">
+      ${zeilen.map(zeile => `
+        <dt>${sicher(zeile[0])}</dt>
+        <dd>${sicher(zeile[1])}</dd>`).join("")}
+    </dl>
+    ${notizText(kennung) ? `
+      <div class="termin-notiz">
+        <div class="termin-notiz-kopf">${istWichtig(kennung) ? "★" : "✎"} Deine Notiz</div>
+        ${sicher(notizText(kennung))}
+      </div>` : ""}
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
+        ${notizText(kennung) ? "Notiz bearbeiten" : "Notiz hinzufügen"}
+      </button>
+    </div>`;
+
+  fenster.hidden = false;
+}
+
+/* Vom Detailfenster aus zur Notiz springen.
+
+   Statt das Textfeld hier noch einmal zu bauen, führt der Weg zurück in die
+   Liste: dort steckt die Bearbeitung schon, samt Speichern, Löschen und
+   Wichtig-Haken. Zwei Textfelder für dieselbe Sache wären zwei Stellen, an
+   denen sich später ein Unterschied einschleicht. */
+function zurNotizSpringen(kennung) {
+  const fenster = document.getElementById("terminHintergrund");
+  if (fenster) fenster.hidden = true;
+
+  offeneNotiz = kennung;
+  if (!bearbeitenModus) bearbeitenUmschalten();
+  ansichtSetzen("liste");
+  notizfeldAktivieren();
+
+  // Ohne das steht das Feld womöglich außerhalb des Sichtfelds, und es
+  // sieht aus, als wäre nichts passiert.
+  const feld = document.getElementById("notizFeld");
+  if (feld && feld.scrollIntoView) {
+    feld.scrollIntoView({ block: "center" });
+  }
 }
 
 
@@ -1278,10 +1481,85 @@ function istVorbei(zeitangabe) {
   return zeitangabe.slice(0, 10) < tagesSchluessel(new Date());
 }
 
+/* Die Zeitgruppen, in denen offene Aufgaben stehen – in dieser Reihenfolge.
+
+   Eine flache Liste nach Datum war ab einem Dutzend Einträgen unübersicht-
+   lich: man sah nicht mehr, was drängt und was noch Zeit hat. Vor allem
+   Überfälliges ging unter, weil es zwar oben stand, sich aber nicht vom
+   Rest abhob.
+
+   "ohne" fängt die Notizen ab, deren Termin nicht mehr im Plan steht – etwa
+   weil das Semester weitergelaufen ist. Ohne dieses Fach hätten sie keins,
+   und "keins" hieße hier: nicht angezeigt. */
+const ZEITGRUPPEN = [
+  { schluessel: "ueberfaellig", titel: "Überfällig", klasse: "todo-gruppe-dringend" },
+  { schluessel: "heute",        titel: "Heute" },
+  { schluessel: "morgen",       titel: "Morgen" },
+  { schluessel: "woche",        titel: "Diese Woche" },
+  { schluessel: "naechste",     titel: "Nächste Woche" },
+  { schluessel: "spaeter",      titel: "Später" },
+  { schluessel: "ohne",         titel: "Ohne Termin im Plan" },
+];
+
+/* In welches Fach ein Eintrag gehört.
+
+   Wichtig ist hier vor allem eins: die Funktion gibt IMMER etwas zurück.
+   Fiele ein Eintrag durch alle Bedingungen, wäre er in der Anzeige
+   verschwunden – und niemand würde es merken, weil nichts fehlt, was man
+   vermissen könnte. Deshalb ist "spaeter" nicht die letzte Bedingung,
+   sondern der Rückfall. tests/test_gruppen.js prüft genau das. */
+function zeitgruppeVon(eintrag, heuteDatum) {
+  const bezug = eintrag.art === "aufgabe"
+    ? eintrag.datum
+    : (eintrag.termin ? eintrag.termin.start.slice(0, 10) : "");
+
+  if (!bezug) return "ohne";
+
+  const heute = tagesSchluessel(heuteDatum);
+  if (bezug < heute) return "ueberfaellig";
+  if (bezug === heute) return "heute";
+  if (bezug === tagesSchluessel(tageDazu(heuteDatum, 1))) return "morgen";
+
+  /* Die Woche endet sonntags. Wichtig ist, dass "diese Woche" von HEUTE aus
+     gerechnet wird und nicht von Montag: am Freitag heißt "diese Woche"
+     noch Samstag und Sonntag, nicht die vier Tage davor. Die liegen in
+     "Überfällig". */
+  const dieseWocheEnde = tagesSchluessel(tageDazu(montagDerWoche(heuteDatum), 6));
+  if (bezug <= dieseWocheEnde) return "woche";
+
+  const naechsteWocheEnde = tagesSchluessel(tageDazu(montagDerWoche(heuteDatum), 13));
+  if (bezug <= naechsteWocheEnde) return "naechste";
+
+  return "spaeter";
+}
+
+/* Verteilt die Einträge auf die Fächer. Gibt eine Zuordnung
+   Fachschlüssel -> Liste zurück, leere Fächer eingeschlossen. */
+function nachZeitgruppen(eintraege, heuteDatum) {
+  const faecher = {};
+  for (const gruppe of ZEITGRUPPEN) faecher[gruppe.schluessel] = [];
+
+  for (const eintrag of eintraege) {
+    const fach = zeitgruppeVon(eintrag, heuteDatum);
+
+    /* Doppelter Boden.
+
+       zeitgruppeVon() gibt immer eines der bekannten Fächer zurück - aber
+       wenn dort jemals eine Bedingung dazukommt und der Rückfall verrutscht,
+       stünde hier "faecher[undefined].push(...)". Das ist kein stiller
+       Fehler, sondern ein Absturz mitten im Zeichnen: der ganze To-do-
+       Bereich bliebe leer, samt der Aufgaben, die richtig zugeordnet waren.
+
+       Lieber ein Eintrag an der falschen Stelle als zwanzig unsichtbare. */
+    (faecher[fach] || faecher.spaeter).push(eintrag);
+  }
+  return faecher;
+}
+
 function todosZeichnen() {
-  const aufgaben = aufgabenSammeln();
-  const offen = aufgaben.filter(a => !a.erledigt);
-  const erledigt = aufgaben.filter(a => a.erledigt);
+  const alle = aufgabenSammeln();
+  const offen = alle.filter(a => !a.erledigt);
+  const erledigt = alle.filter(a => a.erledigt);
   const hinweise = hinweiseSammeln().filter(h => !istVorbei(h.start));
 
   const stuecke = [];
@@ -1305,27 +1583,44 @@ function todosZeichnen() {
       </div>`);
   }
 
-  if (aufgaben.length === 0) {
+  if (alle.length === 0) {
     stuecke.push(`
       <p class="leer-text">
         Noch nichts eingetragen. Über <strong>+ Neue Aufgabe</strong> legst du
         etwas an, das an keiner Vorlesung hängt. Notizen zu einer bestimmten
         Vorlesung schreibst du im Plan über <strong>Bearbeiten</strong>.
       </p>`);
+  } else if (offen.length === 0) {
+    stuecke.push(`<p class="leer-text">Nichts offen. Alles abgehakt.</p>`);
   } else {
-    if (offen.length > 0) {
-      stuecke.push(offen.map(aufgabeZeichnen).join(""));
-    } else {
-      stuecke.push(`<p class="leer-text">Nichts offen. Alles abgehakt.</p>`);
-    }
+    const faecher = nachZeitgruppen(offen, new Date());
 
-    if (erledigt.length > 0) {
+    for (const gruppe of ZEITGRUPPEN) {
+      const drin = faecher[gruppe.schluessel];
+      if (drin.length === 0) continue;          // leere Fächer bleiben stumm
       stuecke.push(`
-        <h3 class="todo-unterueberschrift">
-          Erledigt <span class="todo-anzahl">${erledigt.length}</span>
+        <h3 class="todo-gruppe ${gruppe.klasse || ""}">
+          ${sicher(gruppe.titel)}
+          <span class="todo-anzahl">${drin.length}</span>
         </h3>
-        ${erledigt.map(aufgabeZeichnen).join("")}`);
+        ${drin.map(e => aufgabeZeichnen(e, gruppe.schluessel)).join("")}`);
     }
+  }
+
+  /* Erledigtes ist zugeklappt.
+
+     Es soll nicht weg sein - man will nachsehen können, was man schon
+     abgehakt hat. Aber es soll auch nicht die halbe Seite füllen, während
+     oben drei offene Sachen stehen. <details> merkt sich sein Auf und Zu
+     nicht über das Neuzeichnen hinweg, deshalb die Variable daneben. */
+  if (erledigt.length > 0) {
+    stuecke.push(`
+      <details class="todo-erledigt-fach" ${erledigteOffen ? "open" : ""}>
+        <summary class="todo-gruppe">
+          Erledigt <span class="todo-anzahl">${erledigt.length}</span>
+        </summary>
+        ${erledigt.map(e => aufgabeZeichnen(e, "erledigt")).join("")}
+      </details>`);
   }
 
   // --- Hinweise aus dem Plan ------------------------------------------
@@ -1340,9 +1635,19 @@ function todosZeichnen() {
   }
 
   document.getElementById("todoInhalt").innerHTML = stuecke.join("");
+
+  const fach = document.querySelector(".todo-erledigt-fach");
+  if (fach) fach.addEventListener("toggle", () => { erledigteOffen = fach.open; });
 }
 
-function aufgabeZeichnen(aufgabe) {
+/* Eine Zeile im To-do-Bereich.
+
+   "fach" sagt, in welcher Zeitgruppe der Eintrag gerade steht. Gebraucht
+   wird das nur fuer eine Kleinigkeit: unter der roten Ueberschrift
+   "Ueberfaellig" muss nicht an jedem einzelnen Eintrag noch einmal "vorbei"
+   stehen. Im Fach "Erledigt" dagegen schon - dort stehen auch Sachen, die
+   rechtzeitig fertig wurden. */
+function aufgabeZeichnen(aufgabe, fach) {
   const termin = aufgabe.termin;
 
   let wann;
@@ -1360,6 +1665,8 @@ function aufgabeZeichnen(aufgabe) {
     ? aufgabe.datum
     : (termin ? termin.start : "");
   const vorbei = bezugstag && istVorbei(bezugstag) && !aufgabe.erledigt;
+  // Unter "Ueberfaellig" waere die Marke eine Doppelung.
+  const markeZeigen = vorbei && fach !== "ueberfaellig";
 
   // Wird der Eintrag gerade bearbeitet, steht hier das Textfeld statt der Zeile.
   if (offeneNotiz === aufgabe.kennung) {
@@ -1388,7 +1695,7 @@ function aufgabeZeichnen(aufgabe) {
           aufgabe.wichtig ? `<span class="todo-stern">★</span>` : ""
         }${sicher(aufgabe.text)}</div>
         <div class="todo-wann">
-          ${vorbei ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
+          ${markeZeigen ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
         </div>
       </div>
     </div>`;
@@ -2016,6 +2323,20 @@ function knoepfeVerbinden() {
     SCHMALER_BILDSCHIRM.addListener(wocheZeichnen);
   }
 
+  /* Und bei jeder anderen Größenänderung neu nachmessen.
+
+     matchMedia oben meldet sich nur beim Überschreiten der 520 Bildpunkte.
+     Zieht man am Rechner das Fenster von 1400 auf 700 schmaler, passiert
+     dort nichts – die Kalenderkästchen werden schmaler, die Zeilenzahl aus
+     kalenderTexteAnpassen() stammt aber noch von vorher. Ein volles
+     Neuzeichnen braucht es dafür nicht, nur ein neues Ausmessen. */
+  let messmarke = null;
+  window.addEventListener("resize", () => {
+    if (ansicht !== "kalender" || seite !== "plan") return;
+    if (messmarke) clearTimeout(messmarke);
+    messmarke = setTimeout(kalenderTexteAnpassen, 150);
+  });
+
   for (const knopf of document.querySelectorAll("[data-ansicht]")) {
     knopf.addEventListener("click", () => {
       ansichtSetzen(knopf.getAttribute("data-ansicht"));
@@ -2051,6 +2372,35 @@ function knoepfeVerbinden() {
   // Ein Klick neben das Fenster schließt es ebenfalls.
   fenster.addEventListener("click", ereignis => {
     if (ereignis.target === fenster) fenster.hidden = true;
+  });
+
+  /* Das Detailfenster eines Kalendertermins. Geöffnet wird es in
+     notizKlick(), geschlossen hier. */
+  const terminFenster = document.getElementById("terminHintergrund");
+  if (terminFenster) {
+    document.getElementById("terminSchliessen").addEventListener("click", () => {
+      terminFenster.hidden = true;
+    });
+    terminFenster.addEventListener("click", ereignis => {
+      if (ereignis.target === terminFenster) terminFenster.hidden = true;
+    });
+    document.getElementById("terminInhalt").addEventListener("click", ereignis => {
+      const knopf = ereignis.target.closest
+        ? ereignis.target.closest("[data-notiz-bearbeiten]") : null;
+      if (knopf) zurNotizSpringen(knopf.getAttribute("data-notiz-bearbeiten"));
+    });
+  }
+
+  /* Die Kalenderkästchen sind Knöpfe (role="button"), also müssen sie sich
+     auch mit der Tastatur bedienen lassen – sonst kommt man mit Tab hin,
+     aber nicht hinein. */
+  document.getElementById("tage").addEventListener("keydown", ereignis => {
+    if (ereignis.key !== "Enter" && ereignis.key !== " ") return;
+    const kasten = ereignis.target.closest
+      ? ereignis.target.closest("[data-termin]") : null;
+    if (!kasten) return;
+    ereignis.preventDefault();
+    terminFensterZeigen(kasten.getAttribute("data-termin"));
   });
 
   document.getElementById("filterAlle").addEventListener("click", () => {

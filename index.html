@@ -133,6 +133,19 @@
   </div>
 </div>
 
+<!-- Ein angetippter Kalendertermin. Im Raster ist der Platz begrenzt; hier
+     steht alles, was dort nicht hineinpasst. Gefüllt von
+     terminFensterZeigen() in app.js. -->
+<div class="filter-hintergrund" id="terminHintergrund" hidden>
+  <div class="filter-fenster filter-fenster-schmal">
+    <div class="filter-kopf">
+      <h2>Termin</h2>
+      <button type="button" class="knopf-schlicht" id="terminSchliessen">Fertig</button>
+    </div>
+    <div id="terminInhalt"></div>
+  </div>
+</div>
+
 <!-- Der Geräteabgleich, ebenfalls über der Seite. Sein Inhalt wechselt je
      nachdem, ob schon etwas eingerichtet ist – gefüllt wird er von
      geraeteZeichnen() in app.js. -->

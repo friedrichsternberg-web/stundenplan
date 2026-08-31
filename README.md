@@ -70,9 +70,35 @@ erscheinen die „+ Notiz"-Knöpfe. Das ist Absicht: bei 133 Terminen stünden
 sonst über hundert Knöpfe herum, für eine Handvoll Notizen. Vorhandene
 Notizen sind immer sichtbar und immer anklickbar, auch ohne Bearbeiten-Modus.
 
-**Gesammelt** werden sie im Reiter **To-dos**: offene oben, abgehakte
-darunter. Ein Termin, der schon vorbei ist und dessen Notiz noch offen steht,
-wird rot als „vorbei" markiert. Bearbeiten geht dort genauso wie im Plan.
+**Gesammelt** werden sie im Reiter **To-dos**, und zwar nach Zeit sortiert
+in Fächern:
+
+| Fach | Was hineinkommt |
+|---|---|
+| **Überfällig** | Datum liegt vor heute, noch nicht abgehakt — rot |
+| **Heute** | |
+| **Morgen** | |
+| **Diese Woche** | ab übermorgen bis Sonntag |
+| **Nächste Woche** | Montag bis Sonntag darauf |
+| **Später** | alles danach |
+| **Ohne Termin im Plan** | Notizen, deren Vorlesung die HWR entfernt hat |
+| **Erledigt** | zugeklappt, aufklappbar |
+
+Eine flache Datumsliste war ab einem Dutzend Einträgen unübersichtlich: man
+sah nicht mehr, was drängt. Vor allem Überfälliges ging unter — es stand zwar
+oben, hob sich aber nicht ab.
+
+„Diese Woche" wird von **heute** aus gerechnet, nicht ab Montag. Am Freitag
+heißt „diese Woche" noch Samstag und Sonntag; die Tage davor stehen unter
+Überfällig, wo sie hingehören.
+
+Wichtiges steht innerhalb seines Fachs oben. Nicht darüber hinaus: eine
+wichtige Aufgabe in drei Wochen soll nicht über dem stehen, was heute
+ansteht.
+
+Die Fachüberschriften kleben beim Scrollen oben fest, damit man bei zwanzig
+Aufgaben nicht die Orientierung verliert. Bearbeiten geht dort genauso wie
+im Plan.
 
 Darunter stehen die **Hinweise aus dem Stundenplan** — Termine, bei denen die
 HWR selbst etwas vermerkt hat (ONLINE, Klausur, Exkursion). Die sind
@@ -90,6 +116,33 @@ zwischen Tageskopf und Zeitraster. Sie haben keine Uhrzeit; sie ins Raster zu
 setzen wäre erfunden. Die Zeile taucht nur auf, wenn in der Woche wirklich
 etwas liegt. Bei Vorlesungen mit Notiz steht ein ✎ im Terminkästchen —
 beziehungsweise ein ★, wenn die Notiz als wichtig markiert ist.
+
+### Platz im Kalenderraster
+
+Ein 45-Minuten-Kästchen ist keine 50 Bildpunkte hoch, und auf dem iPhone
+teilen sich fünf Spalten 375 Bildpunkte Breite. Da passt nicht alles hinein.
+Drei Regeln teilen den Platz auf:
+
+1. **Umbrochen wird an Wortgrenzen, mit Trennstrich.** Vorher stand im CSS
+   `overflow-wrap: anywhere`, das trennt an beliebiger Stelle — heraus kam
+   „Schlüsselkompete / nzen V". Jetzt sorgen `break-word` und `hyphens: auto`
+   für „Schlüsselkompeten-zen V".
+2. **Was nicht mehr hineinpasst, endet mit drei Pünktchen** statt waagerecht
+   durchgeschnitten zu werden. Wie viele Zeilen erlaubt sind, **misst der
+   Browser** — `kalenderTexteAnpassen()` in `app.js` fragt nach den
+   tatsächlichen Höhen, statt sie im JavaScript nachzubauen. Ein erster
+   Versuch mit fest eingetragenen Zeilenhöhen vergaß die Raum- und
+   Hinweiszeile unter dem Titel: zwölf von achtzehn Kästchen liefen unten
+   über.
+3. **Rangfolge bei Platzmangel:** Uhrzeit und zwei Titelzeilen bleiben immer,
+   danach weicht der Raum, dann der HWR-Hinweis. Passt die Zeitspanne nicht
+   in die Spaltenbreite, bleibt nur die Anfangszeit stehen — „08:00–09:3"
+   sieht aus wie eine Angabe und ist doch keine.
+
+**Ein Tippen auf ein Kästchen zeigt alles**: vollständiger Titel, Zeit, Raum,
+Dozent, Gruppe, HWR-Hinweis, deine Notiz. Am Rechner half bisher der
+Hinweistext beim Überfahren mit der Maus — auf dem Handy gibt es den nicht,
+und damit war die Kalenderansicht dort halb blind.
 
 ### Aufgaben ohne Vorlesung
 
@@ -356,6 +409,12 @@ nicht heimlich passieren.
 ## Tests
 
 ```bash
+bash tests/alle.sh
+```
+
+Einzeln:
+
+```bash
 python3 tests/test_korrektur.py
 ```
 
@@ -364,13 +423,25 @@ osascript -l JavaScript tests/test_abgleich.js
 ```
 
 ```bash
+osascript -l JavaScript tests/test_ansicht.js
+```
+
+```bash
 python3 tests/test_abgleich_ablage.py
 ```
 
 `test_korrektur.py` prüft die Zeitkorrekturen. `test_abgleich.js` prüft das
 Zusammenführen zweier Stände — die Stelle, an der Daten verlorengehen
-könnten. `test_abgleich_ablage.py` prüft die echte Ablage: Berechtigungen,
-Sperre beim gleichzeitigen Schreiben, Abschottung der Räume gegeneinander.
+könnten. `test_ansicht.js` prüft die Zeitfächer im To-do-Bereich und die
+Karte „Als Nächstes". `test_abgleich_ablage.py` prüft die echte Ablage:
+Berechtigungen, Sperre beim gleichzeitigen Schreiben, Abschottung der Räume
+gegeneinander.
+
+Der wichtigste Einzeltest ist Nummer 5 in `test_ansicht.js`: er verteilt 733
+Einträge — jeden Tag von einem Jahr davor bis ein Jahr danach — auf die
+Zeitfächer und prüft, dass die Summe wieder 733 ergibt und kein Eintrag
+doppelt vorkommt. Fiele einer durch alle Bedingungen, verschwände er lautlos
+aus der Anzeige, und es fehlte nichts, was man vermissen könnte.
 
 Der Ablage-Test läuft gegen den echten Server und benutzt dafür zwei feste
 Testräume, die er bei jedem Lauf überschreibt. Mit deinen Daten hat er
@@ -389,11 +460,20 @@ diesen Testdaten zufällig zum selben Ergebnis. Der Fall steht jetzt so da,
 dass nur die Zeitregel zum richtigen Ergebnis führt (eine Aufgabe, die am
 einen Gerät abgehakt und am anderen später wieder ausgehakt wird).
 
-Zwei weitere Fehler fanden sich erst beim Ausprobieren im Browser und haben
+Mehrere Fehler fanden sich erst beim Ausprobieren im Browser und haben
 seitdem eigene Tests: die Zuhörer für den regelmäßigen Abgleich wurden nicht
-angehängt, solange noch kein Code gesetzt war; und ein Code-Link, der auf
-eine bereits offene Seite trifft, löste kein Neuladen aus und wurde deshalb
-ignoriert.
+angehängt, solange noch kein Code gesetzt war; ein Code-Link, der auf eine
+bereits offene Seite trifft, löste kein Neuladen aus und wurde deshalb
+ignoriert; und in der Karte „Als Nächstes" stand `[object Object]` statt der
+Notiz — ein Überbleibsel davon, dass eine Notiz früher ein bloßer Text war
+und später ein Objekt wurde.
+
+Beim Ausmessen der Kalenderkästchen ist zweimal eine Messung grün gewesen,
+die gar nichts gemessen hat: einmal, weil der Kalender im Hintergrund lag und
+alle Höhen null waren, einmal, weil `scrollHeight` bei `overflow: hidden` nie
+kleiner als das Element selbst wird und die Rechnung deshalb immer genau eine
+Zeile ergab. Beides sah nach einem Ergebnis aus. Seitdem prüft jede Messung
+zuerst, ob sie überhaupt etwas misst.
 
 Die Tests gehören ins Repository, nicht in einen temporären Ordner. Eine
 frühere Sammlung lag im Sitzungs-Zwischenspeicher und war beim
@@ -412,6 +492,7 @@ Plan als „entfallen" gemeldet wird.
 | `abgleich.py` | holt den Plan, vergleicht, benachrichtigt |
 | `index.html` · `style.css` · `app.js` | das Dashboard |
 | `sync.js` | der Geräteabgleich: Netz, Zusammenführen, Grabsteine |
+| `tests/alle.sh` | ruft alle Testsammlungen nacheinander auf |
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |
