@@ -18,6 +18,10 @@ echo "== Aenderungserkennung im Stundenplan =="
 python3 tests/test_erkennung.py
 
 echo
+echo "== Mail-Benachrichtigung (ohne Postfach und ohne Passwort) =="
+python3 tests/test_postfach.py
+
+echo
 echo "== Geraeteabgleich: Zusammenfuehren, Grabsteine, Code =="
 osascript -l JavaScript tests/test_abgleich.js
 

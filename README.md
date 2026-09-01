@@ -313,6 +313,76 @@ Aus demselben Grund bekommt `sw.js` als einzige Datei **keine Versionsnummer**
 an die Adresse: ein Service Worker wird über seinen Pfad angemeldet, und mit
 wechselndem `?v=…` wäre es bei jeder Veröffentlichung ein anderer.
 
+## Neue Mail melden
+
+Das HWR-Postfach wird alle fünf Minuten angeschaut. Kommt etwas Neues und
+Ungelesenes an, meldet sich das Handy mit Absender und Betreff.
+
+**Gespeichert wird nichts.** Keine Mail landet in der App, bei Supabase oder
+sonstwo. Das Skript merkt sich genau zwei Zahlen: welche Nachricht zuletzt
+gesehen wurde, und zu welchem Postfachstand die Zählung gehört.
+
+**Gelesen wird auch nichts.** Der Abruf benutzt `BODY.PEEK`, das ist die
+Fassung, die den Gelesen-Haken nicht setzt. Ohne PEEK wäre nach dem ersten
+Lauf das ganze Postfach als gelesen markiert.
+
+### Warum das nur auf dem Mac läuft
+
+Der HWR-Login ist derselbe für Moodle und die Prüfungsverwaltung. Ihn auf
+einem fremden Server zu hinterlegen hieße, das ganze Hochschulkonto an einem
+Ort zu bündeln. Deshalb liegt das Passwort im **macOS-Schlüsselbund**, von
+Friedrich selbst eingetragen, und verlässt den Rechner nicht.
+
+Der Preis: nachts und unterwegs kommt keine Meldung, der Mac muss an und
+angemeldet sein. Die Stundenplan-Meldungen sind davon unberührt, die laufen
+über GitHub und Supabase rund um die Uhr.
+
+```bash
+bash postfach-einschalten.sh
+```
+
+Das Skript fragt Benutzernamen und Passwort ab, legt beides mit `security`
+im Schlüsselbund ab und richtet den Hintergrund-Job ein. Vorher macht es
+einen ersten Lauf, der nur den jetzigen Stand merkt und **nichts meldet** —
+sonst kämen beim Einschalten so viele Mitteilungen, wie ungelesene Mails im
+Postfach liegen. iOS drosselt eine App, die im Schwall meldet, und dann käme
+später auch das Wichtige nicht mehr durch.
+
+### Was doch das Haus verlässt
+
+Der Text der Benachrichtigung: Absender und Betreff. Er läuft über Supabase
+und Apples Push-Dienst. Gespeichert wird er bei beiden nicht, aber er geht
+dort durch. Wer das nicht will, setzt in `postfach.py` oben
+`NUR_ANZAHL_MELDEN = True` — dann steht in der Meldung nur „2 neue Mails".
+
+### Die drei Fallen, um die es geht
+
+1. **`UID n:*` liefert in IMAP immer mindestens eine Nachricht**, auch wenn
+   keine mit einer Nummer ab n existiert. Ein Bereich darf nach der Norm
+   nicht leer sein, also gibt der Server die höchste vorhandene zurück. Ohne
+   Nachprüfung käme alle fünf Minuten dieselbe alte Mail.
+2. **Der erste Lauf darf nichts melden.** Siehe oben.
+3. **Ändert sich UIDVALIDITY**, hat der Server neu durchnummeriert. Die
+   gemerkte Zahl bedeutet dann etwas anderes.
+
+Alle drei stecken in eigenen Funktionen (`neue_nummern`, `zu_meldende`,
+`muss_neu_anfangen`) und werden von `tests/test_postfach.py` geprüft — ohne
+Postfach und ohne Passwort.
+
+### Was der Test noch prüft
+
+Dass das Passwort nirgends hingeht. Nicht als Zeichenkettensuche, sondern am
+**Syntaxbaum**: gesucht wird, ob die Variable `passwort` jemals als Wert in
+einen Aufruf wandert, der etwas ausgibt oder schreibt.
+
+Ein erster Anlauf suchte nur nach dem Wort und schlug sofort an, weil in
+einer Fehlermeldung „Passwort im Schlüsselbund prüfen" steht. Das Wort ist
+harmlos, die Variable nicht.
+
+Beim Melde-Geheimnis gilt eine andere Regel: es **muss** verschickt werden,
+sonst weist sich der Mac nicht aus. Es darf nur nicht ins Protokoll, das
+tagelang auf der Platte liegt.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
@@ -501,6 +571,10 @@ python3 tests/test_abgleich_ablage.py
 python3 tests/test_melden.py
 ```
 
+```bash
+python3 tests/test_postfach.py
+```
+
 `test_korrektur.py` prüft die Zeitkorrekturen. `test_erkennung.py` prüft, ob
 Änderungen und Ausfälle im Stundenplan noch erkannt werden — und ebenso
 wichtig, dass am Rand des gleitenden Zeitfensters **kein** Fehlalarm
@@ -575,7 +649,9 @@ Plan als „entfallen" gemeldet wird.
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |
-| `benachrichtigung-*.sh` | Hintergrund-Job ein-/ausschalten |
+| `benachrichtigung-*.sh` | Hintergrund-Job für den Stundenplan ein-/ausschalten |
+| `postfach.py` | schaut ins HWR-Postfach und meldet neue Mails |
+| `postfach-*.sh` | Mail-Benachrichtigung ein-/ausschalten |
 | `.github/workflows/aktualisieren.yml` | die GitHub-Automatik |
 | `daten/meine-termine.ics` | Kalenderdatei fürs iPhone, nur belegte Fächer (erzeugt) |
 | `symbol.png` | Symbol für den Home-Bildschirm |
