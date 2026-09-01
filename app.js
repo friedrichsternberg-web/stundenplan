@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "40b14148";
+const GEBAUTE_VERSION = "65895eb4";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
