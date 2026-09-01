@@ -19,11 +19,16 @@
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
 
+<!-- Beschreibt die Seite als App: Name, Symbol, Startadresse. Auf dem
+     iPhone ist das die Voraussetzung dafuer, dass Benachrichtigungen
+     ueberhaupt erlaubt werden. -->
+<link rel="manifest" href="manifest.json">
+
 <link rel="apple-touch-icon" href="symbol.png">
 <link rel="icon" href="symbol.png">
 
 <title>Uni-Dashboard</title>
-<link rel="stylesheet" href="style.css?v=2ad92130">
+<link rel="stylesheet" href="style.css?v=40b14148">
 </head>
 <body>
 
@@ -156,16 +161,22 @@
       <button type="button" class="knopf-schlicht" id="geraeteSchliessen">Fertig</button>
     </div>
     <div id="geraeteInhalt"></div>
+    <!-- Benachrichtigungen. Steht in einem eigenen Kasten, weil der Inhalt
+         erst nach Rueckfrage beim Browser feststeht und deshalb spaeter
+         nachgetragen wird - siehe meldenZeichnen() in app.js. -->
+    <div id="meldenBereich"></div>
   </div>
 </div>
 
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
-     Notizen und Aufgaben Abgleich.jetzt() auf. -->
-<script src="sync.js?v=2ad92130"></script>
+     Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
+     Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
+<script src="sync.js?v=40b14148"></script>
+<script src="melden.js?v=40b14148"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=2ad92130"></script>
+<script src="app.js?v=40b14148"></script>
 
 </body>
 </html>
