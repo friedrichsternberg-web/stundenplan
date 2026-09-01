@@ -37,6 +37,20 @@ if (typeof Abgleich === "undefined") {
   };
 }
 
+/* Ebenso für melden.js. Ohne Benachrichtigungen lässt sich leben, ohne
+   Stundenplan nicht. */
+if (typeof Melden === "undefined") {
+  var Melden = {
+    unterstuetzt: () => false,
+    hindernis: () => "melden.js fehlt",
+    erlaubnis: () => "nicht-moeglich",
+    einschalten: () => Promise.resolve({ erfolg: false, meldung: "melden.js fehlt" }),
+    ausschalten: () => Promise.resolve({ erfolg: false, meldung: "melden.js fehlt" }),
+    angemeldet: () => Promise.resolve(false),
+    anzahlGeraete: () => Promise.resolve(0),
+  };
+}
+
 const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
                     "Donnerstag", "Freitag", "Samstag"];
 
@@ -2041,6 +2055,89 @@ function geraeteZeichnen(meldung) {
     </div>`;
 }
 
+/* Zeichnet den Benachrichtigungsteil im Geräte-Fenster.
+
+   Eigene Funktion und eigener Kasten, weil der Zustand erst nach Rückfrage
+   beim Browser feststeht: ob eine Anmeldung besteht, muss man erfragen und
+   kann es nicht wissen. Deshalb wird hier zuerst etwas Vorläufiges
+   hingeschrieben und gleich danach ersetzt. */
+function meldenZeichnen(meldung) {
+  const bereich = document.getElementById("meldenBereich");
+  if (!bereich) return;
+
+  const rahmen = inhalt => `
+    <div class="melden-kasten">
+      <h3 class="melden-titel">Benachrichtigungen</h3>
+      ${inhalt}
+      ${meldung ? `<p class="geraete-meldung">${sicher(meldung)}</p>` : ""}
+    </div>`;
+
+  const grund = Melden.hindernis();
+  if (grund) {
+    bereich.innerHTML = rahmen(`
+      <p class="filter-hinweis">
+        Wenn sich am Stundenplan etwas ändert – Ausfall, Raumwechsel,
+        verschobene Zeit –, meldet sich die App von selbst.
+      </p>
+      <p class="melden-hindernis">${sicher(grund)}</p>`);
+    return;
+  }
+
+  bereich.innerHTML = rahmen(`<p class="filter-hinweis">Wird geprüft …</p>`);
+
+  Melden.angemeldet().then(async an => {
+    if (!an) {
+      bereich.innerHTML = rahmen(`
+        <p class="filter-hinweis">
+          Wenn sich am Stundenplan etwas ändert – Ausfall, Raumwechsel,
+          verschobene Zeit –, meldet sich die App von selbst. Ohne dass du
+          nachsehen musst.
+        </p>
+        <div class="filter-knoepfe">
+          <button type="button" class="knopf-schlicht knopf-betont" id="meldenEin">
+            Benachrichtigungen einschalten
+          </button>
+        </div>`);
+      return;
+    }
+
+    const anzahl = await Melden.anzahlGeraete();
+    bereich.innerHTML = rahmen(`
+      <p class="abgleich-stand abgleich-gut">
+        Eingeschaltet auf diesem Gerät${anzahl > 1 ? ` · ${anzahl} Geräte insgesamt` : ""}
+      </p>
+      <p class="filter-hinweis">
+        Schick dir eine Probe, damit du weißt, dass die Kette wirklich
+        funktioniert – und nicht erst beim nächsten echten Ausfall.
+      </p>
+      <div class="filter-knoepfe">
+        <button type="button" class="knopf-schlicht" id="meldenProbe">Probe schicken</button>
+        <button type="button" class="knopf-schlicht knopf-gefahr" id="meldenAus">Ausschalten</button>
+      </div>`);
+  });
+}
+
+/* Schickt eine Probemeldung über den echten Weg.
+
+   Bewusst NICHT über registration.showNotification() aus der Seite heraus:
+   das würde zwar eine Mitteilung zeigen, aber nur beweisen, dass das Gerät
+   Mitteilungen anzeigen kann. Die Frage ist eine andere – kommt eine
+   Meldung an, die von außen losgeschickt wurde? Also geht die Probe
+   denselben Weg wie der Ernstfall: über die Absenderfunktion bei Supabase
+   und den Push-Dienst von Apple. */
+function meldenProbeSchicken() {
+  return fetch(ABGLEICH_URL + "/functions/v1/stundenplan-melden", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code: Abgleich.code(),
+      titel: "Probe",
+      text: "Wenn du das liest, funktionieren die Benachrichtigungen.",
+      marke: "probe",
+    }),
+  }).then(a => a.json());
+}
+
 /* Der stille Hinweis im To-do-Bereich, solange nichts eingerichtet ist.
    Steht dort und nicht im Kopf, weil er nur die To-dos betrifft. */
 function abgleichHinweisZeichnen() {
@@ -2088,7 +2185,7 @@ function geraeteVerbinden() {
   const fenster = document.getElementById("geraeteHintergrund");
   if (!fenster) return;
 
-  function oeffnen() { geraeteZeichnen(); fenster.hidden = false; }
+  function oeffnen() { geraeteZeichnen(); meldenZeichnen(); fenster.hidden = false; }
 
   document.getElementById("geraeteOeffnen").addEventListener("click", oeffnen);
   document.getElementById("geraeteSchliessen").addEventListener("click", () => {
@@ -2109,6 +2206,7 @@ function geraeteVerbinden() {
       geraeteZeichnen("Eingerichtet. Deine Einträge werden gerade hochgeladen.");
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
       abgleichHinweisZeichnen();
+      meldenZeichnen();
       return;
     }
 
@@ -2121,6 +2219,7 @@ function geraeteVerbinden() {
       geraeteZeichnen("Übernommen. Wird zusammengeführt …");
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
       abgleichHinweisZeichnen();
+      meldenZeichnen();
       return;
     }
 
@@ -2152,9 +2251,49 @@ function geraeteVerbinden() {
       Abgleich.codeLoeschen();
       geraeteZeichnen();
       abgleichHinweisZeichnen();
+      meldenZeichnen();
       return;
     }
   });
+
+  /* Die Knöpfe für Benachrichtigungen. Eigener Zuhörer, weil sie in einem
+     eigenen Kasten stehen, der unabhängig neu gezeichnet wird. */
+  const meldenBereich = document.getElementById("meldenBereich");
+  if (meldenBereich) {
+    meldenBereich.addEventListener("click", async ereignis => {
+      const ziel = ereignis.target;
+      if (!ziel || !ziel.id) return;
+
+      if (ziel.id === "meldenEin") {
+        /* Ohne Umweg: Notification.requestPermission() verlangt eine
+           unmittelbare Nutzerhandlung. Ein await davor, und der Browser
+           lehnt stillschweigend ab. */
+        const ergebnis = await Melden.einschalten();
+        meldenZeichnen(ergebnis.meldung);
+        return;
+      }
+
+      if (ziel.id === "meldenAus") {
+        const ergebnis = await Melden.ausschalten();
+        meldenZeichnen(ergebnis.meldung);
+        return;
+      }
+
+      if (ziel.id === "meldenProbe") {
+        ziel.disabled = true;
+        try {
+          const antwort = await meldenProbeSchicken();
+          meldenZeichnen(antwort && antwort.zugestellt > 0
+            ? "Probe verschickt – sie sollte gleich ankommen."
+            : "Verschickt, aber kein Gerät hat sie angenommen: "
+              + JSON.stringify(antwort));
+        } catch (fehler) {
+          meldenZeichnen("Probe ging nicht raus: " + (fehler && fehler.message || fehler));
+        }
+        return;
+      }
+    });
+  }
 
   /* Ein Code-Link, der auf eine SCHON OFFENE Seite trifft.
 

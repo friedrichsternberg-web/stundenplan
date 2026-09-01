@@ -1334,3 +1334,32 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   color: var(--notiz-rand);
   margin-bottom: 4px;
 }
+
+
+/* --- Benachrichtigungen ------------------------------------------------ */
+
+.melden-kasten {
+  border-top: 1px solid var(--linie);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.melden-titel {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+/* Warum es gerade nicht geht - etwa "erst zum Home-Bildschirm hinzufuegen".
+   Bewusst kein roter Fehlerkasten: das ist keine Panne, sondern eine
+   Bedingung, die man erfuellen kann. */
+.melden-hindernis {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--schrift);
+  background: var(--flaeche-gedaempft);
+  border-left: 3px solid var(--geaendert);
+  border-radius: 0 var(--rundung) var(--rundung) 0;
+  padding: 10px 12px;
+  margin: 0;
+}

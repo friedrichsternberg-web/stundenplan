@@ -250,6 +250,69 @@ Stand mitgeliefert, führt zusammen und versucht es erneut.
 Ohne Netz funktioniert alles weiter, nur eben lokal. Der nächste Abgleich
 holt es nach.
 
+## Benachrichtigungen
+
+Bisher stand eine Änderung nur im Dashboard – man musste sie also
+nachschlagen, um sie zu erfahren. Genau das sollte das Projekt eigentlich
+abschaffen. Jetzt meldet sich die App von selbst: Ausfall, Raumwechsel,
+verschobene Zeit, neuer Termin.
+
+**Einrichten** über das ⚙ oben rechts, unter dem Geräteabgleich. Voraussetzung
+ist ein eingerichteter Gerätecode – die Anmeldung hängt daran, sonst könnte
+sich jeder eintragen, der die Seite findet.
+
+**Auf dem iPhone geht das nur als App vom Home-Bildschirm.** Im normalen
+Safari-Tab gibt es keine Benachrichtigungen, und Safari sagt auch nicht warum.
+Deshalb prüft `melden.js` das vorher und schreibt den Grund hin, statt einen
+Knopf zu zeigen, der nichts tut.
+
+Ein **Probeknopf** verschickt eine Testmeldung über denselben Weg wie der
+Ernstfall – über Supabase und Apples Push-Dienst, nicht als lokale Attrappe.
+Sonst wüsste man erst beim nächsten echten Ausfall, ob die Kette hält.
+
+### Der Weg einer Meldung
+
+```
+abgleich.py  findet eine Änderung in einem belegten Fach
+   ↓  schreibt meldung.json (außerhalb des veröffentlichten Ordners)
+GitHub-Automatik  hängt das Geheimnis an und ruft Supabase auf
+   ↓
+Edge Function  verschlüsselt und übergibt an Apples Push-Dienst
+   ↓
+iPhone  weckt sw.js, das die Mitteilung anzeigt
+```
+
+Der Versand steht im Arbeitsablauf **ganz am Ende, nach dem Hochladen**.
+Sonst käme die Mitteilung an, während GitHub Pages noch den alten Stand
+ausliefert – man tippt sie an und sieht den Raum von gestern.
+
+### Was wo liegt
+
+| Geheimnis | Wo | Wozu |
+|---|---|---|
+| VAPID-Schlüssel (öffentlich) | `melden.js`, im Quelltext | Damit weiß der Browser, wem er Meldungen abnimmt |
+| VAPID-Schlüssel (privat) | Edge Function bei Supabase | Unterschreibt jede Meldung |
+| Melde-Geheimnis | GitHub Actions Secrets | Nur damit darf die Automatik Meldungen auslösen |
+| Gerätecode | Nur auf deinen Geräten | Bestimmt, welche Geräte beliefert werden |
+
+Fehlt das Melde-Geheimnis in den Secrets, überspringt die Automatik den
+Versand mit einem Hinweis im Protokoll, statt zu scheitern. Der Stundenplan
+ist wichtiger als die Mitteilung darüber.
+
+### Warum der Service Worker nichts zwischenspeichert
+
+`sw.js` behandelt nur Benachrichtigungen – kein `fetch`-Zuhörer, kein
+Zwischenspeicher. Das ist Absicht: dieses Projekt hat schon einmal einen
+halben Tag damit verbracht, dass GitHub Pages Dateien zehn Minuten behalten
+darf und Handy und Laptop verschiedene Fassungen zeigten. Dagegen steht die
+Versionsprüfung in `app.js`. Ein zweiter Zwischenspeicher mit eigenen Regeln,
+den man nur über den Service Worker wieder loswird, würde das untergraben –
+und der Fehler wäre schwer zu finden, weil ein Neuladen nicht hilft.
+
+Aus demselben Grund bekommt `sw.js` als einzige Datei **keine Versionsnummer**
+an die Adresse: ein Service Worker wird über seinen Pfad angemeldet, und mit
+wechselndem `?v=…` wäre es bei jeder Veröffentlichung ein anderer.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
@@ -434,6 +497,10 @@ osascript -l JavaScript tests/test_ansicht.js
 python3 tests/test_abgleich_ablage.py
 ```
 
+```bash
+python3 tests/test_melden.py
+```
+
 `test_korrektur.py` prüft die Zeitkorrekturen. `test_erkennung.py` prüft, ob
 Änderungen und Ausfälle im Stundenplan noch erkannt werden — und ebenso
 wichtig, dass am Rand des gleitenden Zeitfensters **kein** Fehlalarm
@@ -442,7 +509,9 @@ Zusammenführen zweier Stände — die Stelle, an der Daten verlorengehen
 könnten. `test_ansicht.js` prüft die Zeitfächer im To-do-Bereich und die
 Karte „Als Nächstes". `test_abgleich_ablage.py` prüft die echte Ablage:
 Berechtigungen, Sperre beim gleichzeitigen Schreiben, Abschottung der Räume
-gegeneinander.
+gegeneinander. `test_melden.py` prüft die Benachrichtigungen – vor allem,
+dass die Push-Adressen mit dem öffentlichen Schlüssel **nicht** lesbar sind:
+wer sie hat, kann dem Handy Mitteilungen schicken.
 
 Der wichtigste Einzeltest ist Nummer 5 in `test_ansicht.js`: er verteilt 733
 Einträge — jeden Tag von einem Jahr davor bis ein Jahr danach — auf die
@@ -499,6 +568,9 @@ Plan als „entfallen" gemeldet wird.
 | `abgleich.py` | holt den Plan, vergleicht, benachrichtigt |
 | `index.html` · `style.css` · `app.js` | das Dashboard |
 | `sync.js` | der Geräteabgleich: Netz, Zusammenführen, Grabsteine |
+| `melden.js` | Benachrichtigungen an- und abmelden |
+| `sw.js` | nimmt Benachrichtigungen entgegen (sonst nichts) |
+| `manifest.json` | beschreibt die Seite als App |
 | `tests/alle.sh` | ruft alle Testsammlungen nacheinander auf |
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |

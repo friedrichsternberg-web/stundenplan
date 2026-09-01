@@ -86,13 +86,22 @@ jobs:
         # dann, wenn sich am Quellcode etwas getan hat - und eben nicht bei
         # jedem Lauf, sonst gaebe es alle 30 Minuten eine neue index.html.
         run: |
-          cp index.html app.js sync.js style.css symbol.png veroeffentlichung/
+          cp index.html app.js sync.js melden.js style.css symbol.png \
+             manifest.json sw.js veroeffentlichung/
           VERSION="${GITHUB_SHA:0:8}"
           sed -i \
             -e "s|href=\"style.css\"|href=\"style.css?v=$VERSION\"|" \
             -e "s|src=\"app.js\"|src=\"app.js?v=$VERSION\"|" \
             -e "s|src=\"sync.js\"|src=\"sync.js?v=$VERSION\"|" \
+            -e "s|src=\"melden.js\"|src=\"melden.js?v=$VERSION\"|" \
             veroeffentlichung/index.html
+
+          # sw.js bekommt ABSICHTLICH keine Versionsnummer an die Adresse.
+          # Ein Service Worker wird ueber seinen Pfad angemeldet; mit einem
+          # wechselnden "?v=..." waere es bei jeder Veroeffentlichung ein
+          # anderer, und der alte bliebe daneben liegen. Der Browser prueft
+          # die Datei ohnehin von sich aus auf Aenderungen.
+
           # Dieselbe Kennung in app.js hineinschreiben und in eine winzige
           # Datei daneben. app.js vergleicht beides beim Start und laedt sich
           # neu, falls es eine aeltere Fassung ist - siehe
@@ -107,13 +116,19 @@ jobs:
           grep -o 'GEBAUTE_VERSION = "[0-9a-f]*"' veroeffentlichung/app.js
           cat veroeffentlichung/version.js
 
-          # Ohne sync.js laufen Notizen und Aufgaben nur noch oertlich. Das
-          # faellt beim Benutzen kaum auf - deshalb hier hart abbrechen,
-          # statt es stillschweigend zu veroeffentlichen.
-          test -s veroeffentlichung/sync.js \
-            || { echo "sync.js fehlt in der Veroeffentlichung"; exit 1; }
-          grep -q 'src="sync.js?v=' veroeffentlichung/index.html \
-            || { echo "sync.js ist in index.html nicht eingebunden"; exit 1; }
+          # Fehlt eine dieser Dateien, faellt es beim Benutzen kaum auf:
+          # ohne sync.js gelten Notizen nur noch oertlich, ohne sw.js kommen
+          # keine Benachrichtigungen mehr an. Beides sieht aus wie "geht
+          # halt gerade nicht". Deshalb hier hart abbrechen, statt es
+          # stillschweigend zu veroeffentlichen.
+          for datei in sync.js melden.js sw.js manifest.json; do
+            test -s "veroeffentlichung/$datei" \
+              || { echo "$datei fehlt in der Veroeffentlichung"; exit 1; }
+          done
+          for tag in 'src="sync.js?v=' 'src="melden.js?v=' 'rel="manifest"'; do
+            grep -q "$tag" veroeffentlichung/index.html \
+              || { echo "index.html bindet $tag nicht ein"; exit 1; }
+          done
 
       - name: Ablage wachhalten
         # Kostenlose Supabase-Projekte schlafen nach sieben ruhigen Tagen
@@ -148,3 +163,54 @@ jobs:
             git commit -m "Stand vom $(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')"
             git push
           fi
+
+      - name: Benachrichtigung verschicken
+        # Steht bewusst GANZ AM ENDE, nach dem Hochladen.
+        #
+        # Sonst kaeme die Mitteilung an, waehrend gh-pages noch den alten
+        # Stand ausliefert - man tippt sie an und sieht den Raum von
+        # gestern. Zwischen Hochladen und Ausliefern liegen bei GitHub
+        # Pages ohnehin noch ein paar Sekunden, aber die halbe Minute
+        # Bauzeit davor muss nicht auch noch dazukommen.
+        #
+        # abgleich.py legt meldung.json nur an, wenn es eine Aenderung in
+        # einem BELEGTEN Fach gefunden hat. Gibt es die Datei nicht, ist
+        # nichts passiert - dann auch keine Meldung.
+        #
+        # Das Geheimnis steht in den Repository-Secrets und nirgends im
+        # Quelltext. Fehlt es, wird der Schritt uebersprungen statt zu
+        # scheitern: die Veroeffentlichung des Stundenplans ist wichtiger
+        # als die Mitteilung darueber.
+        # !cancelled() statt success(): bricht das Hochladen ab, ist die
+        # Aenderung im Stundenplan trotzdem echt und eine Meldung wert.
+        # Nur bei einem abgebrochenen Lauf soll nichts rausgehen.
+        if: ${{ !cancelled() }}
+        env:
+          MELDE_GEHEIMNIS: ${{ secrets.MELDE_GEHEIMNIS }}
+        run: |
+          if [ ! -f meldung.json ]; then
+            echo "Keine Aenderung - nichts zu melden."
+            exit 0
+          fi
+          if [ -z "$MELDE_GEHEIMNIS" ]; then
+            echo "MELDE_GEHEIMNIS ist nicht gesetzt - Benachrichtigung uebersprungen."
+            echo "Einzurichten unter: Settings -> Secrets and variables -> Actions"
+            exit 0
+          fi
+
+          # Das Geheimnis in die JSON-Datei hineinreichen, ohne es in die
+          # Aufrufzeile zu schreiben - die steht sonst im Protokoll.
+          python3 - <<'ENDE' > versand.json
+          import json, os
+          meldung = json.load(open("meldung.json", encoding="utf-8"))
+          meldung["geheimnis"] = os.environ["MELDE_GEHEIMNIS"]
+          print(json.dumps(meldung, ensure_ascii=False))
+          ENDE
+
+          echo "Sende: $(python3 -c "import json;d=json.load(open('meldung.json'));print(d['titel'])")"
+          curl -s -S -m 30 \
+            -X POST "https://copydwpdqpnwjvknsakz.supabase.co/functions/v1/stundenplan-melden" \
+            -H "Content-Type: application/json" \
+            --data-binary @versand.json
+          echo
+          rm -f versand.json meldung.json

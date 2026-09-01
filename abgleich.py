@@ -603,6 +603,45 @@ def ueber_aenderungen_benachrichtigen(aenderungen):
         saetze.append("... und " + str(anzahl - 3) + " weitere")
 
     mitteilung_senden("Stundenplan geaendert", untertitel, "\n".join(saetze))
+    meldung_hinterlegen(untertitel, saetze)
+
+
+def meldung_hinterlegen(untertitel, saetze):
+    """
+    Legt die Meldung fuer die GitHub-Automatik ab, die sie danach als
+    Push-Benachrichtigung aufs Handy schickt.
+
+    Warum eine Datei und kein direkter Aufruf? Weil zum Verschicken ein
+    Geheimnis noetig ist, und das gehoert nicht in dieses Skript: abgleich.py
+    liegt im oeffentlichen Repository. Das Geheimnis liegt in den GitHub
+    Actions Secrets und wird erst im Arbeitsablauf danebengehalten. So kann
+    dieselbe Datei auf dem Mac laufen, ohne irgendein Geheimnis zu kennen.
+
+    Die Datei liegt bewusst NICHT im Datenordner: der wandert nach gh-pages
+    und waere damit oeffentlich. Es waere kein grosser Schaden - der
+    Stundenplan der HWR ist ohnehin offen abrufbar -, aber es gibt keinen
+    Grund, Friedrichs Ausfaelle ins Netz zu stellen.
+    """
+    ziel = os.environ.get("STUNDENPLAN_MELDUNG") or \
+        os.path.join(PROJEKTORDNER, "meldung.json")
+
+    inhalt = {
+        "titel": "Stundenplan: " + untertitel,
+        # Zwei Meldungen genuegen in der Mitteilung; auf dem Sperrbildschirm
+        # ist ohnehin nach zwei Zeilen Schluss. Der Rest steht im Dashboard.
+        "text": "\n".join(saetze[:2]),
+        # Gleiche Marke heisst: eine neue Meldung ersetzt die vorige, statt
+        # sich danebenzulegen. Siehe sw.js.
+        "marke": "stundenplan",
+    }
+    try:
+        with open(ziel, "w", encoding="utf-8") as datei:
+            json.dump(inhalt, datei, ensure_ascii=False)
+        print("   Meldung hinterlegt in " + ziel)
+    except OSError as fehler:
+        # Kein Grund, den ganzen Lauf scheitern zu lassen - der Stundenplan
+        # ist wichtiger als die Benachrichtigung darueber.
+        print("   Meldung liess sich nicht hinterlegen: " + str(fehler))
 
 
 # ===========================================================================

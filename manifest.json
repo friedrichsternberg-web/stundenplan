@@ -1,0 +1,25 @@
+{
+  "name": "Uni-Dashboard",
+  "short_name": "Uni",
+  "description": "Stundenplan, Notizen und Aufgaben – HWR Berlin, Tourismus",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16181c",
+  "theme_color": "#f4f5f7",
+  "icons": [
+    {
+      "src": "symbol.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "symbol.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -10,3 +10,7 @@ daten/
 
 # Rechtefreigaben gelten nur auf diesem Mac.
 .claude/settings.local.json
+
+# Die Meldung fuer die Push-Benachrichtigung. Entsteht bei jedem Lauf neu
+# und wird von der Automatik sofort verschickt.
+meldung.json
