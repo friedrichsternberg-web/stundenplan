@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-03T16:35",
+ "geprueftAm": "2026-09-03T23:03",
  "fensterVon": "2026-08-31T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -261,7 +261,7 @@ const STUNDENPLAN = {
   {
    "id": "sked.de1207721",
    "start": "2026-09-03T08:00",
-   "ende": "2026-09-03T13:15",
+   "ende": "2026-09-03T12:30",
    "art": "SI",
    "titel": "WPF - Cross Cultural Management",
    "dozent": "also for Incomings DLM 1, WeissD",
@@ -2285,6 +2285,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1207727",
+   "start": "2026-10-15T08:00",
+   "ende": "2026-10-15T13:15",
+   "art": "SI",
+   "titel": "WPF - Cross Cultural Management",
+   "dozent": "also for Incomings DLM 1, WeissD",
+   "raum": "CL: 6A.020",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1207126",
    "start": "2026-10-15T08:00",
    "ende": "2026-10-15T13:15",
@@ -2303,17 +2314,6 @@ const STUNDENPLAN = {
    "titel": "WPF - Wirtschaftspsychologie (Do) Kurs 1",
    "dozent": "Kirch",
    "raum": "CL: 6A.004",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207727",
-   "start": "2026-10-15T08:45",
-   "ende": "2026-10-15T13:15",
-   "art": "SI",
-   "titel": "WPF - Cross Cultural Management",
-   "dozent": "also for Incomings DLM 1, WeissD",
-   "raum": "CL: 6A.020",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -2516,6 +2516,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1216825",
+   "start": "2026-10-22T10:00",
+   "ende": "2026-10-22T11:00",
+   "art": "Klausur",
+   "titel": "WPF - Cross Cultural Management",
+   "dozent": "also for Incomings DLM 1, WeissD",
+   "raum": "",
+   "anmerkung": "Raum wird noch bekannt gegeben!",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1214222",
    "start": "2026-10-22T10:00",
    "ende": "2026-10-22T11:00",
@@ -2572,6 +2583,69 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-03T23:03",
+   "anzahl": 3,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207721",
+      "start": "2026-09-03T08:00",
+      "ende": "2026-09-03T12:30",
+      "art": "SI",
+      "titel": "WPF - Cross Cultural Management",
+      "dozent": "also for Incomings DLM 1, WeissD",
+      "raum": "CL: 6A.020",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Ende",
+       "vorher": "2026-09-03T13:15",
+       "nachher": "2026-09-03T12:30"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207727",
+      "start": "2026-10-15T08:00",
+      "ende": "2026-10-15T13:15",
+      "art": "SI",
+      "titel": "WPF - Cross Cultural Management",
+      "dozent": "also for Incomings DLM 1, WeissD",
+      "raum": "CL: 6A.020",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Beginn",
+       "vorher": "2026-10-15T08:45",
+       "nachher": "2026-10-15T08:00"
+      }
+     ]
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1216825",
+      "start": "2026-10-22T10:00",
+      "ende": "2026-10-22T11:00",
+      "art": "Klausur",
+      "titel": "WPF - Cross Cultural Management",
+      "dozent": "also for Incomings DLM 1, WeissD",
+      "raum": "",
+      "anmerkung": "Raum wird noch bekannt gegeben!",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-08-28T23:12",
    "anzahl": 1,
