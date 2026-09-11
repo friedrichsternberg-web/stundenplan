@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-11T16:17",
+ "geprueftAm": "2026-09-11T22:04",
  "fensterVon": "2026-09-07T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -46,39 +46,6 @@ const STUNDENPLAN = {
    "titel": "Nationales und internationales Hotelmanagement I",
    "dozent": "also for Incomings DLM 1, Maessen",
    "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207843",
-   "start": "2026-09-07T14:00",
-   "ende": "2026-09-07T15:30",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207845",
-   "start": "2026-09-07T15:45",
-   "ende": "2026-09-07T17:15",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207847",
-   "start": "2026-09-07T17:30",
-   "ende": "2026-09-07T18:15",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -359,39 +326,6 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1205759",
-   "start": "2026-09-10T14:00",
-   "ende": "2026-09-10T15:30",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1205761",
-   "start": "2026-09-10T15:45",
-   "ende": "2026-09-10T17:15",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207842",
-   "start": "2026-09-10T17:30",
-   "ende": "2026-09-10T18:15",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
    "id": "sked.de1201296",
    "start": "2026-09-11T09:45",
    "ende": "2026-09-11T11:15",
@@ -590,35 +524,35 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1207849",
-   "start": "2026-09-16T08:45",
-   "ende": "2026-09-16T10:15",
+   "id": "sked.de1217374",
+   "start": "2026-09-16T14:00",
+   "ende": "2026-09-16T15:30",
    "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1205764",
-   "start": "2026-09-16T10:30",
-   "ende": "2026-09-16T12:00",
+   "id": "sked.de1217376",
+   "start": "2026-09-16T15:45",
+   "ende": "2026-09-16T17:15",
    "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1205766",
-   "start": "2026-09-16T12:15",
-   "ende": "2026-09-16T13:00",
+   "id": "sked.de1217378",
+   "start": "2026-09-16T17:30",
+   "ende": "2026-09-16T19:00",
    "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -733,34 +667,34 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1205779",
+   "id": "sked.de1217379",
    "start": "2026-09-18T14:00",
    "ende": "2026-09-18T15:30",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1205781",
+   "id": "sked.de1217381",
    "start": "2026-09-18T15:45",
    "ende": "2026-09-18T17:15",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1207848",
+   "id": "sked.de1217383",
    "start": "2026-09-18T17:30",
    "ende": "2026-09-18T18:15",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
@@ -898,39 +832,6 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1207850",
-   "start": "2026-09-23T08:45",
-   "ende": "2026-09-23T10:15",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1205784",
-   "start": "2026-09-23T10:30",
-   "ende": "2026-09-23T12:00",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1205786",
-   "start": "2026-09-23T12:15",
-   "ende": "2026-09-23T13:00",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
    "id": "sked.de1207146",
    "start": "2026-09-24T08:00",
    "ende": "2026-09-24T13:00",
@@ -1008,28 +909,6 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1207851",
-   "start": "2026-09-25T08:45",
-   "ende": "2026-09-25T10:15",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207853",
-   "start": "2026-09-25T10:30",
-   "ende": "2026-09-25T12:00",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
    "id": "sked.de1205183",
    "start": "2026-09-25T11:30",
    "ende": "2026-09-25T13:00",
@@ -1037,17 +916,6 @@ const STUNDENPLAN = {
    "titel": "4 - Management - UN-Führung",
    "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207855",
-   "start": "2026-09-25T12:15",
-   "ende": "2026-09-25T13:00",
-   "art": "SU",
-   "titel": "4 - Management - UN-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1239,34 +1107,67 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1205790",
+   "id": "sked.de1217384",
+   "start": "2026-09-29T15:30",
+   "ende": "2026-09-29T17:00",
+   "art": "SU",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217386",
+   "start": "2026-09-29T17:15",
+   "ende": "2026-09-29T18:45",
+   "art": "SU",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217388",
+   "start": "2026-09-29T19:00",
+   "ende": "2026-09-29T19:45",
+   "art": "SU",
+   "titel": "4 - Management - MA-Führung",
+   "dozent": "Knoll, TM+HD",
+   "raum": "CL: 6A.225",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217389",
    "start": "2026-09-30T14:00",
    "ende": "2026-09-30T15:30",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1205792",
+   "id": "sked.de1217391",
    "start": "2026-09-30T15:45",
    "ende": "2026-09-30T17:15",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
   },
   {
-   "id": "sked.de1207861",
+   "id": "sked.de1217393",
    "start": "2026-09-30T17:30",
-   "ende": "2026-09-30T18:15",
+   "ende": "2026-09-30T19:00",
    "art": "SU",
    "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+HD",
+   "dozent": "Knoll, TM+HD",
    "raum": "CL: 6A.225",
    "anmerkung": "",
    "gruppe": ""
@@ -1367,39 +1268,6 @@ const STUNDENPLAN = {
    "titel": "4 - Management - Controlling",
    "dozent": "Bleis, TM+HD",
    "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207856",
-   "start": "2026-10-02T08:45",
-   "ende": "2026-10-02T09:30",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207857",
-   "start": "2026-10-02T09:45",
-   "ende": "2026-10-02T11:15",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207859",
-   "start": "2026-10-02T11:30",
-   "ende": "2026-10-02T13:00",
-   "art": "SU",
-   "titel": "4 - Management - MA-Führung",
-   "dozent": "Bergmann, TM+SP",
-   "raum": "CL: 6A.205",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -2097,14 +1965,14 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1210632",
-   "start": "2026-10-22T08:00",
-   "ende": "2026-10-22T13:15",
-   "art": "SI",
+   "id": "sked.de1217399",
+   "start": "2026-10-22T08:30",
+   "ende": "2026-10-22T10:45",
+   "art": "M",
    "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
    "dozent": "Buchanan",
-   "raum": "",
-   "anmerkung": "Achtung hier finden die Prüfungen statt, entweder die mündlichen oder die schriftlichen Prüfungen. Konkretisierung erfolgt später.",
+   "raum": "CL: 6B.369 (L1)",
+   "anmerkung": "E-Klausur",
    "gruppe": ""
   },
   {
@@ -2130,6 +1998,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217400",
+   "start": "2026-10-22T11:00",
+   "ende": "2026-10-22T15:30",
+   "art": "M",
+   "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+   "dozent": "Buchanan, Casselle",
+   "raum": "CL: 6B.453",
+   "anmerkung": "konkrete Termine erfahren Sie von Ihrer Dozentin",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1207117",
    "start": "2026-10-27T10:00",
    "ende": "2026-10-27T11:30",
@@ -2141,14 +2020,25 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1210633",
-   "start": "2026-10-29T08:00",
-   "ende": "2026-10-29T13:15",
-   "art": "SI",
+   "id": "sked.de1217402",
+   "start": "2026-10-27T10:15",
+   "ende": "2026-10-27T14:45",
+   "art": "M",
    "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
-   "dozent": "Buchanan",
-   "raum": "",
-   "anmerkung": "Achtung hier finden die Prüfungen statt, entweder die mündlichen oder die schriftlichen Prüfungen. Konkretisierung erfolgt später.",
+   "dozent": "Cohen-Schiemann, van Hart",
+   "raum": "CL: 6A.020",
+   "anmerkung": "konkrete Termine erfahren Sie von Ihrem Dozenten.",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217403",
+   "start": "2026-10-29T08:30",
+   "ende": "2026-10-29T10:00",
+   "art": "Klausur",
+   "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+   "dozent": "Casselle",
+   "raum": "CL: 6B.371 (L2)",
+   "anmerkung": "E-Klausur",
    "gruppe": ""
   },
   {
@@ -2160,6 +2050,17 @@ const STUNDENPLAN = {
    "dozent": "Kirch",
    "raum": "",
    "anmerkung": "Klausur",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217404",
+   "start": "2026-10-29T10:15",
+   "ende": "2026-10-29T14:45",
+   "art": "M",
+   "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+   "dozent": "Buchanan, Casselle",
+   "raum": "CL: 6B.468",
+   "anmerkung": "Konkrete Termine erfahren Sie von Ihrem Dozenten",
    "gruppe": ""
   },
   {
@@ -2175,6 +2076,657 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-11T22:04",
+   "anzahl": 43,
+   "eintraege": [
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207843",
+      "start": "2026-09-07T14:00",
+      "ende": "2026-09-07T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207845",
+      "start": "2026-09-07T15:45",
+      "ende": "2026-09-07T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207847",
+      "start": "2026-09-07T17:30",
+      "ende": "2026-09-07T18:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205759",
+      "start": "2026-09-10T14:00",
+      "ende": "2026-09-10T15:30",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205761",
+      "start": "2026-09-10T15:45",
+      "ende": "2026-09-10T17:15",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207842",
+      "start": "2026-09-10T17:30",
+      "ende": "2026-09-10T18:15",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207849",
+      "start": "2026-09-16T08:45",
+      "ende": "2026-09-16T10:15",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205764",
+      "start": "2026-09-16T10:30",
+      "ende": "2026-09-16T12:00",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205766",
+      "start": "2026-09-16T12:15",
+      "ende": "2026-09-16T13:00",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217374",
+      "start": "2026-09-16T14:00",
+      "ende": "2026-09-16T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217376",
+      "start": "2026-09-16T15:45",
+      "ende": "2026-09-16T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217378",
+      "start": "2026-09-16T17:30",
+      "ende": "2026-09-16T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217379",
+      "start": "2026-09-18T14:00",
+      "ende": "2026-09-18T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205779",
+      "start": "2026-09-18T14:00",
+      "ende": "2026-09-18T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217381",
+      "start": "2026-09-18T15:45",
+      "ende": "2026-09-18T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205781",
+      "start": "2026-09-18T15:45",
+      "ende": "2026-09-18T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217383",
+      "start": "2026-09-18T17:30",
+      "ende": "2026-09-18T18:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207848",
+      "start": "2026-09-18T17:30",
+      "ende": "2026-09-18T18:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207850",
+      "start": "2026-09-23T08:45",
+      "ende": "2026-09-23T10:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205784",
+      "start": "2026-09-23T10:30",
+      "ende": "2026-09-23T12:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205786",
+      "start": "2026-09-23T12:15",
+      "ende": "2026-09-23T13:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207851",
+      "start": "2026-09-25T08:45",
+      "ende": "2026-09-25T10:15",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207853",
+      "start": "2026-09-25T10:30",
+      "ende": "2026-09-25T12:00",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207855",
+      "start": "2026-09-25T12:15",
+      "ende": "2026-09-25T13:00",
+      "art": "SU",
+      "titel": "4 - Management - UN-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217384",
+      "start": "2026-09-29T15:30",
+      "ende": "2026-09-29T17:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217386",
+      "start": "2026-09-29T17:15",
+      "ende": "2026-09-29T18:45",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217388",
+      "start": "2026-09-29T19:00",
+      "ende": "2026-09-29T19:45",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217389",
+      "start": "2026-09-30T14:00",
+      "ende": "2026-09-30T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205790",
+      "start": "2026-09-30T14:00",
+      "ende": "2026-09-30T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217391",
+      "start": "2026-09-30T15:45",
+      "ende": "2026-09-30T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1205792",
+      "start": "2026-09-30T15:45",
+      "ende": "2026-09-30T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217393",
+      "start": "2026-09-30T17:30",
+      "ende": "2026-09-30T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Knoll, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207861",
+      "start": "2026-09-30T17:30",
+      "ende": "2026-09-30T18:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+HD",
+      "raum": "CL: 6A.225",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207856",
+      "start": "2026-10-02T08:45",
+      "ende": "2026-10-02T09:30",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207857",
+      "start": "2026-10-02T09:45",
+      "ende": "2026-10-02T11:15",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1207859",
+      "start": "2026-10-02T11:30",
+      "ende": "2026-10-02T13:00",
+      "art": "SU",
+      "titel": "4 - Management - MA-Führung",
+      "dozent": "Bergmann, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1210632",
+      "start": "2026-10-22T08:00",
+      "ende": "2026-10-22T13:15",
+      "art": "SI",
+      "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
+      "dozent": "Buchanan",
+      "raum": "",
+      "anmerkung": "Achtung hier finden die Prüfungen statt, entweder die mündlichen oder die schriftlichen Prüfungen. Konkretisierung erfolgt später.",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217399",
+      "start": "2026-10-22T08:30",
+      "ende": "2026-10-22T10:45",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
+      "dozent": "Buchanan",
+      "raum": "CL: 6B.369 (L1)",
+      "anmerkung": "E-Klausur",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217400",
+      "start": "2026-10-22T11:00",
+      "ende": "2026-10-22T15:30",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+      "dozent": "Buchanan, Casselle",
+      "raum": "CL: 6B.453",
+      "anmerkung": "konkrete Termine erfahren Sie von Ihrer Dozentin",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217402",
+      "start": "2026-10-27T10:15",
+      "ende": "2026-10-27T14:45",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
+      "dozent": "Cohen-Schiemann, van Hart",
+      "raum": "CL: 6A.020",
+      "anmerkung": "konkrete Termine erfahren Sie von Ihrem Dozenten.",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1210633",
+      "start": "2026-10-29T08:00",
+      "ende": "2026-10-29T13:15",
+      "art": "SI",
+      "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
+      "dozent": "Buchanan",
+      "raum": "",
+      "anmerkung": "Achtung hier finden die Prüfungen statt, entweder die mündlichen oder die schriftlichen Prüfungen. Konkretisierung erfolgt später.",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217403",
+      "start": "2026-10-29T08:30",
+      "ende": "2026-10-29T10:00",
+      "art": "Klausur",
+      "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+      "dozent": "Casselle",
+      "raum": "CL: 6B.371 (L2)",
+      "anmerkung": "E-Klausur",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217404",
+      "start": "2026-10-29T10:15",
+      "ende": "2026-10-29T14:45",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+      "dozent": "Buchanan, Casselle",
+      "raum": "CL: 6B.468",
+      "anmerkung": "Konkrete Termine erfahren Sie von Ihrem Dozenten",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-03T23:03",
    "anzahl": 3,
