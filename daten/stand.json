@@ -1,7 +1,7 @@
 {
- "etag": "\"16c53-65b6143b2a380\"",
- "geprueftAm": "2026-09-14T18:29",
- "geschriebenAm": "2026-09-14T18:29",
+ "etag": "\"1308f-65b75617ac140\"",
+ "geprueftAm": "2026-09-14T22:26",
+ "geschriebenAm": "2026-09-14T22:26",
  "einstellungen": {
   "nichtBelegteFaecher": [
    "Personalmanagement- und -entwicklung",
@@ -31,350 +31,9 @@
    }
   ]
  },
- "fensterVon": "2026-09-07T00:00",
+ "fensterVon": "2026-09-14T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
-  {
-   "id": "sked.de1200287",
-   "start": "2026-09-07T09:45",
-   "ende": "2026-09-07T11:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1200289",
-   "start": "2026-09-07T11:30",
-   "ende": "2026-09-07T13:00",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208784",
-   "start": "2026-09-08T08:00",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Angewandte Wohlfahrtsstaatentheorie",
-   "dozent": "Fechter",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207961",
-   "start": "2026-09-08T08:00",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Nachhaltiges Wirtschaften (Die)",
-   "dozent": "Matheis",
-   "raum": "CL: 6A.224",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207996",
-   "start": "2026-09-08T08:00",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Social Innovation",
-   "dozent": "WagnerL",
-   "raum": "CL: 6A.014",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207111",
-   "start": "2026-09-08T08:00",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Supply Chain Management",
-   "dozent": "Wringe",
-   "raum": "CL: 6A.207",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208775",
-   "start": "2026-09-08T08:15",
-   "ende": "2026-09-08T13:00",
-   "art": "SI",
-   "titel": "WPF - Recht der Künstlichen Intelligenz",
-   "dozent": "Stiegler",
-   "raum": "CL: 6A.225",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208408",
-   "start": "2026-09-08T08:45",
-   "ende": "2026-09-08T13:00",
-   "art": "SI",
-   "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
-   "dozent": "Knobloch",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208503",
-   "start": "2026-09-08T08:45",
-   "ende": "2026-09-08T13:15",
-   "art": "SI",
-   "titel": "WPF - Praxisorientierte Methoden der empirischen W",
-   "dozent": "Buschong",
-   "raum": "CL: 6B.468",
-   "anmerkung": "ONLINE",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208006",
-   "start": "2026-09-08T09:00",
-   "ende": "2026-09-08T13:00",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftspsychologie (Die)",
-   "dozent": "Denner",
-   "raum": "CL: 5.0003",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1203742",
-   "start": "2026-09-08T14:00",
-   "ende": "2026-09-08T15:30",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1203744",
-   "start": "2026-09-08T15:45",
-   "ende": "2026-09-08T17:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1203746",
-   "start": "2026-09-08T17:30",
-   "ende": "2026-09-08T19:00",
-   "art": "SU-SBWL-TM",
-   "titel": "Projekt  ITB",
-   "dozent": "also for Incomings DLM 1, Rochnowski",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198740",
-   "start": "2026-09-09T08:45",
-   "ende": "2026-09-09T09:30",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198741",
-   "start": "2026-09-09T09:45",
-   "ende": "2026-09-09T11:15",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198743",
-   "start": "2026-09-09T11:30",
-   "ende": "2026-09-09T13:00",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198745",
-   "start": "2026-09-09T14:00",
-   "ende": "2026-09-09T15:30",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198747",
-   "start": "2026-09-09T15:45",
-   "ende": "2026-09-09T17:15",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1198749",
-   "start": "2026-09-09T17:30",
-   "ende": "2026-09-09T19:00",
-   "art": "SU",
-   "titel": "34 - Schlüsselkompetenzen V",
-   "dozent": "Hechel",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207145",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:00",
-   "art": "SI",
-   "titel": "Personalmanagement- und -entwicklung",
-   "dozent": "Gruber-Beerfeltz",
-   "raum": "CL: 6A.206",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207722",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Cross Cultural Management",
-   "dozent": "also for Incomings DLM 1, WeissD",
-   "raum": "CL: 6A.020",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207121",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
-   "dozent": "Hüper",
-   "raum": "CL: 6A.014",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207091",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - IRFS Rechnungslegung",
-   "dozent": "Schültke",
-   "raum": "CL: 6A.001",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1207977",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Nachhaltiges Wirtschaften (Do)",
-   "dozent": "Gläser",
-   "raum": "CL: 6A.207",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1210591",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
-   "dozent": "Casselle",
-   "raum": "CL: 6B.453",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1210581",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
-   "dozent": "Buchanan, for Incomings L&T",
-   "raum": "CL: 6B.468",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208380",
-   "start": "2026-09-10T08:00",
-   "ende": "2026-09-10T13:15",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftspsychologie (Do) Kurs 1",
-   "dozent": "Kirch",
-   "raum": "CL: 6A.004",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1201296",
-   "start": "2026-09-11T09:45",
-   "ende": "2026-09-11T11:15",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "Exkursion InterContinental Berlin",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1201298",
-   "start": "2026-09-11T11:30",
-   "ende": "2026-09-11T13:00",
-   "art": "SU-SBWL-TM",
-   "titel": "Nationales und internationales Hotelmanagement I",
-   "dozent": "also for Incomings DLM 1, Maessen",
-   "raum": "CL: 6A.206",
-   "anmerkung": "Exkursion InterContinental Berlin",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208366",
-   "start": "2026-09-12T09:00",
-   "ende": "2026-09-12T15:00",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftspsychologie (Die)",
-   "dozent": "Denner",
-   "raum": "CL: 5.0003",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1208390",
-   "start": "2026-09-12T10:15",
-   "ende": "2026-09-12T11:00",
-   "art": "SI",
-   "titel": "WPF - Wirtschaftspsychologie (Do) Kurs 1",
-   "dozent": "Kirch",
-   "raum": "",
-   "anmerkung": "Online-Selbsttest",
-   "gruppe": ""
-  },
   {
    "id": "sked.de1197747",
    "start": "2026-09-14T08:45",
@@ -1971,6 +1630,17 @@
    "gruppe": ""
   },
   {
+   "id": "sked.de1217498",
+   "start": "2026-10-22T08:30",
+   "ende": "2026-10-22T10:00",
+   "art": "Klausur",
+   "titel": "Personalmanagement- und -entwicklung",
+   "dozent": "Gruber-Beerfeltz",
+   "raum": "CL: 6A.206",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1217399",
    "start": "2026-10-22T08:30",
    "ende": "2026-10-22T10:45",
@@ -2082,6 +1752,27 @@
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-14T22:26",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217498",
+      "start": "2026-10-22T08:30",
+      "ende": "2026-10-22T10:00",
+      "art": "Klausur",
+      "titel": "Personalmanagement- und -entwicklung",
+      "dozent": "Gruber-Beerfeltz",
+      "raum": "CL: 6A.206",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-11T22:04",
    "anzahl": 43,
