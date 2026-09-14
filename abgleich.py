@@ -603,7 +603,12 @@ def ueber_aenderungen_benachrichtigen(aenderungen):
         saetze.append("... und " + str(anzahl - 3) + " weitere")
 
     mitteilung_senden("Stundenplan geaendert", untertitel, "\n".join(saetze))
-    meldung_hinterlegen(untertitel, saetze)
+
+    # Nur auf dem Server. Auf dem Mac verschickt niemand die Datei - dort
+    # kommt die Mitteilung schon ueber macOS -, und sie bliebe einfach
+    # liegen. Aufgefallen am 14.09.: eine Meldung vom 11.09. lag noch da.
+    if LAEUFT_AUF_SERVER:
+        meldung_hinterlegen(untertitel, saetze)
 
 
 def meldung_hinterlegen(untertitel, saetze):
