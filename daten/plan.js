@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-16T21:06",
+ "geprueftAm": "2026-09-17T00:11",
  "fensterVon": "2026-09-14T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -490,6 +490,72 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217552",
+   "start": "2026-09-22T14:00",
+   "ende": "2026-09-22T15:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217554",
+   "start": "2026-09-22T15:45",
+   "ende": "2026-09-22T17:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217556",
+   "start": "2026-09-22T17:30",
+   "ende": "2026-09-22T19:00",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217558",
+   "start": "2026-09-23T14:00",
+   "ende": "2026-09-23T15:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217560",
+   "start": "2026-09-23T15:45",
+   "ende": "2026-09-23T17:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217562",
+   "start": "2026-09-23T17:30",
+   "ende": "2026-09-23T19:00",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1207146",
    "start": "2026-09-24T08:00",
    "ende": "2026-09-24T13:00",
@@ -563,6 +629,50 @@ const STUNDENPLAN = {
    "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
    "dozent": "Buchanan, for Incomings L&T",
    "raum": "CL: 6B.468",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217564",
+   "start": "2026-09-24T14:00",
+   "ende": "2026-09-24T15:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217566",
+   "start": "2026-09-24T15:45",
+   "ende": "2026-09-24T17:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217568",
+   "start": "2026-09-24T17:30",
+   "ende": "2026-09-24T19:00",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217570",
+   "start": "2026-09-25T09:45",
+   "ende": "2026-09-25T11:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1189,7 +1299,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1200,7 +1310,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1365,7 +1475,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1376,7 +1486,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1387,7 +1497,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1475,7 +1585,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1497,7 +1607,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1519,7 +1629,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1530,7 +1640,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1541,7 +1651,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1563,7 +1673,7 @@ const STUNDENPLAN = {
    "art": "SU",
    "titel": "4 - Management - Controlling",
    "dozent": "Schlösser, TM+SP",
-   "raum": "CL: 6A.205",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1745,6 +1855,393 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-17T00:11",
+   "anzahl": 21,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217552",
+      "start": "2026-09-22T14:00",
+      "ende": "2026-09-22T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217554",
+      "start": "2026-09-22T15:45",
+      "ende": "2026-09-22T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217556",
+      "start": "2026-09-22T17:30",
+      "ende": "2026-09-22T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217558",
+      "start": "2026-09-23T14:00",
+      "ende": "2026-09-23T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217560",
+      "start": "2026-09-23T15:45",
+      "ende": "2026-09-23T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217562",
+      "start": "2026-09-23T17:30",
+      "ende": "2026-09-23T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217564",
+      "start": "2026-09-24T14:00",
+      "ende": "2026-09-24T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217566",
+      "start": "2026-09-24T15:45",
+      "ende": "2026-09-24T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217568",
+      "start": "2026-09-24T17:30",
+      "ende": "2026-09-24T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217570",
+      "start": "2026-09-25T09:45",
+      "ende": "2026-09-25T11:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205319",
+      "start": "2026-10-09T08:00",
+      "ende": "2026-10-09T09:30",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205321",
+      "start": "2026-10-09T09:45",
+      "ende": "2026-10-09T11:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205312",
+      "start": "2026-10-14T14:00",
+      "ende": "2026-10-14T15:30",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205314",
+      "start": "2026-10-14T15:45",
+      "ende": "2026-10-14T17:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205316",
+      "start": "2026-10-14T17:30",
+      "ende": "2026-10-14T18:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205325",
+      "start": "2026-10-15T14:00",
+      "ende": "2026-10-15T15:30",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205327",
+      "start": "2026-10-15T15:45",
+      "ende": "2026-10-15T17:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205329",
+      "start": "2026-10-15T17:30",
+      "ende": "2026-10-15T18:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205324",
+      "start": "2026-10-16T08:00",
+      "ende": "2026-10-16T09:30",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205306",
+      "start": "2026-10-16T09:45",
+      "ende": "2026-10-16T11:15",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1205308",
+      "start": "2026-10-16T11:30",
+      "ende": "2026-10-16T13:00",
+      "art": "SU",
+      "titel": "4 - Management - Controlling",
+      "dozent": "Schlösser, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "CL: 6A.205",
+       "nachher": "CL: 6A.201"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-14T22:26",
    "anzahl": 1,
