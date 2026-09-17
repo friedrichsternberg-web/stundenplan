@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-17T17:05",
+ "geprueftAm": "2026-09-18T00:05",
  "fensterVon": "2026-09-14T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -402,6 +402,28 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217682",
+   "start": "2026-09-21T14:00",
+   "ende": "2026-09-21T15:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217684",
+   "start": "2026-09-21T15:45",
+   "ende": "2026-09-21T16:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1207113",
    "start": "2026-09-22T08:00",
    "ende": "2026-09-22T13:15",
@@ -493,28 +515,6 @@ const STUNDENPLAN = {
    "id": "sked.de1217552",
    "start": "2026-09-22T14:00",
    "ende": "2026-09-22T15:30",
-   "art": "SU",
-   "titel": "4 - Management - MA- und UN-Führung",
-   "dozent": "Knoll, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1217554",
-   "start": "2026-09-22T15:45",
-   "ende": "2026-09-22T17:15",
-   "art": "SU",
-   "titel": "4 - Management - MA- und UN-Führung",
-   "dozent": "Knoll, TM+SP",
-   "raum": "CL: 6A.205",
-   "anmerkung": "",
-   "gruppe": ""
-  },
-  {
-   "id": "sked.de1217556",
-   "start": "2026-09-22T17:30",
-   "ende": "2026-09-22T19:00",
    "art": "SU",
    "titel": "4 - Management - MA- und UN-Führung",
    "dozent": "Knoll, TM+SP",
@@ -721,6 +721,28 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217685",
+   "start": "2026-09-26T16:00",
+   "ende": "2026-09-26T17:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217687",
+   "start": "2026-09-26T17:45",
+   "ende": "2026-09-26T18:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1197757",
    "start": "2026-09-28T08:45",
    "ende": "2026-09-28T09:30",
@@ -908,6 +930,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217688",
+   "start": "2026-09-30T12:15",
+   "ende": "2026-09-30T13:45",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.201",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1217389",
    "start": "2026-09-30T14:00",
    "ende": "2026-09-30T15:30",
@@ -1036,6 +1069,28 @@ const STUNDENPLAN = {
    "titel": "4 - Management - Controlling",
    "dozent": "Bleis, TM+HD",
    "raum": "CL: 6A.225",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217690",
+   "start": "2026-10-02T08:00",
+   "ende": "2026-10-02T09:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.201",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217692",
+   "start": "2026-10-02T09:45",
+   "ende": "2026-10-02T11:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.201",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1345,6 +1400,50 @@ const STUNDENPLAN = {
    "dozent": "Kirch",
    "raum": "",
    "anmerkung": "Online-Selbsttest",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217694",
+   "start": "2026-10-10T11:15",
+   "ende": "2026-10-10T12:45",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217696",
+   "start": "2026-10-10T13:00",
+   "ende": "2026-10-10T14:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217698",
+   "start": "2026-10-10T14:45",
+   "ende": "2026-10-10T16:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217700",
+   "start": "2026-10-10T16:30",
+   "ende": "2026-10-10T18:00",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
    "gruppe": ""
   },
   {
@@ -1711,6 +1810,50 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217702",
+   "start": "2026-10-17T11:15",
+   "ende": "2026-10-17T12:45",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217704",
+   "start": "2026-10-17T13:00",
+   "ende": "2026-10-17T14:30",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217706",
+   "start": "2026-10-17T14:45",
+   "ende": "2026-10-17T16:15",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1217708",
+   "start": "2026-10-17T16:30",
+   "ende": "2026-10-17T18:00",
+   "art": "SU",
+   "titel": "4 - Management - MA- und UN-Führung",
+   "dozent": "Knoll, TM+SP",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1215983",
    "start": "2026-10-20T09:00",
    "ende": "2026-10-20T10:00",
@@ -1855,6 +1998,267 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-18T00:05",
+   "anzahl": 17,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217682",
+      "start": "2026-09-21T14:00",
+      "ende": "2026-09-21T15:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217684",
+      "start": "2026-09-21T15:45",
+      "ende": "2026-09-21T16:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1217554",
+      "start": "2026-09-22T15:45",
+      "ende": "2026-09-22T17:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1217556",
+      "start": "2026-09-22T17:30",
+      "ende": "2026-09-22T19:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217685",
+      "start": "2026-09-26T16:00",
+      "ende": "2026-09-26T17:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217687",
+      "start": "2026-09-26T17:45",
+      "ende": "2026-09-26T18:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217688",
+      "start": "2026-09-30T12:15",
+      "ende": "2026-09-30T13:45",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217690",
+      "start": "2026-10-02T08:00",
+      "ende": "2026-10-02T09:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217692",
+      "start": "2026-10-02T09:45",
+      "ende": "2026-10-02T11:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.201",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217694",
+      "start": "2026-10-10T11:15",
+      "ende": "2026-10-10T12:45",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217696",
+      "start": "2026-10-10T13:00",
+      "ende": "2026-10-10T14:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217698",
+      "start": "2026-10-10T14:45",
+      "ende": "2026-10-10T16:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217700",
+      "start": "2026-10-10T16:30",
+      "ende": "2026-10-10T18:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217702",
+      "start": "2026-10-17T11:15",
+      "ende": "2026-10-17T12:45",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217704",
+      "start": "2026-10-17T13:00",
+      "ende": "2026-10-17T14:30",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217706",
+      "start": "2026-10-17T14:45",
+      "ende": "2026-10-17T16:15",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217708",
+      "start": "2026-10-17T16:30",
+      "ende": "2026-10-17T18:00",
+      "art": "SU",
+      "titel": "4 - Management - MA- und UN-Führung",
+      "dozent": "Knoll, TM+SP",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-17T00:11",
    "anzahl": 21,
