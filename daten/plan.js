@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-18T15:52",
+ "geprueftAm": "2026-09-18T21:58",
  "fensterVon": "2026-09-14T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -1865,6 +1865,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1217894",
+   "start": "2026-10-20T09:00",
+   "ende": "2026-10-20T10:30",
+   "art": "Klausur",
+   "titel": "WPF - Nachhaltiges Wirtschaften (Die)",
+   "dozent": "Matheis",
+   "raum": "CL: 5.0002",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1215572",
    "start": "2026-10-20T15:00",
    "ende": "2026-10-20T16:00",
@@ -1872,7 +1883,7 @@ const STUNDENPLAN = {
    "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
    "dozent": "Knobloch",
    "raum": "",
-   "anmerkung": "Raum wird noch bekannt gegeben.",
+   "anmerkung": "",
    "gruppe": ""
   },
   {
@@ -1904,8 +1915,8 @@ const STUNDENPLAN = {
    "art": "Klausur",
    "titel": "WPF - Cross Cultural Management",
    "dozent": "also for Incomings DLM 1, WeissD",
-   "raum": "",
-   "anmerkung": "Raum wird noch bekannt gegeben!",
+   "raum": "CL: 6A.205",
+   "anmerkung": "",
    "gruppe": ""
   },
   {
@@ -1937,7 +1948,7 @@ const STUNDENPLAN = {
    "art": "Klausur",
    "titel": "WPF - Supply Chain Management",
    "dozent": "Wringe",
-   "raum": "",
+   "raum": "CL: 5.0002",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1998,6 +2009,95 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-18T21:58",
+   "anzahl": 4,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1217894",
+      "start": "2026-10-20T09:00",
+      "ende": "2026-10-20T10:30",
+      "art": "Klausur",
+      "titel": "WPF - Nachhaltiges Wirtschaften (Die)",
+      "dozent": "Matheis",
+      "raum": "CL: 5.0002",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1215572",
+      "start": "2026-10-20T15:00",
+      "ende": "2026-10-20T16:00",
+      "art": "Klausur",
+      "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
+      "dozent": "Knobloch",
+      "raum": "",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Anmerkung",
+       "vorher": "Raum wird noch bekannt gegeben.",
+       "nachher": ""
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1216825",
+      "start": "2026-10-22T10:00",
+      "ende": "2026-10-22T11:00",
+      "art": "Klausur",
+      "titel": "WPF - Cross Cultural Management",
+      "dozent": "also for Incomings DLM 1, WeissD",
+      "raum": "CL: 6A.205",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 6A.205"
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "Raum wird noch bekannt gegeben!",
+       "nachher": ""
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1207117",
+      "start": "2026-10-27T10:00",
+      "ende": "2026-10-27T11:30",
+      "art": "Klausur",
+      "titel": "WPF - Supply Chain Management",
+      "dozent": "Wringe",
+      "raum": "CL: 5.0002",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 5.0002"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-18T00:05",
    "anzahl": 17,
