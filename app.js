@@ -531,8 +531,18 @@ function kalenderTexteAnpassen() {
        ist; seiteSetzen() zeichnet dann ohnehin neu. */
     if (!titel || kasten.clientHeight === 0) continue;
 
-    const zusatzZeilen = kasten.querySelectorAll(".kalender-termin-zeile");
-    for (const zeile of zusatzZeilen) zeile.hidden = false;
+    const alleZeilen = kasten.querySelectorAll(".kalender-termin-zeile");
+    for (const zeile of alleZeilen) zeile.hidden = false;
+
+    /* Die eigene Notiz wird getrennt behandelt.
+
+       Raum und HWR-Hinweis darf der Titel verdraengen, die Notiz nicht:
+       sie ist das Einzige im Kasten, was nicht aus dem HWR-System kommt,
+       und sie steht nirgends sonst im Raster. Lieber ein einzeiliger
+       Titel mit sichtbarer Notiz als zwei Titelzeilen ohne sie. */
+    const notizZeile = kasten.querySelector(".kalender-termin-notiz");
+    const zusatzZeilen = Array.prototype.filter.call(
+      alleZeilen, zeile => zeile !== notizZeile);
 
     /* Passt die Zeitspanne nicht in die Spaltenbreite, bleibt nur die
        Anfangszeit stehen.
@@ -588,6 +598,20 @@ function kalenderTexteAnpassen() {
     while (platzFuerTitel() < zeilenHoehe * 2 && naechste < zusatzZeilen.length) {
       zusatzZeilen[naechste].hidden = true;
       naechste++;
+    }
+
+    /* Die Notiz darf zwei Zeilen haben – aber nicht auf Kosten des Titels.
+
+       Auf dem Handy sind die Kästchen schmal, und eine zweizeilige Notiz
+       drückte den Titel auf "Natio-…". Damit weiß man zwar, was man sich
+       notiert hat, aber nicht mehr, wozu. Also der Reihe nach nachgeben:
+       erst die zweite Notizzeile, dann die zweite Titelzeile, und erst
+       ganz zuletzt die Notiz selbst. Das ✎ in der Zeitzeile bleibt dann
+       stehen und sagt wenigstens, dass es eine gibt. */
+    if (notizZeile) {
+      notizZeile.style.webkitLineClamp = "2";
+      if (platzFuerTitel() < zeilenHoehe * 2) notizZeile.style.webkitLineClamp = "1";
+      if (platzFuerTitel() < zeilenHoehe) notizZeile.hidden = true;
     }
 
     titel.style.webkitLineClamp =
@@ -1432,13 +1456,24 @@ function kalenderBauen(tage) {
     <div class="kalender-ganztag-ecke">Ganztags</div>
     ${tage.map(eintrag => `
       <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}">
-        ${(eintrag.ganztags || []).map(termin => `
+        ${(eintrag.ganztags || []).map(termin => {
+          /* Ort und Notiz standen bisher nur im Bearbeiten-Fenster. Ein
+             ganztaegiger Termin hat aber keine Uhrzeit, die ihn erklaert -
+             ohne Zusatz steht da nur ein Wort. Die zweite Zeile ist auch
+             der Grund, warum der Streifen hoeher geworden ist. */
+          const zusatz = [termin.ort, termin.notiz].filter(Boolean).join(" · ");
+          return `
           <div class="kalender-aufgabe kalender-ganztagstermin${
                  termin.wichtig ? " kalender-aufgabe-wichtig" : ""}"
                data-termin-bearbeiten="${sicher(termin.id)}"
-               title="${sicher(termin.titel)}">
-            ${termin.wichtig ? "★ " : ""}${sicher(termin.titel)}
-          </div>`).join("")}
+               title="${sicher(termin.titel + (zusatz ? " · " + zusatz : ""))}">
+            <div class="kalender-ganztag-titel">${
+              termin.wichtig ? "★ " : ""}${sicher(termin.titel)}</div>
+            ${zusatz
+              ? `<div class="kalender-ganztag-zusatz">${sicher(zusatz)}</div>`
+              : ""}
+          </div>`;
+        }).join("")}
         ${eintrag.aufgaben.map(aufgabe => {
           const klassen = "kalender-aufgabe"
             + (aufgabe.erledigt ? " kalender-aufgabe-erledigt" : "")
@@ -1495,11 +1530,24 @@ function kalenderBauen(tage) {
       const titelZeilen = Math.max(1, Math.floor(
         (kastenHoehe - polsterung - zeitZeile) / titelZeile));
 
+      /* Die eigene Notiz zum Termin. Bisher stand im Kasten nur ein ✎ und
+         man musste tippen, um zu sehen, was man sich notiert hat. Genau
+         umgekehrt herum ist es richtig: die Notiz ist der einzige Teil des
+         Kastens, den man selbst geschrieben hat. */
+      /* Bei einem eigenen Termin steckt in "anmerkung" das Notizfeld aus
+         dem Formular – also ebenfalls etwas Selbstgeschriebenes. Es
+         gehoert deshalb in die Notizzeile und nicht in die Zeile fuer
+         HWR-Hinweise, die als Erste weicht, wenn es eng wird. */
+      const hwrHinweis = termin.eigen ? "" : termin.anmerkung;
+      const notiz = [termin.eigen ? termin.anmerkung : "", notizText(termin.id)]
+                    .filter(Boolean).join(" · ");
+
       const volltext = uhrzeit(termin.start) + "–" + uhrzeit(termin.ende)
                      + " " + termin.titel
                      + (termin.raum ? " · " + termin.raum : "")
                      + (termin.dozent ? " · " + termin.dozent : "")
-                     + (termin.anmerkung ? " · " + termin.anmerkung : "");
+                     + (termin.anmerkung ? " · " + termin.anmerkung : "")
+                     + (notiz ? " · ✎ " + notiz : "");
 
       /* Antippbar. Auf dem Handy gibt es kein Überfahren mit der Maus, also
          auch keinen Hinweistext – ohne das hier bliebe ein knapper Kasten
@@ -1521,7 +1569,10 @@ function kalenderBauen(tage) {
                style="-webkit-line-clamp:${titelZeilen}">${sicher(termin.titel)}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
-            ${termin.anmerkung ? `<div class="kalender-termin-zeile"><strong>${sicher(termin.anmerkung)}</strong></div>` : ""}`}
+            ${hwrHinweis ? `<div class="kalender-termin-zeile"><strong>${sicher(hwrHinweis)}</strong></div>` : ""}`}
+          ${notiz ? `<div class="kalender-termin-zeile kalender-termin-notiz${
+              notizErledigt(termin.id) ? " kalender-termin-notiz-erledigt" : ""}">${
+              sicher(notiz)}</div>` : ""}
         </div>`;
     }).join("");
 

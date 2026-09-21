@@ -113,6 +113,7 @@ const werkzeug = eval(
   "  nachZeitgruppen: nachZeitgruppen," +
   "  ZEITGRUPPEN: ZEITGRUPPEN," +
   "  naechstenZeichnen: naechstenZeichnen," +
+  "  kalenderBauen: kalenderBauen," +
   "  aufgabenSammeln: aufgabenSammeln," +
   "  setzen: function (n, a) { notizen = n; aufgaben = a; grabsteine = {}; }," +
   "  filterLeeren: function () { abgewaehlteFaecher = new Set(); }" +
@@ -364,6 +365,105 @@ pruefe("ohne Notiz steht dort keine Notizzeile",
        gezeichnet.indexOf("naechster-notiz") < 0);
 pruefe("der Termin selbst steht aber da",
        gezeichnet.indexOf("Social Innovation") >= 0);
+
+
+/* ====================================================================== */
+abschnitt("8. Die eigene Notiz steht im Kalenderkaestchen, nicht nur ein ✎");
+
+/* Warum das hier geprueft wird: im Raster stand lange nur ein kleines ✎
+   neben der Uhrzeit. Man sah, DASS man sich etwas notiert hat, aber nicht
+   WAS - dafuer musste man das Kaestchen antippen. Genau anders herum ist
+   es richtig: die Notiz ist das Einzige im Kasten, was nicht aus dem
+   HWR-System kommt.
+
+   Messen kann dieser Test nichts, er hat keinen Browser. Er prueft die
+   Sorte Fehler, die beim naechsten Umbau wieder auftreten kann: dass die
+   Notiz gar nicht erst in den Text kommt, oder an der falschen Stelle
+   steht und deshalb als Erste ausgeblendet wird. */
+
+/* Ohne diese Zeile prueft der Test den falschen Text.
+
+   Jedes Kaestchen traegt ein title="..." mit dem vollen Inhalt - Raum,
+   Dozent, Hinweis, Notiz -, und das steht im HTML VOR allem anderen. Eine
+   Reihenfolge-Pruefung mit indexOf() findet also immer zuerst den
+   Tooltip und stimmt dann auch dann noch, wenn im Kasten selbst alles
+   durcheinandergeraten ist. Beim Sabotieren kam genau das heraus: die
+   Notizzeile nach ganz vorn geschoben, und der Test sagte weiter "OK".
+   Also wird der Tooltip vorher weggeschnitten. */
+function ohneTooltip(html) {
+  return String(html).replace(/ title="[^"]*"/g, "");
+}
+
+function kalendertag(termine, ganztags) {
+  const tag = new Date("2026-08-24T00:00");
+  return [{
+    datum: tag, schluessel: "2026-08-24", termine: termine || [],
+    aufgaben: [], ganztags: ganztags || [], istHeute: false,
+  }];
+}
+
+const hwrTermin = {
+  id: "sked.kasten", start: "2026-08-24T09:45", ende: "2026-08-24T11:15",
+  titel: "34 - Schluesselkompetenzen V", raum: "CL: 6A.206",
+  dozent: "Knoll", anmerkung: "ONLINE", art: "SU", gruppe: "",
+};
+
+werkzeug.filterLeeren();
+werkzeug.setzen({ "sked.kasten": { text: "11:25 Beginn", erledigt: false,
+                                   wichtig: false, geaendert: 1 } }, []);
+let kasten = ohneTooltip(werkzeug.kalenderBauen(kalendertag([hwrTermin])));
+
+pruefe("der Notiztext steht im Kaestchen",
+       kasten.indexOf("11:25 Beginn") >= 0);
+pruefe("und zwar in einer eigenen Notizzeile",
+       kasten.indexOf("kalender-termin-notiz") >= 0);
+
+/* kalenderTexteAnpassen() blendet die Zusatzzeilen der Reihe nach aus,
+   von oben nach unten. Steht die Notiz hinter Raum und HWR-Hinweis, weicht
+   sie als Letzte - und genau so ist die Rangfolge gemeint. */
+pruefe("sie steht hinter dem Raum",
+       kasten.indexOf("kalender-termin-notiz") > kasten.indexOf("CL: 6A.206"));
+pruefe("und hinter dem HWR-Hinweis",
+       kasten.indexOf("kalender-termin-notiz") > kasten.indexOf("ONLINE"));
+
+// Ohne Notiz darf keine leere Zeile entstehen.
+werkzeug.setzen({}, []);
+kasten = ohneTooltip(werkzeug.kalenderBauen(kalendertag([hwrTermin])));
+pruefe("ohne Notiz gibt es keine Notizzeile",
+       kasten.indexOf("kalender-termin-notiz") < 0);
+pruefe("Raum und Hinweis stehen trotzdem da",
+       kasten.indexOf("CL: 6A.206") >= 0 && kasten.indexOf("ONLINE") >= 0);
+
+/* Bei einem eigenen Termin steckt das Notizfeld aus dem Formular in
+   "anmerkung". Landete es in der Zeile fuer HWR-Hinweise, waere es das
+   Zweite, was bei Platzmangel verschwindet - obwohl es selbstgeschrieben
+   ist. */
+const eigenerTermin = {
+  id: "termin-pruef", start: "2026-08-24T19:00", ende: "2026-08-24T21:00",
+  titel: "Probetraining Kletterhalle", raum: "Ostbloc",
+  dozent: "", anmerkung: "Schuhe leihen", art: "eigen", gruppe: "",
+  eigen: true,
+};
+kasten = ohneTooltip(werkzeug.kalenderBauen(kalendertag([eigenerTermin])));
+pruefe("die Notiz eines eigenen Termins steht in der Notizzeile",
+       kasten.indexOf("kalender-termin-notiz") >= 0
+       && kasten.indexOf("Schuhe leihen") >= 0);
+pruefe("und NICHT in der Zeile fuer HWR-Hinweise",
+       kasten.indexOf("<strong>Schuhe leihen</strong>") < 0);
+
+/* Ganztaegige Termine haben keine Uhrzeit, die sie erklaert. Ohne Ort und
+   Notiz steht in der Kachel nur ein Wort. */
+kasten = ohneTooltip(werkzeug.kalenderBauen(kalendertag([], [{
+  id: "termin-ganz", titel: "Geburtstag Mama",
+  start: "2026-08-24T00:00", ende: "2026-08-24T23:59", ganztags: true,
+  ort: "Rostock", notiz: "Anrufen nicht vergessen", wichtig: true,
+}])));
+pruefe("die Ganztagskachel zeigt den Titel",
+       kasten.indexOf("Geburtstag Mama") >= 0);
+pruefe("dazu Ort und Notiz", kasten.indexOf("Rostock · Anrufen nicht vergessen") >= 0);
+pruefe("beides in getrennten Zeilen, damit gekuerzt werden kann",
+       kasten.indexOf("kalender-ganztag-titel") >= 0
+       && kasten.indexOf("kalender-ganztag-zusatz") >= 0);
 
 
 /* ====================================================================== */
