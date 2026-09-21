@@ -483,11 +483,14 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .kalender-ganztag {
   border-left: 1px solid var(--linie);
   border-bottom: 1px solid var(--linie);
-  padding: 3px;
+  padding: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-height: 22px;
+  gap: 3px;
+  /* Vorher 22 px. Das reichte fuer eine 9,5-px-Zeile und sonst nichts -
+     ein Geburtstag sah aus wie eine Randnotiz, obwohl er den ganzen Tag
+     betrifft. Jetzt passen Titel und Zusatzzeile hinein. */
+  min-height: 34px;
 }
 
 .kalender-ganztag-heute { background: color-mix(in srgb, var(--akzent) 7%, transparent); }
@@ -495,10 +498,10 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .kalender-aufgabe {
   background: var(--notiz-rand);
   color: #fff;
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 9.5px;
-  line-height: 1.2;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  line-height: 1.25;
   cursor: pointer;
   /* Lange Aufgaben werden abgeschnitten statt die Zeile aufzublähen –
      der volle Text steht im Tooltip und in der Liste. */
@@ -969,6 +972,46 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   text-overflow: ellipsis;
 }
 
+/* Die eigene Notiz im Kasten. Sie hebt sich von Raum und HWR-Hinweis ab:
+   voll deckend statt leicht durchscheinend, fetter, hinterlegt, und sie
+   darf ueber zwei Zeilen gehen - ein Raum ist ein Wort, eine Notiz ist
+   ein Satz.
+
+   Ein ✎ davor gibt es nicht: das steht schon in der Zeitzeile, und in
+   einer 57 px breiten Handyspalte kostet es zwei Zeichen Text. Die
+   Hinterlegung sagt dasselbe und braucht keine Breite. currentColor
+   statt Weiss, damit es auf dem gelben Hinweiskasten mit dunkler Schrift
+   genauso funktioniert wie auf dem blauen mit heller. */
+.kalender-termin-notiz {
+  opacity: 1;
+  font-weight: 600;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 3px;
+  padding: 0 3px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  margin-top: 1px;
+}
+
+/* Das "hidden"-Attribut wirkt ueber die Browser-Grundregel [hidden]
+   { display: none }. Die steht im Browser-Stylesheet und verliert gegen
+   JEDE Regel von hier - also auch gegen das "display: -webkit-box" eine
+   Zeile weiter oben. Ohne diese Ausnahme blieb die Notiz in einem 28 px
+   hohen Kaestchen stehen, obwohl kalenderTexteAnpassen() sie ausgeblendet
+   hatte, und schob den Inhalt unten heraus. Dieselbe Falle wie bei
+   .kalender-zeit-ende[hidden]. */
+.kalender-termin-notiz[hidden] { display: none; }
+
+.kalender-termin-notiz-erledigt {
+  opacity: .65;
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
 /* Antippbar: der Zeiger und ein leichtes Aufhellen sagen, dass hier mehr
    zu holen ist. */
 .kalender-termin { cursor: pointer; }
@@ -1131,6 +1174,13 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   .kalender-termin-zeit { font-size: 9.5px; line-height: 1.15; }
   .kalender-termin-titel { font-size: 10px; line-height: 1.15; }
   .kalender-termin-zeile { font-size: 9px; }
+  .kalender-termin-notiz { font-size: 9.5px; }
+
+  /* Der Ganztagsstreifen darf auch hochkant lesbar bleiben, nur eine
+     Spur schmaler als am Rechner. */
+  .kalender-ganztag { min-height: 30px; padding: 3px; }
+  .kalender-aufgabe { font-size: 10px; padding: 3px 5px; }
+  .kalender-ganztag-zusatz { font-size: 9px; }
 
   /* Tageskopf einzeilig, das spart Höhe für das Raster darunter. */
   .kalender-tagkopf { padding: 5px 2px; }
@@ -1404,6 +1454,25 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .kalender-ganztagstermin {
   background: var(--eigen);
   color: #ffffff;
+  /* Die Kachel hat zwei Kinder (Titel, Zusatz). Das "nowrap" von
+     .kalender-aufgabe gilt hier nicht mehr - abgeschnitten wird in den
+     Kindern selbst, sonst greift text-overflow am Elternteil ins Leere. */
+  white-space: normal;
+}
+
+.kalender-ganztag-titel {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kalender-ganztag-zusatz {
+  font-size: 9.5px;
+  opacity: .85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 

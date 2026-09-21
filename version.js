@@ -1,1 +1,1 @@
-const SEITEN_VERSION = "4eef7b01";
+const SEITEN_VERSION = "e395b4d6";
