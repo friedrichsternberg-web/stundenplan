@@ -73,13 +73,31 @@ def fassung_holen():
 
 
 def feed_holen(code=TESTRAUM):
+    return feed_holen_mit("", code)
+
+
+def kopfzeilen_klein(antwort):
+    """
+    Kopfzeilennamen einheitlich klein schreiben.
+
+    HTTP-Kopfzeilen sind laut Norm ohne Ruecksicht auf Gross- und
+    Kleinschreibung zu behandeln, und die Supabase-Funktion schickt sie
+    klein: "x-termine". Ein dict() daraus behaelt diese Schreibweise, und
+    ein Zugriff auf "X-Termine" geht dann ins Leere - stillschweigend, mit
+    dem Vorgabewert. Acht Pruefungen schlugen deshalb fehl, obwohl der
+    Feed in Ordnung war.
+    """
+    return {name.lower(): wert for name, wert in dict(antwort).items()}
+
+
+def feed_holen_mit(zusatz, code=TESTRAUM):
     anfrage = urllib.request.Request(
-        URL + "/functions/v1/kalender?code=" + code, method="GET")
+        URL + "/functions/v1/kalender?code=" + code + zusatz, method="GET")
     try:
         with urllib.request.urlopen(anfrage, timeout=30) as antwort:
-            return antwort.status, antwort.read(), dict(antwort.headers)
+            return antwort.status, antwort.read(), kopfzeilen_klein(antwort.headers)
     except urllib.error.HTTPError as ausnahme:
-        return ausnahme.code, ausnahme.read(), dict(ausnahme.headers)
+        return ausnahme.code, ausnahme.read(), kopfzeilen_klein(ausnahme.headers)
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +151,7 @@ pruefe("die Testdaten liegen in der Ablage", antwort.get("erfolg") is True)
 lage, roh, kopfzeilen = feed_holen()
 pruefe("der Feed antwortet", lage == 200)
 pruefe("und zwar als Kalenderdatei",
-       "text/calendar" in kopfzeilen.get("Content-Type", ""))
+       "text/calendar" in kopfzeilen.get("content-type", ""))
 
 text = roh.decode("utf-8")
 zeilen = text.split("\r\n")
@@ -146,8 +164,18 @@ pruefe("Zeilen enden mit CRLF, wie die Norm verlangt",
        "\r\n" in text and text.count("\n") == text.count("\r\n"))
 pruefe("beginnt mit BEGIN:VCALENDAR", zeilen[0] == "BEGIN:VCALENDAR")
 pruefe("endet mit END:VCALENDAR", zeilen[-2] == "END:VCALENDAR")
+"""
+Zeilenweise zaehlen, nicht als Zeichenfolge.
+
+Der erste Anlauf verglich text.count("BEGIN:") mit text.count("END:")
+und ging gut, solange nur eigene Termine im Feed standen. Sobald der
+Stundenplan dazukam, schlug er fehl: dessen Zeiten stehen als "DTEND:",
+und darin steckt "END:". Gezaehlt wurden also Dinge, die gar keine
+Blockenden sind.
+"""
 pruefe("BEGIN und END sind ausgeglichen",
-       text.count("BEGIN:") == text.count("END:"))
+       sum(1 for z in zeilen if z.startswith("BEGIN:"))
+       == sum(1 for z in zeilen if z.startswith("END:")))
 pruefe("die Zeitzone ist dabei", "TZID:Europe/Berlin" in text)
 pruefe("der Kalender hat einen Namen", "X-WR-CALNAME:" in text)
 
@@ -223,8 +251,13 @@ pruefe("jeder Termin hat eine eindeutige Kennung",
 pruefe("und einen Zeitstempel",
        entfaltet.count("DTSTAMP:") == entfaltet.count("BEGIN:VEVENT"))
 
-anzahl = entfaltet.count("BEGIN:VEVENT")
-pruefe("drei Termine und eine offene Aufgabe (%d)" % anzahl, anzahl == 4)
+"""
+Gezaehlt wird ueber die Kopfzeilen, nicht ueber alle VEVENT-Bloecke: im
+Feed steckt seit dem Zusammenfuehren auch der Stundenplan, und dessen
+Anzahl schwankt mit dem Semester.
+"""
+pruefe("drei eigene Termine", int(kopfzeilen.get("x-termine", "0")) == 3)
+pruefe("und eine offene Aufgabe", int(kopfzeilen.get("x-aufgaben", "0")) == 1)
 
 
 # ---------------------------------------------------------------------------
@@ -237,12 +270,82 @@ pruefe("und er ist nicht leer", b"BEGIN:VEVENT" in roh2)
 
 
 # ---------------------------------------------------------------------------
-abschnitt("9. Aufraeumen")
+abschnitt("9. Der Stundenplan steckt mit drin")
+
+"""
+Der Feed soll einen vollstaendigen Tag zeigen, nicht die Haelfte davon.
+
+Anfangs lieferte er nur die eigenen Termine - wer ihn abonnierte, bekam
+einen Kalender ohne Vorlesungen und musste ein zweites Abo einrichten.
+Die HWR-Termine werden nicht neu berechnet, sondern aus der fertigen
+Datei uebernommen, die die GitHub-Automatik ohnehin schreibt. Dort sind
+Faecherfilter und Zeitkorrekturen schon angewandt.
+"""
+lage, roh4, kopf4 = feed_holen()
+inhalt4 = roh4.decode("utf-8")
+
+pruefe("der Feed antwortet", lage == 200)
+anzahl_plan = int(kopf4.get("x-stundenplan", "0"))
+print("       Stundenplan-Termine im Feed: %d" % anzahl_plan)
+pruefe("Vorlesungen sind dabei", anzahl_plan > 0)
+pruefe("und auch die eigenen Termine", "Zahnarzt" in inhalt4.replace("\r\n ", ""))
+
+# Die Datei muss als Ganzes gueltig bleiben, nicht nur ihre Haelften.
+zeilen4 = inhalt4.split("\r\n")
+pruefe("BEGIN und END bleiben ausgeglichen",
+       sum(1 for z in zeilen4 if z.startswith("BEGIN:"))
+       == sum(1 for z in zeilen4 if z.startswith("END:")))
+pruefe("kein verirrtes LF ohne CR",
+       inhalt4.count("\n") == inhalt4.count("\r\n"))
+pruefe("keine Zeile ueber 75 Oktett",
+       not [z for z in zeilen4 if len(z.encode("utf-8")) > 75])
+
+"""
+Wer die HWR-Datei schon separat abonniert hat, braucht sie hier nicht
+noch einmal - sonst stuende alles doppelt im Kalender.
+"""
+lage, roh5, kopf5 = feed_holen_mit("&plan=0")
+pruefe("mit plan=0 bleibt der Stundenplan draussen",
+       int(kopf5.get("x-stundenplan", "-1")) == 0)
+pruefe("die eigenen Termine aber nicht",
+       "Zahnarzt" in roh5.decode("utf-8").replace("\r\n ", ""))
+
+"""
+Die wichtigste Zusicherung des ganzen Feeds.
+
+Ein Abonnement ist kein gewoehnlicher Abruf: die Kalender App ersetzt bei
+jedem Mal ihren gesamten Inhalt durch das, was zurueckkommt. Kaeme einmal
+ein Kalender ohne Vorlesungen, weil die Plandatei gerade nicht erreichbar
+war, verschwaenden alle Vorlesungen - bis zum naechsten erfolgreichen
+Abruf, und der kann Stunden spaeter sein.
+
+Bei einem Probelauf kam genau das einmal vor: X-Stundenplan war 0,
+waehrend fuenf weitere Abrufe sauber durchliefen. Seitdem versucht die
+Funktion es zweimal und meldet danach lieber einen Fehler.
+
+Erwartet wird also: entweder vollstaendig, oder ein Fehler. Niemals ein
+Kalender mit null Vorlesungen.
+"""
+halbe = 0
+for lauf in range(5):
+    lage6, _, kopf6 = feed_holen()
+    if lage6 == 200 and int(kopf6.get("x-stundenplan", "0")) == 0:
+        halbe += 1
+pruefe("fuenf Abrufe, kein einziger halber Kalender", halbe == 0)
+
+
+# ---------------------------------------------------------------------------
+abschnitt("10. Aufraeumen")
 
 antwort = schreiben({"v": 2, "eintraege": {}})
 pruefe("die Testdaten sind wieder weg", antwort.get("erfolg") is True)
-lage, roh3, _ = feed_holen()
-pruefe("der Feed ist jetzt leer", b"BEGIN:VEVENT" not in roh3)
+
+lage, roh3, kopf3 = feed_holen()
+pruefe("keine eigenen Termine mehr", int(kopf3.get("x-termine", "-1")) == 0)
+pruefe("keine Aufgaben mehr", int(kopf3.get("x-aufgaben", "-1")) == 0)
+# Der Stundenplan bleibt - der haengt nicht am Testraum.
+pruefe("der Stundenplan steht weiterhin drin",
+       int(kopf3.get("x-stundenplan", "0")) > 0)
 
 
 # ---------------------------------------------------------------------------

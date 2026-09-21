@@ -430,8 +430,13 @@ trotzdem begraben. Geprüft in `tests/test_planer.js`, Abschnitt 4.
 
 ## Apple Kalender
 
-Deine eigenen Termine und offenen Aufgaben lassen sich in der Kalender App
-abonnieren. Die Adresse steht im ⚙-Fenster unter **Apple Kalender**.
+**Alles in einem Kalender**: der Stundenplan der HWR, deine eigenen Termine
+und die offenen Aufgaben. Die Adresse steht im ⚙-Fenster unter **Apple
+Kalender**.
+
+Wer den HWR-Kalender schon separat abonniert hat, sollte das alte Abo
+entfernen – sonst steht jede Vorlesung doppelt drin. Mit `&plan=0` an der
+Adresse bleibt der Stundenplan draußen, dann sind zwei Abos in Ordnung.
 
 ```
 webcal://copydwpdqpnwjvknsakz.supabase.co/functions/v1/kalender?code=<dein Code>
@@ -439,6 +444,20 @@ webcal://copydwpdqpnwjvknsakz.supabase.co/functions/v1/kalender?code=<dein Code>
 
 Geliefert wird das von einer Edge Function bei Supabase. Sie läuft rund um
 die Uhr; der Mac muss nicht an sein.
+
+### Warum ein Fehler hier laut sein muss
+
+Ein Abonnement ist kein gewöhnlicher Abruf. Die Kalender App **ersetzt bei
+jedem Mal ihren gesamten Inhalt** durch das, was zurückkommt. Käme einmal
+ein Kalender ohne Vorlesungen, weil die Plandatei gerade nicht erreichbar
+war, verschwänden alle Vorlesungen aus dem Kalender – bis zum nächsten
+erfolgreichen Abruf, und der kann Stunden später sein.
+
+Beim Ausprobieren kam genau das einmal vor: ein Abruf lieferte null
+Vorlesungen, während fünf weitere sauber durchliefen. Seitdem versucht die
+Funktion es zweimal und meldet danach lieber einen Fehler. Ein „Abo nicht
+erreichbar" ist unangenehm, ein stillschweigend geleerter Stundenplan ist
+schlimmer.
 
 **Es geht nur in eine Richtung**, von der App in den Kalender. Was in der
 Kalender App eingetragen wird, kommt nicht zurück. Für zwei Richtungen
