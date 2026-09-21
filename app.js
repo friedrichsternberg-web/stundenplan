@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "1a909d4c";
+const GEBAUTE_VERSION = "4eef7b01";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -2367,9 +2367,13 @@ function geraeteZeichnen(meldung) {
     <div class="kalender-abo">
       <h3 class="melden-titel">Apple Kalender</h3>
       <p class="filter-hinweis">
-        Deine eigenen Termine und offenen Aufgaben als Kalender zum
-        Abonnieren. Einmal eingerichtet, holt sich die Kalender App die
-        Änderungen von selbst.
+        <strong>Alles in einem Kalender:</strong> der Stundenplan der HWR,
+        deine eigenen Termine und die offenen Aufgaben. Einmal abonniert,
+        holt sich die Kalender App auch Raumwechsel und Ausfälle von selbst.
+      </p>
+      <p class="filter-hinweis">
+        Hast du den HWR-Kalender schon separat abonniert, entferne das alte
+        Abo – sonst steht jede Vorlesung doppelt drin.
       </p>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht" id="kalenderAbo">
