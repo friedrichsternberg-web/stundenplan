@@ -137,6 +137,28 @@ const SPEICHER_AUFGABEN = "stundenplan.aufgaben";
    steht das in sync.js. */
 const SPEICHER_GRABSTEINE = "stundenplan.grabsteine";
 
+/* Deine eigenen Termine – alles, was nicht von der HWR kommt.
+
+   Zahnarzt, Geburtstag, Zugfahrt, Schicht. Sie liegen bewusst in einem
+   eigenen Speicher und nicht bei den Aufgaben: eine Aufgabe hat nur einen
+   Tag, ein Termin hat Anfang und Ende. Der Unterschied zieht sich durch
+   die ganze Anzeige – Aufgaben stehen in der Ganztagszeile, Termine im
+   Stundenraster.
+
+   Die Kennung fängt mit "termin-" an. Nicht mit "eigen-", obwohl das
+   naheliegend wäre: an "eigen-" erkennt der Abgleich seit Monaten eine
+   freie AUFGABE. Ein Termin mit dieser Vorsilbe würde beim Einlesen zur
+   Aufgabe gemacht, und Anfang und Ende wären weg. */
+const SPEICHER_TERMINE = "stundenplan.eigeneTermine";
+
+/* Einmalige Sicherung vor dem Umbau zum Planer.
+
+   Beim Umstieg auf eigene Termine ändert sich die Form der gespeicherten
+   Daten. Geht dabei etwas schief, liegt unter diesem Schlüssel noch der
+   Stand von vorher – unangetastet, in der Fassung, die die alte App
+   geschrieben hat. */
+const SPEICHER_SICHERUNG = "stundenplan.sicherung.vorPlaner";
+
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
@@ -160,6 +182,22 @@ let aufgaben = [];
 
 // Gelöschtes: { "eigen-1756…": 1756312800000 } – Kennung und Zeitpunkt.
 let grabsteine = {};
+
+/* Eigene Termine: [{ id, titel, start, ende, ganztags, ort, notiz,
+   wichtig, geaendert }, …] – start und ende wie im HWR-Plan als
+   "2026-09-25T14:00". */
+let eigeneTermine = [];
+
+/* Einträge aus der Ablage, deren Art diese Fassung der App nicht kennt.
+
+   Sie werden unverändert durchgereicht statt weggeworfen. Der Grund ist
+   eine Falle, in die dieser Abgleich sonst getappt wäre: schreibt eine
+   neuere Fassung eine neue Art von Eintrag, und ein Gerät mit einer
+   älteren Fassung gleicht ab, würde die alte Fassung sie nicht verstehen,
+   beim Zurückschreiben weglassen – und damit auf allen Geräten löschen.
+
+   Was hier durchgereicht wird, überlebt das. */
+let unbekannteEintraege = {};
 
 /* Ob das Fach "Erledigt" im To-do-Bereich aufgeklappt ist.
 
@@ -365,7 +403,7 @@ function naechstenZeichnen() {
 
   // Ein laufender Termin ist interessanter als der nächste kommende,
   // deshalb wird zuerst danach gesucht.
-  const termine = sichtbareTermine();
+  const termine = alleAngezeigtenTermine();
   let treffer = termine.find(t => alsDatum(t.start) <= jetzt && alsDatum(t.ende) > jetzt);
   let laeuftGerade = Boolean(treffer);
 
@@ -426,7 +464,7 @@ function wocheZeichnen() {
 
   // Termine dieser Woche nach Tagen sortieren.
   const nachTag = new Map();
-  for (const termin of sichtbareTermine()) {
+  for (const termin of alleAngezeigtenTermine()) {
     const schluessel = tagesSchluessel(termin.start);
     if (!nachTag.has(schluessel)) nachTag.set(schluessel, []);
     nachTag.get(schluessel).push(termin);
@@ -441,18 +479,22 @@ function wocheZeichnen() {
     const schluessel = tagesSchluessel(tag);
     const termineDesTages = nachTag.get(schluessel) || [];
     const aufgabenDesTages = aufgabenFuerTag(schluessel);
+    const ganztagsDesTages = ganztagsTermineFuerTag(schluessel);
 
     // Am Wochenende ist normalerweise nichts – dann bleibt der Kasten weg.
-    // Steht dort aber eine eigene Aufgabe, muss der Tag sichtbar sein,
-    // sonst käme man an sie nicht heran.
+    // Steht dort aber etwas Eigenes, muss der Tag sichtbar sein, sonst
+    // käme man nicht heran. Seit es eigene Termine gibt, zählen die mit:
+    // ein Geburtstag am Samstag darf den Tag nicht unsichtbar lassen.
     if (versatz >= 5 && termineDesTages.length === 0
-        && aufgabenDesTages.length === 0) continue;
+        && aufgabenDesTages.length === 0
+        && ganztagsDesTages.length === 0) continue;
 
     tage.push({
       datum: tag,
       schluessel: schluessel,
       termine: termineDesTages,
       aufgaben: aufgabenDesTages,
+      ganztags: ganztagsDesTages,
       istHeute: schluessel === heuteSchluessel,
     });
   }
@@ -581,12 +623,17 @@ function listeBauen(tage) {
         ${termineDesTages.length === 0
           ? `<div class="tag-leer">Keine Veranstaltung.</div>`
           : termineDesTages.map(terminZeichnen).join("")}
+        ${(eintrag.ganztags || []).map(ganztagsTerminZeichnen).join("")}
         ${eintrag.aufgaben.map(freieAufgabeZeichnen).join("")}
         ${bearbeitenModus
           ? `<div class="tag-fuss">
                <button type="button" class="notiz-neu"
                        data-aufgabe-neu="${sicher(eintrag.schluessel)}">
                  + Aufgabe für diesen Tag
+               </button>
+               <button type="button" class="notiz-neu"
+                       data-termin-neu="${sicher(eintrag.schluessel)}">
+                 + Termin an diesem Tag
                </button>
              </div>`
           : ""}
@@ -596,10 +643,16 @@ function listeBauen(tage) {
 }
 
 function terminZeichnen(termin) {
-  const details = [termin.raum, termin.dozent, termin.art]
-    .filter(Boolean).join(" · ");
+  /* Bei eigenen Terminen ist "art" immer "eigen" – das als Detail
+     anzuzeigen wäre eine leere Zeile. Bei HWR-Terminen steht dort SU, SI
+     oder Ü, und das sagt etwas. */
+  const details = termin.eigen
+    ? [termin.raum].filter(Boolean).join(" · ")
+    : [termin.raum, termin.dozent, termin.art].filter(Boolean).join(" · ");
+
   return `
-    <div class="termin">
+    <div class="termin${termin.eigen ? " termin-eigen" : ""}"${
+      termin.eigen ? ` data-termin-bearbeiten="${sicher(termin.id)}"` : ""}>
       <div class="termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
       <div class="termin-inhalt">
         <div class="termin-titel">${sicher(termin.titel)}</div>
@@ -779,12 +832,158 @@ function grabsteineLaden() {
 function grabsteineSpeichern() {
   try {
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
+    localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
 
 function grabsteinSetzen(kennung) {
   grabsteine[kennung] = Abgleich.jetzt();
   grabsteineSpeichern();
+}
+
+/* --- Eigene Termine ------------------------------------------------------
+
+   Der Schritt vom Stundenplan zum Planer. Alles hier betrifft Termine, die
+   du selbst einträgst – die HWR-Termine kommen unverändert aus
+   daten/plan.js und werden nie angefasst.
+   ---------------------------------------------------------------------- */
+
+function eigeneTermineLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_TERMINE);
+    const gelesen = roh ? JSON.parse(roh) : [];
+    if (!Array.isArray(gelesen)) return [];
+    return gelesen
+      .filter(t => t && typeof t.titel === "string" && typeof t.start === "string")
+      .map(t => ({
+        id: String(t.id || neueTerminKennung()),
+        titel: t.titel,
+        start: t.start,
+        // Ohne Ende wäre der Termin im Kalender nicht zeichenbar. Eine
+        // Stunde ist die Annahme, die am seltensten stört.
+        ende: typeof t.ende === "string" && t.ende ? t.ende : stundeSpaeter(t.start),
+        ganztags: Boolean(t.ganztags),
+        ort: typeof t.ort === "string" ? t.ort : "",
+        notiz: typeof t.notiz === "string" ? t.notiz : "",
+        wichtig: Boolean(t.wichtig),
+        geaendert: Number(t.geaendert) || 0,
+      }));
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function eigeneTermineSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
+  } catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+function neueTerminKennung() {
+  return "termin-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+}
+
+/* Eine Stunde auf eine Zeitangabe draufrechnen, ohne die Form zu verlieren.
+
+   Über Date zu gehen wäre der naheliegende Weg, birgt aber die
+   Zeitumstellung: am letzten Oktobersonntag hat ein Tag 25 Stunden, und
+   ein Termin um 02:30 rutscht dann auf eine Uhrzeit, die es zweimal gibt.
+   Hier wird deshalb schlicht auf der Uhr gerechnet – der Kalender zeigt
+   ohnehin Ortszeit an. */
+function stundeSpaeter(zeitangabe) {
+  const stunde = Number(zeitangabe.slice(11, 13));
+  if (!isFinite(stunde)) return zeitangabe;
+  if (stunde >= 23) return zeitangabe.slice(0, 11) + "23:59";
+  return zeitangabe.slice(0, 11)
+       + String(stunde + 1).padStart(2, "0") + zeitangabe.slice(13, 16);
+}
+
+function terminZuEigenerKennung(kennung) {
+  return eigeneTermine.filter(t => t.id === kennung)[0] || null;
+}
+
+/* Legt einen Termin an oder ändert ihn. Ein leerer Titel löscht ihn –
+   dieselbe Regel wie bei Notizen und Aufgaben, damit man sich nur eine
+   merken muss. */
+function terminSetzen(kennung, felder) {
+  const titel = (felder.titel || "").trim();
+
+  if (!titel) {
+    eigeneTermine = eigeneTermine.filter(t => t.id !== kennung);
+    grabsteinSetzen(kennung);
+    eigeneTermineSpeichern();
+    return;
+  }
+
+  const vorhandener = terminZuEigenerKennung(kennung);
+  const neuer = {
+    id: kennung,
+    titel: titel,
+    start: felder.start,
+    ende: felder.ende || stundeSpaeter(felder.start),
+    ganztags: Boolean(felder.ganztags),
+    ort: (felder.ort || "").trim(),
+    notiz: (felder.notiz || "").trim(),
+    wichtig: Boolean(felder.wichtig),
+    geaendert: Abgleich.jetzt(),
+  };
+
+  /* Ende vor Anfang wäre im Kalender ein Kästchen mit negativer Höhe –
+     also unsichtbar. Lieber stillschweigend geraderücken als einen Termin
+     anzeigen, den man nicht sieht. */
+  if (!neuer.ganztags && neuer.ende <= neuer.start) {
+    neuer.ende = stundeSpaeter(neuer.start);
+  }
+
+  if (vorhandener) {
+    eigeneTermine = eigeneTermine.map(t => (t.id === kennung ? neuer : t));
+  } else {
+    eigeneTermine.push(neuer);
+  }
+  grabsteinEntfernen(kennung);
+  eigeneTermineSpeichern();
+}
+
+/* Bringt eigene Termine in dieselbe Form wie die HWR-Termine.
+
+   Das ist der Kniff, der den ganzen Umbau klein hält: Listenansicht,
+   Kalenderraster, Überlappungsrechnung und das Detailfenster arbeiten
+   alle mit dieser einen Form. Wer sie bedient, wird von allen vier
+   gezeichnet, ohne dass dort auch nur eine Zeile geändert werden müsste.
+
+   Das Feld "eigen" unterscheidet sie trotzdem – für die Farbe und dafür,
+   dass der Fächerfilter sie nicht wegnimmt. */
+function eigeneTermineAlsPlan() {
+  return eigeneTermine.filter(t => !t.ganztags).map(t => ({
+    id: t.id,
+    start: t.start,
+    ende: t.ende,
+    titel: t.titel,
+    raum: t.ort || "",
+    dozent: "",
+    anmerkung: t.notiz || "",
+    art: "eigen",
+    gruppe: "",
+    eigen: true,
+    wichtig: Boolean(t.wichtig),
+  }));
+}
+
+function ganztagsTermineFuerTag(tagesschluessel) {
+  return eigeneTermine.filter(
+    t => t.ganztags && t.start.slice(0, 10) <= tagesschluessel
+                    && (t.ende || t.start).slice(0, 10) >= tagesschluessel);
+}
+
+/* Alles, was in Plan und Kalender erscheinen soll: HWR plus deine eigenen.
+
+   Der Fächerfilter greift nur in sichtbareTermine() und damit nur auf die
+   HWR-Termine. Ein eigener Termin soll nicht verschwinden, weil ein Fach
+   abgewählt wurde, mit dem er nichts zu tun hat. */
+function alleAngezeigtenTermine() {
+  return sichtbareTermine().concat(eigeneTermineAlsPlan())
+    .sort((a, b) => a.start.localeCompare(b.start));
 }
 
 function grabsteinEntfernen(kennung) {
@@ -917,6 +1116,23 @@ function freieAufgabeZeichnen(aufgabe) {
     </div>`;
 }
 
+/* Ein ganztägiger eigener Termin in der Listenansicht.
+
+   Er bekommt dieselbe Zeile wie eine freie Aufgabe, nur mit "Ganztägig"
+   statt "Aufgabe" davor – die Stelle, wo sonst die Uhrzeit steht, bleibt
+   sonst leer und das Auge sucht. */
+function ganztagsTerminZeichnen(termin) {
+  const zusatz = [termin.ort, termin.notiz].filter(Boolean).join(" · ");
+  return `
+    <div class="termin termin-eigen" data-termin-bearbeiten="${sicher(termin.id)}">
+      <div class="termin-zeit">Ganztägig</div>
+      <div class="termin-inhalt">
+        <div class="termin-titel">${termin.wichtig ? "★ " : ""}${sicher(termin.titel)}</div>
+        ${zusatz ? `<div class="termin-details">${sicher(zusatz)}</div>` : ""}
+      </div>
+    </div>`;
+}
+
 function notizZeichnen(termin) {
   const text = notizText(termin.id);
 
@@ -972,9 +1188,17 @@ function notizKlick(ereignis) {
   const ziel = ereignis.target && ereignis.target.closest
     ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
                               + "[data-notiz-abbrechen],[data-notiz-loeschen],"
-                              + "[data-todo-haken],[data-aufgabe-neu],[data-termin]")
+                              + "[data-todo-haken],[data-aufgabe-neu],[data-termin],"
+                              + "[data-termin-neu],[data-termin-bearbeiten]")
     : null;
   if (!ziel) return;
+
+  // Eigener Termin: neu anlegen oder ändern.
+  const neuerTermin = ziel.getAttribute("data-termin-neu");
+  if (neuerTermin) { terminFormularZeigen("", neuerTermin); return; }
+
+  const zuAendern = ziel.getAttribute("data-termin-bearbeiten");
+  if (zuAendern) { terminFormularZeigen(zuAendern); return; }
 
   // Ein Kästchen im Kalenderraster: alles zeigen, was dort nicht hinpasst.
   const angetippterTermin = ziel.getAttribute("data-termin");
@@ -1201,12 +1425,20 @@ function kalenderBauen(tage) {
      gelogen. Echte Kalender lösen das mit einem schmalen Streifen über dem
      Raster, und genau das ist das hier. Die Zeile erscheint nur, wenn in
      dieser Woche überhaupt eine Aufgabe liegt; sonst kostet sie nur Höhe. */
-  const gibtAufgaben = tage.some(eintrag => eintrag.aufgaben.length > 0);
+  const gibtAufgaben = tage.some(
+    eintrag => eintrag.aufgaben.length > 0 || (eintrag.ganztags || []).length > 0);
 
   const ganztagsZeile = !gibtAufgaben ? "" : `
-    <div class="kalender-ganztag-ecke">Aufg.</div>
+    <div class="kalender-ganztag-ecke">Ganztags</div>
     ${tage.map(eintrag => `
       <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}">
+        ${(eintrag.ganztags || []).map(termin => `
+          <div class="kalender-aufgabe kalender-ganztagstermin${
+                 termin.wichtig ? " kalender-aufgabe-wichtig" : ""}"
+               data-termin-bearbeiten="${sicher(termin.id)}"
+               title="${sicher(termin.titel)}">
+            ${termin.wichtig ? "★ " : ""}${sicher(termin.titel)}
+          </div>`).join("")}
         ${eintrag.aufgaben.map(aufgabe => {
           const klassen = "kalender-aufgabe"
             + (aufgabe.erledigt ? " kalender-aufgabe-erledigt" : "")
@@ -1273,7 +1505,8 @@ function kalenderBauen(tage) {
          auch keinen Hinweistext – ohne das hier bliebe ein knapper Kasten
          schlicht unlesbar. */
       return `
-        <div class="kalender-termin ${termin.anmerkung ? "kalender-termin-hinweis" : ""}"
+        <div class="kalender-termin ${termin.eigen ? "kalender-termin-eigen"
+                                      : (termin.anmerkung ? "kalender-termin-hinweis" : "")}"
              style="top:${oben}px; height:${kastenHoehe}px; left:${links}%; width:calc(${breite}% - 2px)"
              data-termin="${sicher(termin.id)}"
              role="button" tabindex="0"
@@ -1358,9 +1591,14 @@ function terminFensterZeigen(kennung) {
         ${sicher(notizText(kennung))}
       </div>` : ""}
     <div class="filter-knoepfe">
-      <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
-        ${notizText(kennung) ? "Notiz bearbeiten" : "Notiz hinzufügen"}
-      </button>
+      ${termin.eigen ? `
+        <button type="button" class="knopf-schlicht knopf-betont"
+                data-termin-bearbeiten="${sicher(kennung)}">
+          Termin ändern
+        </button>` : `
+        <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
+          ${notizText(kennung) ? "Notiz bearbeiten" : "Notiz hinzufügen"}
+        </button>`}
     </div>`;
 
   fenster.hidden = false;
@@ -1406,6 +1644,22 @@ function zurNotizSpringen(kennung) {
    hier nichts, und der Eintrag wird als "Termin nicht mehr im Plan" gezeigt,
    statt still zu verschwinden. */
 function terminZuKennung(kennung) {
+  /* Erst die eigenen. Sie stehen nicht in STUNDENPLAN.termine, würden also
+     sonst nicht gefunden – und damit hinge eine Notiz an einem eigenen
+     Termin im Leeren. */
+  const eigener = eigeneTermineAlsPlan().filter(t => t.id === kennung)[0];
+  if (eigener) return eigener;
+  const ganztags = eigeneTermine.filter(t => t.id === kennung)[0];
+  if (ganztags) {
+    return { id: ganztags.id, start: ganztags.start, ende: ganztags.ende,
+             titel: ganztags.titel, raum: ganztags.ort || "", dozent: "",
+             anmerkung: ganztags.notiz || "", art: "eigen", gruppe: "",
+             eigen: true, ganztags: true };
+  }
+  return terminZuKennungAusPlan(kennung);
+}
+
+function terminZuKennungAusPlan(kennung) {
   return STUNDENPLAN.termine.filter(t => t.id === kennung)[0] || null;
 }
 
@@ -1887,6 +2141,32 @@ function abgleichSammeln() {
     };
   }
 
+  for (const termin of eigeneTermine) {
+    eintraege[termin.id] = {
+      art: "termin",
+      titel: termin.titel,
+      start: termin.start,
+      ende: termin.ende,
+      ganztags: Boolean(termin.ganztags),
+      ort: termin.ort || "",
+      notiz: termin.notiz || "",
+      wichtig: Boolean(termin.wichtig),
+      geaendert: Number(termin.geaendert) || 0,
+    };
+  }
+
+  /* Was diese Fassung nicht versteht, wandert unverändert zurück.
+
+     Ohne das hier wäre folgendes möglich: eine spätere Fassung führt eine
+     neue Art von Eintrag ein, ein Gerät mit einer älteren Fassung gleicht
+     ab, versteht sie nicht, lässt sie beim Zurückschreiben weg – und
+     löscht sie damit auf allen Geräten. Die Stelle ist absichtlich hier,
+     vor den Grabsteinen: ein Löschvermerk soll auch einen unbekannten
+     Eintrag begraben können. */
+  for (const kennung of Object.keys(unbekannteEintraege)) {
+    if (!eintraege[kennung]) eintraege[kennung] = unbekannteEintraege[kennung];
+  }
+
   for (const kennung of Object.keys(grabsteine)) {
     /* Ein Grabstein zählt nur, wenn an derselben Kennung nichts Neueres
        steht. Normalerweise kann das gar nicht vorkommen – notizSetzen()
@@ -1899,7 +2179,7 @@ function abgleichSammeln() {
     eintraege[kennung] = { geloescht: true, geaendert: grabsteine[kennung] };
   }
 
-  return { v: 1, eintraege: eintraege };
+  return { v: 2, eintraege: eintraege };
 }
 
 /* Der Rückweg: den zusammengeführten Stand in die Form bringen, mit der der
@@ -1912,7 +2192,9 @@ function abgleichUebernehmen(nutzlast) {
   const eintraege = (nutzlast && nutzlast.eintraege) || {};
   const neueNotizen = {};
   const neueAufgaben = [];
+  const neueTermine = [];
   const neueGrabsteine = {};
+  const neueUnbekannte = {};
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -1920,9 +2202,32 @@ function abgleichUebernehmen(nutzlast) {
 
     if (eintrag.geloescht) { neueGrabsteine[kennung] = zeitpunkt; continue; }
 
-    // Kaputte Einträge aussortieren statt anzeigen. Ein halber Eintrag in
-    // der Ablage soll nicht die ganze Liste unbrauchbar machen.
-    if (typeof eintrag.text !== "string" || !eintrag.text) continue;
+    // Eigener Termin: braucht Titel und Anfang, alles andere ist Beiwerk.
+    if (eintrag.art === "termin" || kennung.indexOf("termin-") === 0) {
+      if (typeof eintrag.titel !== "string" || !eintrag.titel) continue;
+      if (typeof eintrag.start !== "string" || eintrag.start.length < 16) continue;
+      neueTermine.push({
+        id: kennung,
+        titel: eintrag.titel,
+        start: eintrag.start,
+        ende: (typeof eintrag.ende === "string" && eintrag.ende)
+                ? eintrag.ende : stundeSpaeter(eintrag.start),
+        ganztags: Boolean(eintrag.ganztags),
+        ort: typeof eintrag.ort === "string" ? eintrag.ort : "",
+        notiz: typeof eintrag.notiz === "string" ? eintrag.notiz : "",
+        wichtig: Boolean(eintrag.wichtig),
+        geaendert: zeitpunkt,
+      });
+      continue;
+    }
+
+    /* Kein Text und keine bekannte Art? Dann kommt der Eintrag von einer
+       Fassung, die es noch nicht gab. Er wird aufgehoben und beim nächsten
+       Hochladen unverändert zurückgegeben, statt weggeworfen zu werden. */
+    if (typeof eintrag.text !== "string" || !eintrag.text) {
+      if (eintrag.art) neueUnbekannte[kennung] = eintrag;
+      continue;
+    }
 
     if (eintrag.art === "aufgabe" || kennung.indexOf("eigen-") === 0) {
       if (typeof eintrag.datum !== "string" || !eintrag.datum) continue;
@@ -1946,7 +2251,9 @@ function abgleichUebernehmen(nutzlast) {
 
   notizen = neueNotizen;
   aufgaben = neueAufgaben;
+  eigeneTermine = neueTermine;
   grabsteine = neueGrabsteine;
+  unbekannteEintraege = neueUnbekannte;
 
   /* Direkt in den Speicher, nicht über notizenSpeichern() – das würde
      Abgleich.anstossen() aufrufen und damit einen Abgleich anstoßen, der
@@ -1986,6 +2293,20 @@ function altKopieren(text) {
   } catch (fehler) {
     return false;
   }
+}
+
+/* Die Adresse des Kalender-Abos.
+
+   Der Gerätecode steckt darin. Anders geht es nicht: die Kalender App
+   kann sich nicht ausweisen, sie ruft eine Adresse ab und fertig. Wer die
+   Adresse hat, sieht die Termine.
+
+   "webcal" statt "https" ist derselbe Abruf, nur mit einem Vorsatz, den
+   Apple kennt: ein Tippen darauf öffnet die Kalender App und schlägt das
+   Abo vor, statt die Datei im Browser anzuzeigen. */
+function kalenderAdresse(vorsatz) {
+  const basis = ABGLEICH_URL.replace(/^https:/, vorsatz === "webcal" ? "webcal:" : "https:");
+  return basis + "/functions/v1/kalender?code=" + Abgleich.code();
 }
 
 // Die Adresse dieser Seite mit angehängtem Code – zum Weiterschicken.
@@ -2042,6 +2363,27 @@ function geraeteZeichnen(meldung) {
       <button type="button" class="knopf-schlicht" id="jetztAbgleichen">Jetzt abgleichen</button>
     </div>
     ${hinweis}
+
+    <div class="kalender-abo">
+      <h3 class="melden-titel">Apple Kalender</h3>
+      <p class="filter-hinweis">
+        Deine eigenen Termine und offenen Aufgaben als Kalender zum
+        Abonnieren. Einmal eingerichtet, holt sich die Kalender App die
+        Änderungen von selbst.
+      </p>
+      <div class="filter-knoepfe">
+        <button type="button" class="knopf-schlicht" id="kalenderAbo">
+          Abo-Adresse kopieren
+        </button>
+        <a class="knopf-schlicht knopf-betont" id="kalenderOeffnen"
+           href="${sicher(kalenderAdresse("webcal"))}">In Kalender öffnen</a>
+      </div>
+      <p class="filter-hinweis">
+        Es geht nur in eine Richtung: von hier in den Kalender. Was du in
+        der Kalender App einträgst, kommt nicht zurück – dafür bräuchte ich
+        dein iCloud-Passwort, und das nehme ich nicht an.
+      </p>
+    </div>
 
     <p class="filter-hinweis geraete-warnung">
       Bewahr den Code auf, etwa im Passwortspeicher. Wer ihn hat, sieht deine
@@ -2136,6 +2478,136 @@ function meldenProbeSchicken() {
       marke: "probe",
     }),
   }).then(a => a.json());
+}
+
+/* --- Das Formular für eigene Termine ------------------------------------
+
+   Ein echtes <form> und keine lose Sammlung von Feldern. Das bringt drei
+   Dinge geschenkt, die man sonst von Hand bauen müsste: die Pflichtfeld-
+   Prüfung, das Absenden mit der Eingabetaste, und auf dem Handy die
+   passende Tastatur samt Datums- und Uhrzeitrad.
+   ---------------------------------------------------------------------- */
+
+// Welcher Termin gerade im Formular steht, oder "" für einen neuen.
+let formularKennung = "";
+
+function terminFormularZeigen(kennung, vorgabeTag) {
+  const fenster = document.getElementById("terminFormHintergrund");
+  if (!fenster) return;
+
+  const vorhandener = kennung ? terminZuEigenerKennung(kennung) : null;
+  formularKennung = kennung || "";
+
+  document.getElementById("terminFormTitel").textContent =
+    vorhandener ? "Termin ändern" : "Neuer Termin";
+  document.getElementById("formLoeschen").hidden = !vorhandener;
+
+  const tag = vorhandener ? vorhandener.start.slice(0, 10)
+                          : (vorgabeTag || tagesSchluessel(new Date()));
+
+  document.getElementById("formTitel").value = vorhandener ? vorhandener.titel : "";
+  document.getElementById("formDatum").value = tag;
+  document.getElementById("formGanztags").checked = vorhandener
+    ? Boolean(vorhandener.ganztags) : false;
+  /* Voreinstellung für einen neuen Termin: die nächste volle Stunde.
+     "Jetzt" wäre selten gemeint, Mitternacht nie. */
+  const naechsteStunde = String(Math.min(23, new Date().getHours() + 1)).padStart(2, "0");
+  document.getElementById("formVon").value = vorhandener
+    ? vorhandener.start.slice(11, 16) : naechsteStunde + ":00";
+  document.getElementById("formBis").value = vorhandener
+    ? vorhandener.ende.slice(11, 16)
+    : String(Math.min(23, new Date().getHours() + 2)).padStart(2, "0") + ":00";
+  document.getElementById("formOrt").value = vorhandener ? vorhandener.ort : "";
+  document.getElementById("formNotiz").value = vorhandener ? vorhandener.notiz : "";
+  document.getElementById("formWichtig").checked = vorhandener
+    ? Boolean(vorhandener.wichtig) : false;
+
+  zeitfelderUmschalten();
+  fenster.hidden = false;
+
+  // Auf dem Rechner gleich losschreiben können. Auf dem Handy nicht: dort
+  // spränge die Tastatur hoch und verdeckte das halbe Formular.
+  if (!SCHMALER_BILDSCHIRM.matches) {
+    const feld = document.getElementById("formTitel");
+    if (feld && feld.focus) feld.focus();
+  }
+}
+
+function zeitfelderUmschalten() {
+  const ganztags = document.getElementById("formGanztags").checked;
+  document.getElementById("formZeiten").hidden = ganztags;
+}
+
+function terminFormularSpeichern() {
+  const titel = document.getElementById("formTitel").value;
+  const tag = document.getElementById("formDatum").value;
+  const ganztags = document.getElementById("formGanztags").checked;
+  const von = document.getElementById("formVon").value || "09:00";
+  const bis = document.getElementById("formBis").value || "10:00";
+
+  if (!titel.trim() || !tag) return false;
+
+  terminSetzen(formularKennung || neueTerminKennung(), {
+    titel: titel,
+    // Ganztägig heißt hier: von Mitternacht bis kurz vor Mitternacht. So
+    // bleibt die Form dieselbe wie bei allen anderen Terminen, und nur
+    // das Feld "ganztags" entscheidet über die Darstellung.
+    start: tag + "T" + (ganztags ? "00:00" : von),
+    ende: tag + "T" + (ganztags ? "23:59" : bis),
+    ganztags: ganztags,
+    ort: document.getElementById("formOrt").value,
+    notiz: document.getElementById("formNotiz").value,
+    wichtig: document.getElementById("formWichtig").checked,
+  });
+
+  document.getElementById("terminFormHintergrund").hidden = true;
+  formularKennung = "";
+  allesZeichnen();
+  return true;
+}
+
+function terminFormVerbinden() {
+  const fenster = document.getElementById("terminFormHintergrund");
+  if (!fenster) return;
+
+  document.getElementById("terminNeu").addEventListener("click", () => {
+    /* Als Tag wird der Montag der angezeigten Woche genommen, nicht
+       stur heute: blättert man in die nächste Woche und legt dort etwas
+       an, ist fast nie der heutige Tag gemeint. Ist die laufende Woche
+       zu sehen, bleibt es bei heute. */
+    const heute = tagesSchluessel(new Date());
+    const montagDerAnsicht = tagesSchluessel(angezeigterMontag);
+    const montagHeute = tagesSchluessel(montagDerWoche(new Date()));
+    terminFormularZeigen("", montagDerAnsicht === montagHeute ? heute : montagDerAnsicht);
+  });
+
+  document.getElementById("terminFormSchliessen").addEventListener("click", () => {
+    fenster.hidden = true;
+    formularKennung = "";
+  });
+  fenster.addEventListener("click", ereignis => {
+    if (ereignis.target === fenster) { fenster.hidden = true; formularKennung = ""; }
+  });
+
+  document.getElementById("formGanztags")
+    .addEventListener("change", zeitfelderUmschalten);
+
+  document.getElementById("terminForm").addEventListener("submit", ereignis => {
+    // Ohne das lädt der Browser die Seite neu und alles ist weg.
+    ereignis.preventDefault();
+    terminFormularSpeichern();
+  });
+
+  document.getElementById("formLoeschen").addEventListener("click", () => {
+    if (!formularKennung) return;
+    const vorhandener = terminZuEigenerKennung(formularKennung);
+    if (!confirm("Termin „" + (vorhandener ? vorhandener.titel : "") + "“ löschen?")) return;
+    // Leerer Titel löscht – dieselbe Regel wie bei Notizen und Aufgaben.
+    terminSetzen(formularKennung, { titel: "", start: "" });
+    fenster.hidden = true;
+    formularKennung = "";
+    allesZeichnen();
+  });
 }
 
 /* Der stille Hinweis im To-do-Bereich, solange nichts eingerichtet ist.
@@ -2235,6 +2707,14 @@ function geraeteVerbinden() {
         .then(geklappt => geraeteZeichnen(geklappt
           ? "Link kopiert. Schick ihn dir aufs andere Gerät."
           : "Kopieren ging nicht – markier den Code von Hand."));
+      return;
+    }
+
+    if (ziel.id === "kalenderAbo") {
+      inZwischenablage(kalenderAdresse("https"))
+        .then(geklappt => geraeteZeichnen(geklappt
+          ? "Adresse kopiert. In der Kalender App: Ablage → Neues Kalenderabo."
+          : "Kopieren ging nicht."));
       return;
     }
 
@@ -2524,9 +3004,17 @@ function knoepfeVerbinden() {
       if (ereignis.target === terminFenster) terminFenster.hidden = true;
     });
     document.getElementById("terminInhalt").addEventListener("click", ereignis => {
-      const knopf = ereignis.target.closest
-        ? ereignis.target.closest("[data-notiz-bearbeiten]") : null;
-      if (knopf) zurNotizSpringen(knopf.getAttribute("data-notiz-bearbeiten"));
+      const ziel = ereignis.target.closest
+        ? ereignis.target.closest("[data-notiz-bearbeiten],[data-termin-bearbeiten]") : null;
+      if (!ziel) return;
+
+      const eigener = ziel.getAttribute("data-termin-bearbeiten");
+      if (eigener) {
+        terminFenster.hidden = true;
+        terminFormularZeigen(eigener);
+        return;
+      }
+      zurNotizSpringen(ziel.getAttribute("data-notiz-bearbeiten"));
     });
   }
 
@@ -2569,9 +3057,26 @@ function starten() {
   // und die gespeicherte Auswahl laden.
   NICHT_BELEGTE_FAECHER = STUNDENPLAN.nichtBelegteFaecher || [];
   NICHT_BELEGTE_GRUPPEN = STUNDENPLAN.nichtBelegteGruppen || [];
+  /* Einmalige Sicherung, bevor die neue Fassung zum ersten Mal schreibt.
+
+     Sie kostet ein paar Kilobyte und liegt unangetastet daneben. Sollte
+     beim Umstieg auf eigene Termine etwas schieflaufen, steht hier noch
+     genau der Stand, den die vorige Fassung hinterlassen hat. */
+  try {
+    if (!localStorage.getItem(SPEICHER_SICHERUNG)) {
+      localStorage.setItem(SPEICHER_SICHERUNG, JSON.stringify({
+        angelegtAm: new Date().toISOString(),
+        notizen: localStorage.getItem(SPEICHER_NOTIZEN),
+        aufgaben: localStorage.getItem(SPEICHER_AUFGABEN),
+        grabsteine: localStorage.getItem(SPEICHER_GRABSTEINE),
+      }));
+    }
+  } catch (fehler) { /* dann eben ohne – der Abgleich hat ohnehin eine Kopie */ }
+
   notizen = notizenLaden();
   aufgaben = aufgabenLaden();
   grabsteine = grabsteineLaden();
+  eigeneTermine = eigeneTermineLaden();
   abgewaehlteFaecher = filterLaden();
 
   // Ein Code in der Adresse muss vor Abgleich.einrichten() gelesen werden –
@@ -2592,6 +3097,7 @@ function starten() {
   kopfZeichnen();
   knoepfeVerbinden();
   geraeteVerbinden();
+  terminFormVerbinden();
   // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
   // hier kein weiterer Zeichen-Aufruf.

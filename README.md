@@ -1,5 +1,7 @@
 # Uni-Dashboard
 
+Stundenplan der HWR, eigene Termine, Aufgaben und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
+
 Übersichts-App zum Studium: HWR-Stundenplan (Tourismus, Semester 5, Kurs),
 eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
 etwas ändert.
@@ -383,6 +385,89 @@ Beim Melde-Geheimnis gilt eine andere Regel: es **muss** verschickt werden,
 sonst weist sich der Mac nicht aus. Es darf nur nicht ins Protokoll, das
 tagelang auf der Platte liegt.
 
+## Eigene Termine
+
+Seit dem 21.09.2026 ist die App nicht mehr nur ein Stundenplan. Neben den
+HWR-Veranstaltungen kann alles hinein, was sonst noch ansteht: Zahnarzt,
+Geburtstag, Schicht, Zugfahrt.
+
+Angelegt wird über **+ Termin** in der Werkzeugleiste, oder im
+Bearbeiten-Modus über **+ Termin an diesem Tag**. Ein Termin hat Anfang und
+Ende, wahlweise ganztägig, dazu Ort, Notiz und eine Wichtig-Markierung.
+
+Eigene Termine sind **grün**, HWR-Termine blau, HWR-Hinweise orange. Man
+sieht also auf einen Blick, was aus dem offiziellen Plan kommt und was man
+selbst eingetragen hat.
+
+### Warum sie dieselbe Form haben wie HWR-Termine
+
+`eigeneTermineAlsPlan()` bringt sie in genau das Format, das aus
+`daten/plan.js` kommt. Das ist der Kniff, der den Umbau klein gehalten hat:
+Listenansicht, Kalenderraster, die Überlappungsrechnung für nebeneinander
+liegende Termine und das Detailfenster arbeiten alle mit dieser einen Form.
+Keine dieser vier Stellen musste angefasst werden.
+
+### Die Vorsilbe `termin-`
+
+Freie Aufgaben heißen seit Monaten `eigen-…`, und der Abgleich erkennt sie
+genau daran. Ein Termin mit derselben Vorsilbe wäre beim Einlesen zur
+Aufgabe gemacht worden – und Anfang und Ende wären weg gewesen. Deshalb
+`termin-…`.
+
+### Ein Eintrag aus der Zukunft wird nicht weggeworfen
+
+Die unangenehmste Falle beim Abgleich, und sie ist nicht offensichtlich:
+
+Legt eine spätere Fassung der App eine neue Art von Eintrag an, und ein
+Gerät mit einer älteren Fassung gleicht ab, dann versteht die alte Fassung
+diese Einträge nicht. Würde sie sie beim Zurückschreiben weglassen, wären
+sie auf **allen** Geräten gelöscht – durch ein Gerät, das nur nicht
+aktuell war.
+
+`abgleichUebernehmen()` hebt deshalb auf, was es nicht kennt, und
+`abgleichSammeln()` reicht es unverändert zurück. Ein Löschvermerk kann es
+trotzdem begraben. Geprüft in `tests/test_planer.js`, Abschnitt 4.
+
+## Apple Kalender
+
+Deine eigenen Termine und offenen Aufgaben lassen sich in der Kalender App
+abonnieren. Die Adresse steht im ⚙-Fenster unter **Apple Kalender**.
+
+```
+webcal://copydwpdqpnwjvknsakz.supabase.co/functions/v1/kalender?code=<dein Code>
+```
+
+Geliefert wird das von einer Edge Function bei Supabase. Sie läuft rund um
+die Uhr; der Mac muss nicht an sein.
+
+**Es geht nur in eine Richtung**, von der App in den Kalender. Was in der
+Kalender App eingetragen wird, kommt nicht zurück. Für zwei Richtungen
+bräuchte es ein iCloud-Passwort, und das nehme ich nicht an – aus demselben
+Grund wie beim HWR-Login.
+
+Wie oft die Kalender App nachschaut, entscheidet Apple. Der Feed bittet um
+stündlich (`REFRESH-INTERVAL`), garantiert ist das nicht. In der Kalender
+App lässt sich das unter *Einstellungen → Accounts → Abonnements* ändern.
+
+**Der Code steckt in der Abo-Adresse.** Anders geht es nicht: die Kalender
+App kann sich nicht ausweisen, sie ruft eine Adresse ab und fertig. Wer die
+Adresse hat, sieht die Termine.
+
+Erledigte Aufgaben kommen bewusst nicht mit. Im Kalender steht, was noch
+ansteht; hakt man etwas ab, verschwindet es beim nächsten Abruf von selbst.
+
+### Drei Fallen in einer Kalenderdatei
+
+1. **Komma und Semikolon trennen Felder.** „Essen mit Mama, Papa" wäre ohne
+   Maskierung zwei Einträge.
+2. **75 Oktett pro Zeile, nicht 75 Zeichen.** Ein Umlaut braucht zwei Byte.
+   Wer nach Zeichen zählt, zerschneidet irgendwann einen mittendrin, und die
+   Datei ist unlesbar. `tests/test_kalenderfeed.py` prüft das mit einem
+   Titel, der genau dort umbricht.
+3. **Das Ende eines ganztägigen Termins ist ausschließend.** Ein Termin am
+   25. endet am 26. Wer denselben Tag einsetzt, bekommt einen Termin ohne
+   Dauer, den manche Kalender gar nicht zeigen.
+
 ## Benutzen
 
 **Dashboard ansehen:** `index.html` doppelklicken. Kein Server nötig.
@@ -572,6 +657,14 @@ python3 tests/test_melden.py
 ```
 
 ```bash
+osascript -l JavaScript tests/test_planer.js
+```
+
+```bash
+python3 tests/test_kalenderfeed.py
+```
+
+```bash
 python3 tests/test_postfach.py
 ```
 
@@ -642,6 +735,7 @@ Plan als „entfallen" gemeldet wird.
 | `abgleich.py` | holt den Plan, vergleicht, benachrichtigt |
 | `index.html` · `style.css` · `app.js` | das Dashboard |
 | `sync.js` | der Geräteabgleich: Netz, Zusammenführen, Grabsteine |
+| Edge Function `kalender` | liefert eigene Termine als Kalender-Abo |
 | `melden.js` | Benachrichtigungen an- und abmelden |
 | `sw.js` | nimmt Benachrichtigungen entgegen (sonst nichts) |
 | `manifest.json` | beschreibt die Seite als App |

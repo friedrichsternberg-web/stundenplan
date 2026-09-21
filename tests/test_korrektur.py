@@ -86,8 +86,24 @@ if os.path.exists(abgleich.DATEI_STAND):
     pruefe("alle " + str(len(fach)) + " Termine beginnen um 8:45",
            anfaenge == ["08:45"])
     roh = sorted(set(t["start"][11:16] for t in fach))
-    pruefe("der Originalplan bleibt uneinheitlich (" + ", ".join(roh) + ")",
-           len(roh) == 2)
+    print("       Anfangszeiten im HWR-Plan:  " + ", ".join(roh))
+
+    """
+    Frueher stand hier: "der Originalplan bleibt uneinheitlich" - er hatte
+    damals 08:00 und 08:45 gemischt.
+
+    Am 21.09.2026 schlug der Test fehl, weil die HWR die Zeiten selbst
+    richtiggestellt hat. Das war kein Fehler, sondern der Erfolgsfall: die
+    Korrektur sollte sich von selbst abschalten, sobald die Quelle stimmt.
+
+    Der Test prueft deshalb jetzt die dauerhafte Eigenschaft statt der
+    voruebergehenden: nach der Korrektur beginnt alles um 08:45, egal ob
+    die HWR 08:00, 08:45 oder beides eintraegt. Nichts wird doppelt
+    verschoben - waere das der Fall, stuende hier 09:30.
+    """
+    pruefe("nichts wurde doppelt verschoben", anfaenge == ["08:45"])
+    pruefe("die Korrektur greift nur bei 08:00",
+           all(t["start"][11:16] == "08:45" for t in korrigiert))
 else:
     print("  (uebersprungen - noch kein Stand vorhanden)")
 

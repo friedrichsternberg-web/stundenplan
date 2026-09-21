@@ -30,6 +30,14 @@ echo "== Anzeige: Zeitgruppen und die Karte 'Als Naechstes' =="
 osascript -l JavaScript tests/test_ansicht.js
 
 echo
+echo "== Planer: eigene Termine, nichts geht verloren =="
+osascript -l JavaScript tests/test_planer.js
+
+echo
+echo "== Kalender-Feed fuer die Apple Kalender App =="
+python3 tests/test_kalenderfeed.py
+
+echo
 echo "== Ablage (echter Server) =="
 python3 tests/test_abgleich_ablage.py
 

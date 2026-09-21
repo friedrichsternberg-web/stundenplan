@@ -1363,3 +1363,117 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   padding: 10px 12px;
   margin: 0;
 }
+
+
+/* --- Eigene Termine ---------------------------------------------------- */
+
+:root {
+  /* Eine eigene Farbe, damit man auf einen Blick sieht, was von der HWR
+     kommt und was man selbst eingetragen hat. Gruen, weil Blau schon der
+     Stundenplan ist und Orange die HWR-Hinweise. */
+  --eigen: #0f8a6a;
+  --eigen-flaeche: #e6f5f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --eigen: #3ec79c;
+    --eigen-flaeche: #16302a;
+  }
+}
+
+/* In der Listenansicht ein farbiger Balken links, wie bei den Notizen. */
+.termin-eigen {
+  border-left: 3px solid var(--eigen);
+  background: var(--eigen-flaeche);
+  border-radius: 0 var(--rundung) var(--rundung) 0;
+  cursor: pointer;
+}
+
+.termin-eigen:hover { filter: brightness(.98); }
+.termin-eigen .termin-zeit { color: var(--eigen); font-weight: 600; }
+
+/* Im Kalenderraster eine eigene Fuellfarbe statt des blauen Akzents. */
+.kalender-termin-eigen {
+  background: var(--eigen);
+  color: #ffffff;
+}
+
+/* Ganztaegige eigene Termine stehen in derselben Zeile wie die Aufgaben,
+   aber in der Terminfarbe. */
+.kalender-ganztagstermin {
+  background: var(--eigen);
+  color: #ffffff;
+}
+
+
+/* --- Das Formular fuer eigene Termine ---------------------------------- */
+
+.termin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.form-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+.form-feld em { font-style: normal; opacity: .7; }
+
+.form-feld input,
+.form-feld textarea {
+  font: inherit;
+  font-size: 16px;   /* unter 16px zoomt iOS beim Antippen hinein */
+  padding: 9px 11px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  width: 100%;
+}
+
+.form-feld input:focus,
+.form-feld textarea:focus {
+  outline: none;
+  border-color: var(--eigen);
+}
+
+.form-feld textarea { resize: vertical; min-height: 44px; }
+
+/* Von und Bis nebeneinander - sie gehoeren zusammen und passen in eine
+   Zeile, auch auf dem Handy. */
+.form-zeiten { display: flex; gap: 10px; }
+.form-zeiten .form-feld { flex: 1; }
+.form-zeiten[hidden] { display: none; }
+
+.form-haken {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.form-haken input { width: 18px; height: 18px; cursor: pointer; }
+
+/* --- Kalender-Abo ------------------------------------------------------ */
+
+.kalender-abo {
+  border-top: 1px solid var(--linie);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+/* Der Abo-Knopf ist ein Verweis und kein Knopf - er muss trotzdem
+   aussehen wie einer. */
+a.knopf-schlicht {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}

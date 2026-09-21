@@ -92,6 +92,9 @@
       <button type="button" class="knopf-schlicht" id="bearbeitenSchalter">
         Bearbeiten
       </button>
+      <button type="button" class="knopf-schlicht knopf-betont" id="terminNeu">
+        + Termin
+      </button>
       <button type="button" class="knopf-schlicht" id="filterOeffnen">Fächer</button>
     </div>
 
@@ -148,6 +151,69 @@
       <button type="button" class="knopf-schlicht" id="terminSchliessen">Fertig</button>
     </div>
     <div id="terminInhalt"></div>
+  </div>
+</div>
+
+<!-- Eigene Termine anlegen und ändern. Alles, was nicht von der HWR
+     kommt: Zahnarzt, Geburtstag, Schicht, Zugfahrt. -->
+<div class="filter-hintergrund" id="terminFormHintergrund" hidden>
+  <div class="filter-fenster filter-fenster-schmal">
+    <div class="filter-kopf">
+      <h2 id="terminFormTitel">Termin</h2>
+      <button type="button" class="knopf-schlicht" id="terminFormSchliessen">Abbrechen</button>
+    </div>
+
+    <form id="terminForm" class="termin-form">
+      <label class="form-feld">
+        <span>Was?</span>
+        <input type="text" id="formTitel" required maxlength="120"
+               placeholder="Zahnarzt, Geburtstag, Schicht …" autocomplete="off">
+      </label>
+
+      <label class="form-haken">
+        <input type="checkbox" id="formGanztags">
+        <span>Ganztägig</span>
+      </label>
+
+      <label class="form-feld">
+        <span>Tag</span>
+        <input type="date" id="formDatum" required>
+      </label>
+
+      <!-- Bei "ganztägig" versteckt: dann gibt es keine Uhrzeit. -->
+      <div class="form-zeiten" id="formZeiten">
+        <label class="form-feld">
+          <span>Von</span>
+          <input type="time" id="formVon" step="300">
+        </label>
+        <label class="form-feld">
+          <span>Bis</span>
+          <input type="time" id="formBis" step="300">
+        </label>
+      </div>
+
+      <label class="form-feld">
+        <span>Wo? <em>(freiwillig)</em></span>
+        <input type="text" id="formOrt" maxlength="120" autocomplete="off">
+      </label>
+
+      <label class="form-feld">
+        <span>Notiz <em>(freiwillig)</em></span>
+        <textarea id="formNotiz" rows="2" maxlength="500"></textarea>
+      </label>
+
+      <label class="form-haken">
+        <input type="checkbox" id="formWichtig">
+        <span>★ Wichtig</span>
+      </label>
+
+      <div class="filter-knoepfe">
+        <button type="submit" class="knopf-schlicht knopf-betont">Speichern</button>
+        <button type="button" class="knopf-schlicht knopf-gefahr" id="formLoeschen" hidden>
+          Löschen
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
