@@ -6,11 +6,12 @@ Stundenplan der HWR, eigene Termine, Aufgaben und Notizen in einem – auf dem H
 eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
 etwas ändert.
 
-## Die drei Bereiche
+## Die vier Bereiche
 
 | Reiter | zeigt |
 |---|---|
 | **Plan** | „Als Nächstes", die Woche als Liste oder Kalender |
+| **Notizen** | das Notizbuch: freie Notizen, verknüpft mit Terminen und Modulen |
 | **To-dos** | deine Notizen zum Abhaken, dazu Hinweise aus dem HWR-Plan |
 | **Änderungen** | was sich am Stundenplan geändert hat |
 
@@ -428,6 +429,107 @@ aktuell war.
 `abgleichSammeln()` reicht es unverändert zurück. Ein Löschvermerk kann es
 trotzdem begraben. Geprüft in `tests/test_planer.js`, Abschnitt 4.
 
+## Das Notizbuch
+
+Seit dem 22.09.2026 gibt es den Bereich **Notizen**. Er funktioniert wie die
+Notizen-App von Apple: eine Liste von Notizen, ein Textfeld zum Schreiben,
+und die erste Zeile ist automatisch die Überschrift. Ein zweites Feld nur
+für den Titel gibt es bewusst nicht — wer eine Überschrift will, schreibt
+sie einfach zuerst.
+
+### Zwei Sorten Notiz, und warum beide bleiben
+
+Die App kennt jetzt zwei Dinge, die man „Notiz" nennen könnte, und das ist
+kein Versehen:
+
+| | **Kurznotiz** | **Notiz** (Notizbuch) |
+|---|---|---|
+| hängt an | genau einem Termin | nichts, oder beliebig vielen Dingen |
+| Länge | eine Zeile | so lang wie nötig |
+| steht in | Kalenderkästchen und To-dos | Bereich „Notizen" |
+| Beispiel | „11:25 Beginn" | „Klausurvorbereitung" mit drei Absätzen |
+
+Im Terminfenster stehen beide untereinander. Damit man sie dort nicht
+verwechselt, heißt die erste dort ausdrücklich **Kurznotiz**.
+
+### Verknüpfungen
+
+Das ist der eigentliche Zweck des Bereichs. Eine Notiz kann auf drei Dinge
+zeigen:
+
+| Symbol | Verweis | bedeutet |
+|---|---|---|
+| ▦ | **Modul** | gilt für alle Termine dieses Fachs |
+| ◷ | **Termin** | gilt für genau diese eine Veranstaltung |
+| ✎ | **Notiz** | zeigt auf eine andere Notiz |
+
+Angelegt werden sie über **+ Verknüpfen** im Notizfenster, aus einer
+Auswahlliste — nicht durch Tippen einer Syntax. Auf dem Handy wäre
+`[[Modulname]]` von Hand einzugeben eine Zumutung, und ein vertippter Name
+zeigt ins Leere, ohne dass man es merkt.
+
+Gespeichert wird ein Verweis als Zeichenkette mit Doppelpunkt, etwa
+`fach:34 - Schlüsselkompetenzen V`. Nicht als Objekt mit zwei Feldern: der
+Abgleich entscheidet bei gleichem Zeitstempel über einen **Textabdruck** des
+Eintrags, und ein verschachteltes Objekt landete dort als
+`[object Object]` — zwei verschiedene Verweise sähen gleich aus.
+
+Aus demselben Grund wird die Liste immer **sortiert** gespeichert. Sonst
+hinge das Ergebnis des Abgleichs davon ab, in welcher Reihenfolge man die
+Verknüpfungen angetippt hat.
+
+### Die Rückrichtung
+
+Tippt man einen Termin im Kalender an, stehen im Fenster darunter die
+Notizen, die dazu gehören — sowohl die an diesem einen Termin als auch die
+am ganzen Modul. An jeder steht, welche von beiden es ist.
+
+Ein Termin **erbt** also die Notizen seines Moduls. Andersherum wäre es
+nutzlos: welcher der zwanzig Termine eines Moduls gemeint ist, weiß man
+beim Notieren meistens selbst nicht.
+
+Von dort führen drei Knöpfe weiter: eine neue Notiz zu diesem Termin, eine
+zum Modul, und „Alle Notizen zum Modul" — das filtert den Notizbereich auf
+dieses Fach.
+
+### Warum der Text im Feld `inhalt` steht und nicht in `text`
+
+Das ist die unscheinbarste und wichtigste Entscheidung an der ganzen
+Sache. Der Abgleich sortiert jeden eingehenden Eintrag ein, und eine
+Fassung der App, die das Notizbuch noch nicht kennt, macht aus **jedem
+Eintrag mit einem Feld `text`** eine Notiz an einem Termin. Eine Notiz aus
+dem Notizbuch würde dort also zur Termin-Notiz gemacht, ihre Verknüpfungen
+fielen weg — und beim nächsten Hochladen wäre das der neue Stand, auf
+allen Geräten.
+
+Ohne `text` greift stattdessen die Regel für Unbekanntes: aufheben und
+unverändert zurückgeben. Ein altes Gerät reicht das Notizbuch damit durch,
+ohne es anzufassen.
+
+`tests/test_zettel.js` spielt diese alte Fassung Zeile für Zeile nach,
+statt sich darauf zu verlassen.
+
+## Hell oder dunkel
+
+Im ⚙-Fenster steht unter **Aussehen** eine Wahl: Automatisch, Hell, Dunkel.
+„Automatisch" folgt dem Gerät, also am iPhone auch dessen Zeitschaltung.
+
+Technisch hängt die Farbe am Attribut `data-thema` des `<html>`-Elements,
+nicht mehr an `@media (prefers-color-scheme: dark)`. Gesetzt wird es an
+zwei Stellen:
+
+1. von einem kurzen Skript **im Kopf der `index.html`**, noch vor dem
+   Stilblatt — sonst blitzte die App bei jedem Start weiß auf, bevor sie
+   dunkel wird;
+2. danach von `themaAnwenden()` in `app.js`.
+
+Das Skript im Kopf kann die Konstante `SPEICHER_THEMA` nicht benutzen,
+`app.js` ist da noch nicht geladen. Der Schlüsselname steht dort also
+ausgeschrieben. Benennt ihn jemand um, funktioniert die App weiter und
+blitzt nur bei jedem Start — genau die Sorte Fehler, die man monatelang
+hinnimmt. Abschnitt 9 von `tests/test_zettel.js` vergleicht deshalb beide
+Stellen miteinander.
+
 ## Apple Kalender
 
 **Alles in einem Kalender**: der Stundenplan der HWR, deine eigenen Termine
@@ -680,6 +782,10 @@ osascript -l JavaScript tests/test_planer.js
 ```
 
 ```bash
+osascript -l JavaScript tests/test_zettel.js
+```
+
+```bash
 python3 tests/test_kalenderfeed.py
 ```
 
@@ -759,6 +865,7 @@ Plan als „entfallen" gemeldet wird.
 | `sw.js` | nimmt Benachrichtigungen entgegen (sonst nichts) |
 | `manifest.json` | beschreibt die Seite als App |
 | `tests/alle.sh` | ruft alle Testsammlungen nacheinander auf |
+| `tests/test_zettel.js` | Notizbuch: Verknüpfungen, Rundlauf, altes Gerät |
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |

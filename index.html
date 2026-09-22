@@ -28,6 +28,31 @@
 <link rel="icon" href="symbol.png">
 
 <title>Uni-Dashboard</title>
+
+<!-- Hell oder dunkel, noch bevor irgendetwas gezeichnet wird.
+
+     Das muss hier oben stehen und darf nicht warten, bis app.js laeuft:
+     das Stilblatt faerbt nach dem Attribut data-thema, und ohne das
+     Attribut gilt hell. Wer dunkel eingestellt hat, saehe sonst bei jedem
+     Start einen kurzen weissen Blitz.
+
+     Deshalb ausnahmsweise Code mitten im Dokument statt in app.js. Er ist
+     bewusst winzig und kennt nur eine einzige Frage: dunkel oder nicht. -->
+<script>
+(function () {
+  var wunsch = "auto";
+  try { wunsch = localStorage.getItem("stundenplan.thema") || "auto"; }
+  catch (fehler) { /* privates Fenster: dann eben die Voreinstellung */ }
+
+  var dunkel = wunsch === "dunkel";
+  if (wunsch !== "hell" && wunsch !== "dunkel") {
+    dunkel = Boolean(window.matchMedia
+             && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+  document.documentElement.setAttribute("data-thema", dunkel ? "dunkel" : "hell");
+})();
+</script>
+
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -58,6 +83,9 @@
 <nav class="reiter" role="tablist" aria-label="Bereiche">
   <button type="button" data-seite="plan" role="tab" aria-selected="true">
     Plan
+  </button>
+  <button type="button" data-seite="zettel" role="tab" aria-selected="false">
+    Notizen <span class="reiter-zahl" id="zettelZahl" hidden></span>
   </button>
   <button type="button" data-seite="todos" role="tab" aria-selected="false">
     To-dos <span class="reiter-zahl" id="todoZahl" hidden></span>
@@ -101,7 +129,19 @@
     <div class="tage" id="tage"></div>
   </section>
 
-  <!-- ================= Bereich 2: To-dos ================= -->
+  <!-- ================= Bereich 2: Notizen ================= -->
+  <section id="seiteZettel" hidden>
+    <div class="zettel-leiste">
+      <input type="search" id="zettelSuchfeld" placeholder="Notizen durchsuchen …"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <button type="button" class="knopf-schlicht knopf-betont" id="zettelNeu">
+        + Notiz
+      </button>
+    </div>
+    <div id="zettelListe"></div>
+  </section>
+
+  <!-- ================= Bereich 3: To-dos ================= -->
   <section id="seiteTodos" hidden>
     <p class="bereich-hinweis">
       Alles, was du dir zu einzelnen Terminen notiert hast – und die Hinweise,
@@ -112,7 +152,7 @@
     <div id="todoInhalt"></div>
   </section>
 
-  <!-- ================= Bereich 3: Änderungen ================= -->
+  <!-- ================= Bereich 4: Änderungen ================= -->
   <section id="seiteAenderungen" hidden>
     <p class="bereich-hinweis">
       Was sich seit dem ersten Abruf am Stundenplan geändert hat.
@@ -217,6 +257,35 @@
   </div>
 </div>
 
+<!-- Eine Notiz schreiben. Ein einziges Textfeld, die erste Zeile ist die
+     Überschrift - so wie in der Notizen-App von Apple. Darunter die
+     Verknüpfungen zu Terminen, Modulen und anderen Notizen. -->
+<div class="filter-hintergrund" id="zettelHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2 id="zettelFensterTitel">Notiz</h2>
+      <button type="button" class="knopf-schlicht" id="zettelSchliessen">Fertig</button>
+    </div>
+    <div id="zettelInhalt"></div>
+  </div>
+</div>
+
+<!-- Das Auswahlfenster für eine neue Verknüpfung. Liegt in der Datei HINTER
+     dem Notizfenster, damit es ohne z-index darüber liegt: bei gleichem
+     Stapelwert gewinnt, was später kommt. -->
+<div class="filter-hintergrund" id="verweisHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Verknüpfen mit</h2>
+      <button type="button" class="knopf-schlicht" id="verweisSchliessen">Fertig</button>
+    </div>
+    <input type="search" id="verweisSuchfeld" class="verweis-suche"
+           placeholder="Modul, Termin oder Notiz suchen …"
+           autocomplete="off" autocorrect="off" spellcheck="false">
+    <div id="verweisListe"></div>
+  </div>
+</div>
+
 <!-- Der Geräteabgleich, ebenfalls über der Seite. Sein Inhalt wechselt je
      nachdem, ob schon etwas eingerichtet ist – gefüllt wird er von
      geraeteZeichnen() in app.js. -->
@@ -227,6 +296,9 @@
       <button type="button" class="knopf-schlicht" id="geraeteSchliessen">Fertig</button>
     </div>
     <div id="geraeteInhalt"></div>
+    <!-- Hell oder dunkel. Steht im selben Fenster, weil es dieselbe Sorte
+         Einstellung ist: gilt für die App, nicht für den Plan. -->
+    <div id="themaBereich"></div>
     <!-- Benachrichtigungen. Steht in einem eigenen Kasten, weil der Inhalt
          erst nach Rueckfrage beim Browser feststeht und deshalb spaeter
          nachgetragen wird - siehe meldenZeichnen() in app.js. -->

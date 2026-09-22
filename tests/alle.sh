@@ -34,6 +34,10 @@ echo "== Planer: eigene Termine, nichts geht verloren =="
 osascript -l JavaScript tests/test_planer.js
 
 echo
+echo "== Notizbuch: freie Notizen und Verknuepfungen =="
+osascript -l JavaScript tests/test_zettel.js
+
+echo
 echo "== Kalender-Feed fuer die Apple Kalender App =="
 python3 tests/test_kalenderfeed.py
 

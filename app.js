@@ -151,6 +151,30 @@ const SPEICHER_GRABSTEINE = "stundenplan.grabsteine";
    Aufgabe gemacht, und Anfang und Ende wären weg. */
 const SPEICHER_TERMINE = "stundenplan.eigeneTermine";
 
+/* Freie Notizen – das Notizbuch.
+
+   Nicht zu verwechseln mit SPEICHER_NOTIZEN weiter oben. Der Unterschied
+   ist der Aufhänger:
+
+   - Eine NOTIZ (oben) hängt an genau einem Termin. Sie hat keinen eigenen
+     Platz, sie steht immer beim Termin.
+   - Ein ZETTEL (hier) steht für sich. Er hat einen Text, so lang man will,
+     und kann auf beliebig viele Termine, Module und andere Zettel
+     verweisen – oder auf gar nichts.
+
+   "Zettel" heißt er im Code, damit beim Lesen sofort klar ist, welche der
+   beiden Sorten gemeint ist. In der Oberfläche steht "Notiz", weil das
+   das Wort ist, das man benutzt.
+
+   Form: [{ id, text, verweise: ["termin:sked.de…", "fach:…", "zettel:…"],
+            wichtig, geaendert }] */
+const SPEICHER_ZETTEL = "stundenplan.zettel";
+
+/* Hell, dunkel oder wie das Betriebssystem es will. Der Wert wird auch vom
+   kurzen Skript im Kopf der index.html gelesen – wenn du den Namen hier
+   änderst, muss er dort mitgeändert werden. */
+const SPEICHER_THEMA = "stundenplan.thema";
+
 /* Einmalige Sicherung vor dem Umbau zum Planer.
 
    Beim Umstieg auf eigene Termine ändert sich die Form der gespeicherten
@@ -165,8 +189,27 @@ let angezeigterMontag = montagDerWoche(new Date());
 // "liste" oder "kalender".
 let ansicht = "liste";
 
-// Welcher Bereich gerade offen ist: "plan", "todos" oder "aenderungen".
+// Welcher Bereich gerade offen ist: "plan", "zettel", "todos" oder
+// "aenderungen".
 let seite = "plan";
+
+// Das Notizbuch. Siehe SPEICHER_ZETTEL.
+let zettel = [];
+
+/* Welcher Zettel gerade im Bearbeitungsfenster liegt, als Kennung. Leer
+   heißt: das Fenster ist zu. */
+let offenerZettel = "";
+
+// Suchwort im Notizbuch. Nicht gespeichert – eine Suche gilt für den Moment.
+let zettelSuche = "";
+
+/* Zeigt der Notizbereich gerade nur die Notizen zu einer Sache? Dann steht
+   hier deren Verweis, etwa "fach:34 - Schlüsselkompetenzen V". Leer heißt:
+   alle Notizen. Ebenfalls nicht gespeichert. */
+let zettelFilter = "";
+
+// "auto", "hell" oder "dunkel".
+let thema = "auto";
 
 /* Ob die Notiz-Knöpfe im Plan sichtbar sind.
 
@@ -856,7 +899,6 @@ function grabsteineLaden() {
 function grabsteineSpeichern() {
   try {
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
-    localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
 
@@ -1009,6 +1051,249 @@ function alleAngezeigtenTermine() {
   return sichtbareTermine().concat(eigeneTermineAlsPlan())
     .sort((a, b) => a.start.localeCompare(b.start));
 }
+
+/* --- Das Notizbuch -------------------------------------------------------
+
+   Freie Notizen, die für sich stehen, und die Verknüpfungen von dort zu
+   Terminen, Modulen und anderen Notizen.
+
+   Ein Verweis ist eine Zeichenkette mit einem Doppelpunkt darin:
+
+     "termin:sked.de1200309"   genau diese eine Veranstaltung
+     "fach:34 - Schlüsselkompetenzen V"   das ganze Modul, alle Termine
+     "zettel:zettel-1789…"     eine andere Notiz
+
+   Warum eine Zeichenkette und kein Objekt mit zwei Feldern? Weil der
+   Abgleich jeden Eintrag als Text abdrückt, um bei gleichem Zeitstempel
+   entscheiden zu können, welche Fassung gewinnt. Ein verschachteltes
+   Objekt würde dort als "[object Object]" landen und zwei verschiedene
+   Verweise sähen gleich aus.
+
+   Die Liste wird immer sortiert gespeichert. Aus demselben Grund: sonst
+   hinge das Ergebnis des Abgleichs davon ab, in welcher Reihenfolge man
+   die Verknüpfungen angetippt hat.
+   ------------------------------------------------------------------------ */
+
+function zettelLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_ZETTEL);
+    const gelesen = roh ? JSON.parse(roh) : [];
+    if (!Array.isArray(gelesen)) return [];
+    return gelesen.filter(z => z && typeof z.id === "string")
+                  .map(zettelGeraderuecken);
+  } catch (fehler) {
+    return [];
+  }
+}
+
+/* Bringt einen gelesenen Zettel auf die Form, mit der der Rest arbeitet.
+
+   Steht an einer Stelle und nicht an fünf: ein Zettel kommt aus dem
+   Browserspeicher, aus dem Abgleich oder aus dem Formular, und in allen
+   drei Fällen soll hinterher dasselbe herauskommen. */
+function zettelGeraderuecken(roh) {
+  return {
+    id: String(roh.id),
+    text: typeof roh.text === "string" ? roh.text : "",
+    verweise: verweiseSaeubern(roh.verweise),
+    wichtig: Boolean(roh.wichtig),
+    geaendert: Number(roh.geaendert) || 0,
+  };
+}
+
+function verweiseSaeubern(liste) {
+  if (!Array.isArray(liste)) return [];
+  const gesehen = {};
+  const sauber = [];
+  for (const eintrag of liste) {
+    if (typeof eintrag !== "string") continue;
+    const wert = eintrag.trim();
+    // Ohne Doppelpunkt fehlt die Art - damit ist der Verweis unbrauchbar.
+    if (wert.indexOf(":") < 1) continue;
+    if (gesehen[wert]) continue;
+    gesehen[wert] = true;
+    sauber.push(wert);
+  }
+  return sauber.sort();
+}
+
+function zettelSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_ZETTEL, JSON.stringify(zettel));
+  } catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+/* Eine Kennung für eine neue Notiz.
+
+   "zettel-" und nicht "notiz-": an "notiz" hängt im Abgleich schon die
+   Notiz am Termin, und die hat eine ganz andere Form. Dieselbe Falle wie
+   bei "eigen-" und "termin-", siehe SPEICHER_TERMINE. */
+function neueZettelKennung() {
+  return "zettel-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+}
+
+function zettelZuKennung(kennung) {
+  return zettel.filter(z => z.id === kennung)[0] || null;
+}
+
+/* Die Überschrift einer Notiz ist ihre erste Zeile.
+
+   So macht es die Notizen-App von Apple auch, und es erspart ein zweites
+   Eingabefeld. Wer eine Überschrift will, schreibt sie einfach zuerst;
+   wer nur schnell etwas hinwirft, bekommt trotzdem eine brauchbare Zeile
+   in der Übersicht. */
+function zettelTitel(z) {
+  if (!z) return "";
+  const zeilen = String(z.text || "").split("\n");
+  for (const zeile of zeilen) {
+    const sauber = zeile.trim();
+    if (sauber) return sauber.length > 90 ? sauber.slice(0, 90) + "…" : sauber;
+  }
+  return "Ohne Titel";
+}
+
+/* Alles nach der Überschrift, in einer Zeile, für die Übersicht. */
+function zettelVorschau(z) {
+  if (!z) return "";
+  const zeilen = String(z.text || "").split("\n");
+  let uebersprungen = false;
+  const rest = [];
+  for (const zeile of zeilen) {
+    if (!uebersprungen) {
+      if (zeile.trim()) uebersprungen = true;
+      continue;
+    }
+    if (zeile.trim()) rest.push(zeile.trim());
+  }
+  const text = rest.join(" · ");
+  return text.length > 160 ? text.slice(0, 160) + "…" : text;
+}
+
+/* Legt eine Notiz an oder ändert sie. Leerer Text UND keine Verknüpfung
+   löscht sie – dieselbe Regel wie bei Notizen, Aufgaben und Terminen.
+
+   Anders als dort zählt hier auch die Verknüpfung: eine Notiz, die nur aus
+   "gehört zu diesem Termin" besteht, ist zwar seltsam, aber sie ist etwas,
+   das jemand absichtlich angelegt hat. Sie stillschweigend wegzuwerfen
+   wäre schlechter als sie leer stehen zu lassen. */
+function zettelSetzen(kennung, felder) {
+  const text = String((felder && felder.text) || "").trim();
+  const verweise = verweiseSaeubern(felder && felder.verweise);
+
+  if (!text && verweise.length === 0) {
+    zettel = zettel.filter(z => z.id !== kennung);
+    grabsteinSetzen(kennung);
+    zettelSpeichern();
+    return;
+  }
+
+  const vorhandener = zettelZuKennung(kennung);
+  const neuer = zettelGeraderuecken({
+    id: kennung,
+    text: text,
+    verweise: verweise,
+    wichtig: felder && felder.wichtig !== undefined
+               ? Boolean(felder.wichtig)
+               : Boolean(vorhandener && vorhandener.wichtig),
+    geaendert: Abgleich.jetzt(),
+  });
+
+  if (vorhandener) zettel = zettel.map(z => z.id === kennung ? neuer : z);
+  else zettel.push(neuer);
+
+  // Siehe notizSetzen(): ein Grabstein an derselben Kennung ist jetzt falsch.
+  grabsteinEntfernen(kennung);
+  zettelSpeichern();
+}
+
+/* Die Notizen, sortiert wie man sie sucht: zuletzt angefasste zuerst,
+   Wichtiges ganz oben. */
+function zettelSortiert() {
+  return zettel.slice().sort((a, b) => {
+    if (Boolean(a.wichtig) !== Boolean(b.wichtig)) return a.wichtig ? -1 : 1;
+    return (Number(b.geaendert) || 0) - (Number(a.geaendert) || 0);
+  });
+}
+
+/* Volltextsuche über Überschrift und Text. Kleinschreibung auf beiden
+   Seiten, damit "hwr" auch "HWR" findet. */
+function zettelGefunden(suchwort) {
+  const wort = String(suchwort || "").trim().toLowerCase();
+  if (!wort) return zettelSortiert();
+  return zettelSortiert().filter(
+    z => String(z.text || "").toLowerCase().indexOf(wort) >= 0);
+}
+
+
+/* --- Die Rückrichtung: was hängt an diesem Termin? ----------------------
+
+   Das ist der eigentliche Zweck der Verknüpfungen. Man tippt einen Termin
+   an und sieht, was man sich dazu notiert hat – ohne im Notizbuch suchen
+   zu müssen.
+
+   Ein Termin erbt dabei die Notizen seines Moduls: schreibt man eine Notiz
+   zu "34 - Schlüsselkompetenzen V", steht sie bei jedem Termin dieses
+   Moduls. Andersherum wäre es nutzlos, denn welcher der zwanzig Termine
+   eines Moduls gemeint ist, weiß man beim Notieren meistens selbst nicht.
+   -------------------------------------------------------------------- */
+
+function zettelFuerTermin(terminKennung) {
+  const termin = terminZuKennung(terminKennung);
+  const fach = termin && !termin.eigen ? termin.titel : "";
+  return zettelSortiert().filter(z =>
+    z.verweise.indexOf("termin:" + terminKennung) >= 0
+    || (fach && z.verweise.indexOf("fach:" + fach) >= 0));
+}
+
+function zettelFuerFach(fachname) {
+  return zettelSortiert().filter(
+    z => z.verweise.indexOf("fach:" + fachname) >= 0);
+}
+
+/* Wer verweist auf diese Notiz? Im Obsidian-Vault heißt das Rückverweis,
+   und genau dafür ist es hier auch gut: man sieht beim Lesen, in welchem
+   Zusammenhang die Notiz sonst noch steht. */
+function zettelRueckverweise(kennung) {
+  return zettelSortiert().filter(
+    z => z.id !== kennung && z.verweise.indexOf("zettel:" + kennung) >= 0);
+}
+
+/* Aus einem Verweis wieder etwas Lesbares machen.
+
+   Gibt immer etwas zurück, auch wenn das Ziel nicht mehr existiert – ein
+   Termin kann aus dem Zeitfenster gefallen sein, eine verknüpfte Notiz
+   gelöscht. Dann steht dort "nicht mehr da" statt einer leeren Zeile, und
+   man weiß wenigstens, dass es den Verweis gibt. */
+function verweisBeschreiben(verweis) {
+  const trenner = verweis.indexOf(":");
+  const art = verweis.slice(0, trenner);
+  const wert = verweis.slice(trenner + 1);
+
+  if (art === "fach") {
+    return { art: art, wert: wert, symbol: "▦", titel: wert,
+             zusatz: "Modul", fehlt: false };
+  }
+
+  if (art === "zettel") {
+    const ziel = zettelZuKennung(wert);
+    return { art: art, wert: wert, symbol: "✎",
+             titel: ziel ? zettelTitel(ziel) : "Notiz nicht mehr da",
+             zusatz: "Notiz", fehlt: !ziel };
+  }
+
+  if (art === "termin") {
+    const ziel = terminZuKennung(wert);
+    return { art: art, wert: wert, symbol: "◷",
+             titel: ziel ? ziel.titel : "Termin nicht mehr im Plan",
+             zusatz: ziel ? zeitpunktLesbar(ziel.start) : "",
+             fehlt: !ziel };
+  }
+
+  return { art: art, wert: wert, symbol: "•", titel: wert, zusatz: "",
+           fehlt: false };
+}
+
 
 function grabsteinEntfernen(kennung) {
   if (!(kennung in grabsteine)) return;
@@ -1638,9 +1923,10 @@ function terminFensterZeigen(kennung) {
     </dl>
     ${notizText(kennung) ? `
       <div class="termin-notiz">
-        <div class="termin-notiz-kopf">${istWichtig(kennung) ? "★" : "✎"} Deine Notiz</div>
+        <div class="termin-notiz-kopf">${istWichtig(kennung) ? "★" : "✎"} Kurznotiz</div>
         ${sicher(notizText(kennung))}
       </div>` : ""}
+    ${terminZettelZeichnen(termin, kennung)}
     <div class="filter-knoepfe">
       ${termin.eigen ? `
         <button type="button" class="knopf-schlicht knopf-betont"
@@ -1648,12 +1934,72 @@ function terminFensterZeigen(kennung) {
           Termin ändern
         </button>` : `
         <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
-          ${notizText(kennung) ? "Notiz bearbeiten" : "Notiz hinzufügen"}
+          ${notizText(kennung) ? "Kurznotiz bearbeiten" : "Kurznotiz hinzufügen"}
         </button>`}
     </div>`;
 
   fenster.hidden = false;
 }
+
+/* Der Abschnitt "Notizen" im Terminfenster.
+
+   Das ist die Rückrichtung der Verknüpfungen und der eigentliche Zweck der
+   ganzen Sache: man tippt einen Termin an und sieht, was man sich dazu
+   notiert hat. Ohne das müsste man wissen, dass es eine Notiz gibt, und
+   sie im Notizbuch suchen – dann könnte man sie auch gleich weglassen.
+
+   Gezeigt wird beides zusammen: was an genau diesem Termin hängt und was
+   am Modul. Woran genau, steht an der Notiz selbst, damit man beim Ändern
+   nicht daneben greift. */
+/* Hier treffen zwei Sorten Notiz aufeinander, und das Fenster muss sie
+   auseinanderhalten:
+
+   - Die KURZNOTIZ hängt an genau diesem Termin, ist eine Zeile lang und
+     steht im Kalenderkästchen. "11:25 Beginn".
+   - Eine NOTIZ aus dem Notizbuch steht für sich, ist so lang wie man will
+     und kann an mehreren Terminen gleichzeitig hängen.
+
+   Deshalb heißt die erste im Terminfenster ausdrücklich "Kurznotiz". Beide
+   "Notiz" zu nennen wäre bequem und genau einmal verwirrend gewesen -
+   nämlich jedes Mal. */
+function terminZettelZeichnen(termin, kennung) {
+  const passende = zettelFuerTermin(kennung);
+  const fach = termin.eigen ? "" : termin.titel;
+
+  const knoepfe = `
+    <div class="termin-zettel-knoepfe">
+      <button type="button" class="knopf-schlicht"
+              data-zettel-neu="termin:${sicher(kennung)}">
+        + Notiz zu diesem Termin
+      </button>
+      ${fach ? `
+        <button type="button" class="knopf-schlicht"
+                data-zettel-neu="fach:${sicher(fach)}">
+          + Notiz zum Modul
+        </button>
+        ${zettelFuerFach(fach).length > 0 ? `
+          <button type="button" class="knopf-schlicht"
+                  data-zettel-fach="${sicher(fach)}">
+            Alle Notizen zum Modul
+          </button>` : ""}` : ""}
+    </div>`;
+
+  if (passende.length === 0) return knoepfe;
+
+  return `
+    <div class="termin-zettel">
+      <div class="termin-notiz-kopf">✎ Notizen</div>
+      ${passende.map(z => `
+        <button type="button" class="termin-zettel-zeile"
+                data-zettel-oeffnen="${sicher(z.id)}">
+          <strong>${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</strong>
+          <small>${z.verweise.indexOf("termin:" + kennung) >= 0
+                    ? "zu diesem Termin" : "zum Modul"}</small>
+        </button>`).join("")}
+    </div>
+    ${knoepfe}`;
+}
+
 
 /* Vom Detailfenster aus zur Notiz springen.
 
@@ -2085,6 +2431,7 @@ function reiterZahlenSetzen() {
     .filter(kennung => !notizen[kennung].erledigt).length;
   const offeneFreie = aufgaben.filter(a => !a.erledigt).length;
   zahlSetzen("todoZahl", offeneNotizen + offeneFreie);
+  zahlSetzen("zettelZahl", zettel.length);
   zahlSetzen("aenderungsZahl", ungeseheneAenderungen());
 }
 
@@ -2148,12 +2495,481 @@ function eintragZeichnen(eintrag) {
 
 
 /* -------------------------------------------------------------------------
+   5b. Der Bereich "Notizen"
+
+   Das Notizbuch. Eine Liste von Notizen, ein Fenster zum Schreiben, ein
+   Fenster zum Verknüpfen – mehr ist es nicht.
+
+   Die Verknüpfungen sind der eigentliche Grund für diesen Bereich. Eine
+   Notiz für sich ist ein Zettel in einer Schublade; eine Notiz, die weiß,
+   zu welchem Modul sie gehört, steht später von selbst dort, wo man sie
+   sucht: im Fenster des Termins.
+   ------------------------------------------------------------------------- */
+
+function zettelZeichnen() {
+  const bereich = document.getElementById("zettelListe");
+  if (!bereich) return;
+
+  let liste = zettelGefunden(zettelSuche);
+  if (zettelFilter) {
+    liste = liste.filter(z => z.verweise.indexOf(zettelFilter) >= 0);
+  }
+
+  /* Der Filterbalken erscheint nur, wenn gefiltert wird – sonst nähme er
+     Platz weg und sagte nichts. Der Knopf daneben hebt ihn wieder auf; ohne
+     ihn käme man aus einer Modulansicht nicht mehr heraus, ohne den Reiter
+     neu anzutippen. */
+  const filterBalken = !zettelFilter ? "" : (function () {
+    const beschreibung = verweisBeschreiben(zettelFilter);
+    return `
+      <div class="zettel-filter">
+        <span>${beschreibung.symbol} Notizen zu
+              <strong>${sicher(beschreibung.titel)}</strong></span>
+        <button type="button" class="knopf-schlicht" id="zettelFilterWeg">
+          Alle Notizen
+        </button>
+      </div>`;
+  })();
+
+  if (liste.length === 0) {
+    bereich.innerHTML = filterBalken + `<p class="leer-text">${
+      zettelSuche || zettelFilter
+        ? "Dazu gibt es noch keine Notiz."
+        : "Noch keine Notizen. Tipp auf „+ Notiz“."
+    }</p>`;
+    return;
+  }
+
+  bereich.innerHTML = filterBalken + liste.map(z => {
+    const vorschau = zettelVorschau(z);
+    const marken = z.verweise.map(verweisBeschreiben);
+    return `
+      <div class="zettel-karte${z.wichtig ? " zettel-karte-wichtig" : ""}"
+           data-zettel-oeffnen="${sicher(z.id)}"
+           role="button" tabindex="0">
+        <div class="zettel-karte-kopf">
+          <span class="zettel-karte-titel">${
+            z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
+          <span class="zettel-karte-zeit">${sicher(zettelDatum(z))}</span>
+        </div>
+        ${vorschau
+          ? `<div class="zettel-karte-vorschau">${sicher(vorschau)}</div>`
+          : ""}
+        ${marken.length === 0 ? "" : `
+          <div class="zettel-karte-marken">
+            ${marken.map(m => `<span class="zettel-marke${
+              m.fehlt ? " zettel-marke-fehlt" : ""}">${m.symbol} ${
+              sicher(m.titel)}</span>`).join("")}
+          </div>`}
+      </div>`;
+  }).join("");
+}
+
+/* Wann zuletzt angefasst, kurz. Heute steht die Uhrzeit, sonst das Datum –
+   dieselbe Regel wie in der Nachrichten-App, und sie stimmt mit dem
+   überein, wonach man sucht: "das war doch heute Vormittag". */
+function zettelDatum(z) {
+  const wann = Number(z && z.geaendert) || 0;
+  if (!wann) return "";
+  const zeitpunkt = new Date(wann);
+  if (tagesSchluessel(zeitpunkt) === tagesSchluessel(new Date())) {
+    return uhrzeit(zeitpunkt.toISOString().slice(0, 16));
+  }
+  return String(zeitpunkt.getDate()).padStart(2, "0") + "."
+       + String(zeitpunkt.getMonth() + 1).padStart(2, "0") + ".";
+}
+
+/* Setzt den Filter und wechselt in den Notizbereich.
+
+   Von hier aus führen alle Wege, die "zeig mir die Notizen dazu" heißen:
+   das Terminfenster, eine Modulmarke in einer Notiz, der Fächerfilter. */
+function zettelFilterSetzen(verweis) {
+  zettelFilter = verweis || "";
+  zettelSuche = "";
+  const suchfeld = document.getElementById("zettelSuchfeld");
+  if (suchfeld) suchfeld.value = "";
+  seiteSetzen("zettel");
+}
+
+
+/* --- Das Fenster zum Schreiben ----------------------------------------- */
+
+/* Beim Tippen steht der Text im Textfeld, nicht in einer Variablen. Sobald
+   das Fenster aber neu gezeichnet wird – weil eine Verknüpfung dazukommt
+   oder wegfällt –, ist das Textfeld weg und mit ihm der Text. Deshalb wird
+   er vorher hier hineingerettet. */
+let offeneVerweise = [];
+let offenerZettelText = "";
+let offenerZettelWichtig = false;
+
+function zettelWerteLesen() {
+  const feld = document.getElementById("zettelFeld");
+  const haken = document.getElementById("zettelWichtig");
+  if (feld) offenerZettelText = feld.value;
+  if (haken) offenerZettelWichtig = Boolean(haken.checked);
+}
+
+/* Öffnet eine Notiz. Ohne Kennung entsteht eine neue; vorgabe ist eine
+   Liste von Verweisen, die sie gleich mitbekommt – so kann das
+   Terminfenster eine Notiz anlegen, die schon verknüpft ist. */
+function zettelFensterZeigen(kennung, vorgabe) {
+  const vorhandener = kennung ? zettelZuKennung(kennung) : null;
+
+  offenerZettel = kennung || neueZettelKennung();
+  offenerZettelText = vorhandener ? vorhandener.text : "";
+  offenerZettelWichtig = vorhandener ? Boolean(vorhandener.wichtig) : false;
+  offeneVerweise = verweiseSaeubern(
+    vorhandener ? vorhandener.verweise : (vorgabe || []));
+
+  zettelFensterZeichnen();
+
+  const fenster = document.getElementById("zettelHintergrund");
+  if (fenster) fenster.hidden = false;
+
+  /* Bei einer neuen Notiz gleich ins Textfeld springen. Bei einer
+     vorhandenen nicht: dort will man meistens erst lesen, und die
+     Bildschirmtastatur würde die halbe Notiz verdecken. */
+  if (!vorhandener) {
+    const feld = document.getElementById("zettelFeld");
+    if (feld && feld.focus) feld.focus();
+  }
+}
+
+function zettelFensterZeichnen() {
+  const inhalt = document.getElementById("zettelInhalt");
+  if (!inhalt) return;
+
+  const vorhandener = zettelZuKennung(offenerZettel);
+  const rueckverweise = zettelRueckverweise(offenerZettel);
+
+  const titel = document.getElementById("zettelFensterTitel");
+  if (titel) titel.textContent = vorhandener ? "Notiz" : "Neue Notiz";
+
+  inhalt.innerHTML = `
+    <textarea id="zettelFeld" class="zettel-feld" rows="10"
+              placeholder="Die erste Zeile wird die Überschrift …"
+              >${sicher(offenerZettelText)}</textarea>
+
+    <label class="form-haken">
+      <input type="checkbox" id="zettelWichtig"${offenerZettelWichtig ? " checked" : ""}>
+      <span>★ Wichtig</span>
+    </label>
+
+    <div class="zettel-verweise-kopf">Verknüpft mit</div>
+    <div class="zettel-marken zettel-marken-gross">
+      ${offeneVerweise.map(verweis => {
+        const m = verweisBeschreiben(verweis);
+        return `
+          <span class="zettel-marke${m.fehlt ? " zettel-marke-fehlt" : ""}">
+            <button type="button" class="zettel-marke-text"
+                    data-verweis-oeffnen="${sicher(verweis)}">
+              ${m.symbol} ${sicher(m.titel)}${
+                m.zusatz ? ` <small>${sicher(m.zusatz)}</small>` : ""}
+            </button>
+            <button type="button" class="zettel-marke-weg"
+                    data-verweis-weg="${sicher(verweis)}"
+                    aria-label="Verknüpfung entfernen">✕</button>
+          </span>`;
+      }).join("")}
+      <button type="button" class="zettel-marke zettel-marke-neu" id="verweisNeu">
+        + Verknüpfen
+      </button>
+    </div>
+
+    ${rueckverweise.length === 0 ? "" : `
+      <div class="zettel-verweise-kopf">Verlinkt von</div>
+      <div class="zettel-marken">
+        ${rueckverweise.map(z => `
+          <button type="button" class="zettel-marke zettel-marke-text"
+                  data-zettel-oeffnen="${sicher(z.id)}">
+            ✎ ${sicher(zettelTitel(z))}
+          </button>`).join("")}
+      </div>`}
+
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht knopf-betont" id="zettelSpeichern">
+        Speichern
+      </button>
+      ${vorhandener ? `
+        <button type="button" class="knopf-schlicht knopf-gefahr" id="zettelLoeschen">
+          Löschen
+        </button>` : ""}
+    </div>`;
+}
+
+/* Schließt das Fenster und schreibt vorher weg.
+
+   Das Speichern beim Schließen ist Absicht und nicht Bequemlichkeit: ein
+   getippter Text, der beim Antippen von "Fertig" verschwindet, ist genau
+   die Sorte Verlust, die man nicht bemerkt und nicht rückgängig machen
+   kann. Die Notizen-App von Apple macht es ebenso. */
+function zettelFensterSchliessen() {
+  zettelSichern();
+  offenerZettel = "";
+  const fenster = document.getElementById("zettelHintergrund");
+  if (fenster) fenster.hidden = true;
+  const auswahl = document.getElementById("verweisHintergrund");
+  if (auswahl) auswahl.hidden = true;
+  allesZeichnen();
+}
+
+function zettelSichern() {
+  if (!offenerZettel) return;
+  zettelWerteLesen();
+
+  /* Eine neue, völlig leere Notiz wird nicht angelegt.
+
+     zettelSetzen() würde sonst einen Grabstein für eine Kennung setzen,
+     die es nie gegeben hat. Das schadet nichts, sammelt aber Müll in der
+     Ablage an, der 120 Tage mitgeschleppt wird. */
+  const leer = !offenerZettelText.trim() && offeneVerweise.length === 0;
+  if (leer && !zettelZuKennung(offenerZettel)) return;
+
+  zettelSetzen(offenerZettel, {
+    text: offenerZettelText,
+    verweise: offeneVerweise,
+    wichtig: offenerZettelWichtig,
+  });
+}
+
+
+/* --- Das Fenster zum Verknüpfen ---------------------------------------- */
+
+let verweisSuche = "";
+
+function verweisFensterZeigen() {
+  verweisSuche = "";
+  const feld = document.getElementById("verweisSuchfeld");
+  if (feld) feld.value = "";
+  verweisListeZeichnen();
+  const fenster = document.getElementById("verweisHintergrund");
+  if (fenster) fenster.hidden = false;
+}
+
+/* Stellt zusammen, womit sich verknüpfen lässt.
+
+   Drei Gruppen, absichtlich in dieser Reihenfolge: das Modul ist der
+   häufigste Fall, weil eine Notiz meistens zum Fach gehört und nicht zu
+   einem einzelnen Dienstagstermin. */
+function verweisAngebot(suchwort) {
+  const wort = String(suchwort || "").trim().toLowerCase();
+  const passt = text => !wort || String(text).toLowerCase().indexOf(wort) >= 0;
+  const gruppen = [];
+
+  // 1. Module – jeder Fachtitel einmal.
+  const gesehen = {};
+  const faecher = [];
+  for (const termin of (STUNDENPLAN.termine || [])) {
+    if (gesehen[termin.titel]) continue;
+    gesehen[termin.titel] = true;
+    if (passt(termin.titel)) faecher.push(termin.titel);
+  }
+  faecher.sort();
+  if (faecher.length) {
+    gruppen.push({
+      name: "Module",
+      eintraege: faecher.map(name => ({
+        verweis: "fach:" + name, symbol: "▦", titel: name,
+        zusatz: "alle Termine dieses Moduls",
+      })),
+    });
+  }
+
+  /* 2. Einzelne Termine, von heute an.
+
+     Vergangene bleiben draußen, solange nicht gesucht wird: die Liste wäre
+     sonst mit hundert erledigten Vorlesungen gefüllt, bevor der erste
+     kommende auftaucht. Wer gezielt sucht, bekommt sie trotzdem. */
+  const heute = tagesSchluessel(new Date());
+  const termine = alleAngezeigtenTermine().filter(termin =>
+    passt(termin.titel + " " + (termin.raum || ""))
+    && (wort || termin.start.slice(0, 10) >= heute));
+  if (termine.length) {
+    gruppen.push({
+      name: "Termine",
+      eintraege: termine.slice(0, 40).map(termin => ({
+        verweis: "termin:" + termin.id, symbol: "◷", titel: termin.titel,
+        zusatz: zeitpunktLesbar(termin.start)
+                + (termin.raum ? " · " + termin.raum : ""),
+      })),
+    });
+  }
+
+  // 3. Andere Notizen. Die offene selbst darf nicht dabei sein.
+  const andere = zettelSortiert().filter(
+    z => z.id !== offenerZettel && passt(z.text));
+  if (andere.length) {
+    gruppen.push({
+      name: "Notizen",
+      eintraege: andere.slice(0, 40).map(z => ({
+        verweis: "zettel:" + z.id, symbol: "✎", titel: zettelTitel(z),
+        zusatz: zettelVorschau(z).slice(0, 60),
+      })),
+    });
+  }
+
+  return gruppen;
+}
+
+function verweisListeZeichnen() {
+  const bereich = document.getElementById("verweisListe");
+  if (!bereich) return;
+
+  const gruppen = verweisAngebot(verweisSuche);
+  if (gruppen.length === 0) {
+    bereich.innerHTML = `<p class="leer-text">Nichts gefunden.</p>`;
+    return;
+  }
+
+  bereich.innerHTML = gruppen.map(gruppe => `
+    <div class="verweis-gruppe">
+      <div class="verweis-gruppe-kopf">${sicher(gruppe.name)}</div>
+      ${gruppe.eintraege.map(eintrag => {
+        const gewaehlt = offeneVerweise.indexOf(eintrag.verweis) >= 0;
+        return `
+          <button type="button" class="verweis-zeile${
+                    gewaehlt ? " verweis-zeile-aktiv" : ""}"
+                  data-verweis-waehlen="${sicher(eintrag.verweis)}">
+            <span class="verweis-symbol">${eintrag.symbol}</span>
+            <span class="verweis-text">
+              <strong>${sicher(eintrag.titel)}</strong>
+              ${eintrag.zusatz ? `<small>${sicher(eintrag.zusatz)}</small>` : ""}
+            </span>
+            <span class="verweis-haken">${gewaehlt ? "✓" : "+"}</span>
+          </button>`;
+      }).join("")}
+    </div>`).join("");
+}
+
+/* Einen Verweis anhaken oder wieder abwählen. Beides über denselben Knopf –
+   so muss man nicht zwischen "hinzufügen" und "entfernen" unterscheiden,
+   und ein zweites Antippen macht ein Versehen sofort rückgängig. */
+function verweisUmschalten(verweis) {
+  zettelWerteLesen();
+  const stelle = offeneVerweise.indexOf(verweis);
+  if (stelle >= 0) offeneVerweise.splice(stelle, 1);
+  else offeneVerweise.push(verweis);
+  offeneVerweise = verweiseSaeubern(offeneVerweise);
+  verweisListeZeichnen();
+  zettelFensterZeichnen();
+}
+
+/* Einem Verweis folgen: Modul filtert die Liste, Notiz öffnet die Notiz,
+   Termin öffnet das Terminfenster. */
+function verweisFolgen(verweis) {
+  const trenner = verweis.indexOf(":");
+  const art = verweis.slice(0, trenner);
+  const wert = verweis.slice(trenner + 1);
+
+  if (art === "fach") {
+    zettelFensterSchliessen();
+    zettelFilterSetzen(verweis);
+    return;
+  }
+
+  if (art === "zettel") {
+    if (!zettelZuKennung(wert)) return;
+    // Erst das Offene sichern, sonst geht der gerade getippte Text verloren.
+    zettelSichern();
+    zettelFensterZeigen(wert);
+    return;
+  }
+
+  if (art === "termin") {
+    if (!terminZuKennung(wert)) return;
+    zettelFensterSchliessen();
+    terminFensterZeigen(wert);
+  }
+}
+
+
+/* --- Hell oder dunkel --------------------------------------------------- */
+
+function themaLaden() {
+  try {
+    const gemerkt = localStorage.getItem(SPEICHER_THEMA);
+    if (gemerkt === "hell" || gemerkt === "dunkel" || gemerkt === "auto") {
+      return gemerkt;
+    }
+  } catch (fehler) { /* dann eben automatisch */ }
+  return "auto";
+}
+
+function themaIstDunkel() {
+  if (thema === "dunkel") return true;
+  if (thema === "hell") return false;
+  return Boolean(window.matchMedia
+                 && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
+/* Trägt die Wahl ins <html>-Element ein – daran hängt im Stilblatt alles.
+
+   Die Farbe der Statusleiste wird nicht noch einmal aufgeschrieben, sondern
+   aus der gerade geltenden CSS-Variablen gelesen. Sonst stünden dieselben
+   zwei Farbwerte an drei Stellen und liefen beim nächsten Umfärben
+   auseinander. */
+function themaAnwenden() {
+  document.documentElement.setAttribute(
+    "data-thema", themaIstDunkel() ? "dunkel" : "hell");
+
+  let farbe = "";
+  try {
+    farbe = getComputedStyle(document.documentElement)
+              .getPropertyValue("--hintergrund").trim();
+  } catch (fehler) { /* dann bleibt die Statusleiste, wie sie ist */ }
+  if (!farbe) return;
+
+  /* Die beiden Marken im Kopf der Seite tragen ein media="..." und folgen
+     damit dem Betriebssystem. Sobald hier eine eigene Wahl gilt, muss das
+     weg – sonst zeigte die Statusleiste weiter die Systemfarbe. */
+  for (const marke of document.querySelectorAll('meta[name="theme-color"]')) {
+    marke.removeAttribute("media");
+    marke.setAttribute("content", farbe);
+  }
+}
+
+function themaSetzen(neues) {
+  thema = neues;
+  try { localStorage.setItem(SPEICHER_THEMA, thema); }
+  catch (fehler) { /* dann gilt die Wahl bis zum Neuladen */ }
+  themaAnwenden();
+  themaZeichnen();
+}
+
+function themaZeichnen() {
+  const bereich = document.getElementById("themaBereich");
+  if (!bereich) return;
+
+  const wahl = [
+    ["auto", "Automatisch"],
+    ["hell", "Hell"],
+    ["dunkel", "Dunkel"],
+  ];
+
+  bereich.innerHTML = `
+    <h3 class="melden-titel">Aussehen</h3>
+    <p class="filter-hinweis">
+      „Automatisch“ folgt der Einstellung deines Geräts – am iPhone also
+      auch der Zeitschaltung, falls du eine eingerichtet hast.
+    </p>
+    <div class="schalter" role="group" aria-label="Aussehen">
+      ${wahl.map(eintrag => `
+        <button type="button" data-thema="${eintrag[0]}"
+                class="${thema === eintrag[0] ? "schalter-aktiv" : ""}"
+                aria-pressed="${thema === eintrag[0] ? "true" : "false"}">
+          ${eintrag[1]}
+        </button>`).join("")}
+    </div>`;
+}
+
+
+/* -------------------------------------------------------------------------
    6. Geräteabgleich
 
    Die Mechanik steckt in sync.js – Netz, Zusammenführen, Grabsteine. Hier
-   steht nur die Übersetzung in beide Richtungen: aus Notizen und Aufgaben
-   eine gemeinsame Sammlung machen, und aus einer gemeinsamen Sammlung
-   wieder Notizen und Aufgaben.
+   steht nur die Übersetzung in beide Richtungen: aus Notizen, Aufgaben,
+   eigenen Terminen und dem Notizbuch eine gemeinsame Sammlung machen, und
+   aus einer gemeinsamen Sammlung wieder diese vier.
 
    Der Zwischenschritt lohnt sich, weil sync.js dadurch nichts über
    Stundenpläne wissen muss. Für sie ist alles nur "Kennung, Zeitstempel,
@@ -2162,11 +2978,13 @@ function eintragZeichnen(eintrag) {
 
 /* Trägt alles zusammen, was auf diesem Gerät steht.
 
-   Notizen und Aufgaben landen in einer Sammlung, obwohl sie getrennt
+   Alle vier Sorten landen in einer Sammlung, obwohl sie getrennt
    gespeichert sind. Das geht, weil ihre Kennungen sich nie überschneiden:
    Notizen hängen an Termin-Kennungen der HWR ("sked.de…"), freie Aufgaben
-   fangen immer mit "eigen-" an. Beim Auspacken unten wird daran wieder
-   auseinandersortiert. */
+   fangen mit "eigen-" an, eigene Termine mit "termin-", Notizen aus dem
+   Notizbuch mit "zettel-". Beim Auspacken unten wird daran wieder
+   auseinandersortiert – und zusätzlich am Feld "art", das seit dem
+   Notizbuch der verlässlichere Weg ist. */
 function abgleichSammeln() {
   const eintraege = {};
 
@@ -2203,6 +3021,32 @@ function abgleichSammeln() {
       notiz: termin.notiz || "",
       wichtig: Boolean(termin.wichtig),
       geaendert: Number(termin.geaendert) || 0,
+    };
+  }
+
+  /* Die Notizen aus dem Notizbuch.
+
+     Beachte das Feld "inhalt". Es heißt bewusst NICHT "text", obwohl dort
+     ein Text drinsteht – und das ist keine Spielerei, sondern die einzige
+     Absicherung gegen ein Gerät, auf dem noch eine ältere Fassung der App
+     läuft.
+
+     abgleichUebernehmen() unten sortiert jeden Eintrag, der ein Feld
+     "text" hat, in Notizen oder Aufgaben ein. Eine ältere Fassung kennt
+     die Art "zettel" nicht, sähe also einen Eintrag mit Text und machte
+     daraus eine Notiz an einem Termin, den es gar nicht gibt – die
+     Verknüpfungen wären beim nächsten Hochladen weg, auf allen Geräten.
+
+     Ohne "text" greift dort stattdessen die Regel für Unbekanntes: heben
+     und unverändert zurückgeben. Ein altes Gerät reicht das Notizbuch
+     also durch, ohne es anzufassen. */
+  for (const z of zettel) {
+    eintraege[z.id] = {
+      art: "zettel",
+      inhalt: z.text,
+      verweise: verweiseSaeubern(z.verweise),
+      wichtig: Boolean(z.wichtig),
+      geaendert: Number(z.geaendert) || 0,
     };
   }
 
@@ -2244,6 +3088,7 @@ function abgleichUebernehmen(nutzlast) {
   const neueNotizen = {};
   const neueAufgaben = [];
   const neueTermine = [];
+  const neueZettel = [];
   const neueGrabsteine = {};
   const neueUnbekannte = {};
 
@@ -2269,6 +3114,22 @@ function abgleichUebernehmen(nutzlast) {
         wichtig: Boolean(eintrag.wichtig),
         geaendert: zeitpunkt,
       });
+      continue;
+    }
+
+    /* Eine Notiz aus dem Notizbuch. Steht vor der Text-Prüfung darunter,
+       weil ihr Text im Feld "inhalt" liegt und sie dort sonst als
+       unbekannt durchfiele – siehe abgleichSammeln(). */
+    if (eintrag.art === "zettel") {
+      const inhalt = typeof eintrag.inhalt === "string" ? eintrag.inhalt : "";
+      const verweise = verweiseSaeubern(eintrag.verweise);
+      // Weder Text noch Verknüpfung: da ist nichts mehr, was man zeigen
+      // könnte. Dieselbe Grenze zieht zettelSetzen().
+      if (!inhalt && verweise.length === 0) continue;
+      neueZettel.push(zettelGeraderuecken({
+        id: kennung, text: inhalt, verweise: verweise,
+        wichtig: eintrag.wichtig, geaendert: zeitpunkt,
+      }));
       continue;
     }
 
@@ -2303,6 +3164,7 @@ function abgleichUebernehmen(nutzlast) {
   notizen = neueNotizen;
   aufgaben = neueAufgaben;
   eigeneTermine = neueTermine;
+  zettel = neueZettel;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
 
@@ -2312,6 +3174,13 @@ function abgleichUebernehmen(nutzlast) {
   try {
     localStorage.setItem(SPEICHER_NOTIZEN, JSON.stringify(notizen));
     localStorage.setItem(SPEICHER_AUFGABEN, JSON.stringify(aufgaben));
+    /* Die eigenen Termine standen hier lange nicht mit – ein Fehler, der
+       sich gut versteckt hat: nach einem Abgleich lagen sie nur im
+       Arbeitsspeicher, beim nächsten Laden der Seite waren sie weg, und
+       der nächste Abgleich holte sie stillschweigend wieder. Man sah es
+       also nur, wenn man ohne Netz neu lud. */
+    localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
+    localStorage.setItem(SPEICHER_ZETTEL, JSON.stringify(zettel));
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
@@ -2376,8 +3245,9 @@ function geraeteZeichnen(meldung) {
   if (!Abgleich.code()) {
     bereich.innerHTML = `
       <p class="filter-hinweis">
-        Notizen und Aufgaben liegen bisher nur in diesem Browser. Schalte den
-        Abgleich ein, dann zeigen Handy und Laptop dasselbe.
+        Notizen, Aufgaben und eigene Termine liegen bisher nur in diesem
+        Browser. Schalte den Abgleich ein, dann zeigen Handy und Laptop
+        dasselbe.
       </p>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht knopf-betont" id="abgleichEin">
@@ -2712,7 +3582,12 @@ function geraeteVerbinden() {
   const fenster = document.getElementById("geraeteHintergrund");
   if (!fenster) return;
 
-  function oeffnen() { geraeteZeichnen(); meldenZeichnen(); fenster.hidden = false; }
+  function oeffnen() {
+    geraeteZeichnen();
+    meldenZeichnen();
+    themaZeichnen();
+    fenster.hidden = false;
+  }
 
   document.getElementById("geraeteOeffnen").addEventListener("click", oeffnen);
   document.getElementById("geraeteSchliessen").addEventListener("click", () => {
@@ -2869,6 +3744,7 @@ function geraeteVerbinden() {
 function allesZeichnen() {
   naechstenZeichnen();
   wocheZeichnen();
+  zettelZeichnen();
   todosZeichnen();
   verlaufZeichnen();
   reiterZahlenSetzen();
@@ -2883,7 +3759,12 @@ function seiteSetzen(neueSeite) {
   try { localStorage.setItem(SPEICHER_SEITE, seite); }
   catch (fehler) { /* dann startet die App eben wieder beim Plan */ }
 
-  const bereiche = { plan: "seitePlan", todos: "seiteTodos", aenderungen: "seiteAenderungen" };
+  const bereiche = {
+    plan: "seitePlan",
+    zettel: "seiteZettel",
+    todos: "seiteTodos",
+    aenderungen: "seiteAenderungen",
+  };
   for (const name of Object.keys(bereiche)) {
     const bereich = document.getElementById(bereiche[name]);
     if (bereich) bereich.hidden = name !== seite;
@@ -2957,6 +3838,156 @@ function ansichtSetzen(neueAnsicht) {
 
   wocheZeichnen();
 }
+
+/* Hängt alles an, was zum Notizbuch gehört.
+
+   Wie überall in dieser App laufen die Knöpfe über einen einzigen Zuhörer
+   je Bereich und nicht über einen je Knopf: der Inhalt wird bei jeder
+   Änderung neu gezeichnet, einzeln angehängte Zuhörer wären danach weg. */
+function zettelVerbinden() {
+  const liste = document.getElementById("zettelListe");
+  if (liste) {
+    liste.addEventListener("click", ereignis => {
+      const ziel = ereignis.target && ereignis.target.closest
+        ? ereignis.target.closest("#zettelFilterWeg,[data-zettel-oeffnen]") : null;
+      if (!ziel) return;
+      if (ziel.id === "zettelFilterWeg") {
+        zettelFilter = "";
+        zettelZeichnen();
+        return;
+      }
+      zettelFensterZeigen(ziel.getAttribute("data-zettel-oeffnen"));
+    });
+
+    /* Die Karten sind Knöpfe (role="button"), also müssen sie sich auch
+       mit der Tastatur öffnen lassen – sonst kommt man mit Tab hin, aber
+       nicht hinein. Dieselbe Überlegung wie bei den Kalenderkästchen. */
+    liste.addEventListener("keydown", ereignis => {
+      if (ereignis.key !== "Enter" && ereignis.key !== " ") return;
+      const karte = ereignis.target.closest
+        ? ereignis.target.closest("[data-zettel-oeffnen]") : null;
+      if (!karte) return;
+      ereignis.preventDefault();
+      zettelFensterZeigen(karte.getAttribute("data-zettel-oeffnen"));
+    });
+  }
+
+  const suchfeld = document.getElementById("zettelSuchfeld");
+  if (suchfeld) {
+    suchfeld.addEventListener("input", () => {
+      zettelSuche = suchfeld.value;
+      zettelZeichnen();
+    });
+  }
+
+  const neuKnopf = document.getElementById("zettelNeu");
+  if (neuKnopf) {
+    neuKnopf.addEventListener("click", () => {
+      /* Wird gerade nach einem Modul gefiltert, bekommt die neue Notiz
+         dieses Modul gleich mit. Man ist ja offensichtlich dabei, sich
+         etwas dazu zu notieren. */
+      zettelFensterZeigen("", zettelFilter ? [zettelFilter] : []);
+    });
+  }
+
+  const fenster = document.getElementById("zettelHintergrund");
+  if (fenster) {
+    document.getElementById("zettelSchliessen")
+      .addEventListener("click", zettelFensterSchliessen);
+    fenster.addEventListener("click", ereignis => {
+      if (ereignis.target === fenster) zettelFensterSchliessen();
+    });
+
+    document.getElementById("zettelInhalt").addEventListener("click", ereignis => {
+      const ziel = ereignis.target && ereignis.target.closest
+        ? ereignis.target.closest("#verweisNeu,#zettelSpeichern,#zettelLoeschen,"
+                                  + "[data-verweis-weg],[data-verweis-oeffnen],"
+                                  + "[data-zettel-oeffnen]") : null;
+      if (!ziel) return;
+
+      if (ziel.id === "verweisNeu") {
+        // Vor dem zweiten Fenster retten, was im Textfeld steht.
+        zettelWerteLesen();
+        verweisFensterZeigen();
+        return;
+      }
+
+      if (ziel.id === "zettelSpeichern") { zettelFensterSchliessen(); return; }
+
+      if (ziel.id === "zettelLoeschen") {
+        if (!confirm("Diese Notiz löschen?\n\n"
+                     + "Sie verschwindet auch auf deinen anderen Geräten.")) return;
+        zettelSetzen(offenerZettel, { text: "", verweise: [] });
+        offenerZettel = "";
+        fenster.hidden = true;
+        allesZeichnen();
+        return;
+      }
+
+      const wegzunehmen = ziel.getAttribute("data-verweis-weg");
+      if (wegzunehmen) { verweisUmschalten(wegzunehmen); return; }
+
+      const zuFolgen = ziel.getAttribute("data-verweis-oeffnen");
+      if (zuFolgen) { verweisFolgen(zuFolgen); return; }
+
+      const rueckverweis = ziel.getAttribute("data-zettel-oeffnen");
+      if (rueckverweis) {
+        zettelSichern();
+        zettelFensterZeigen(rueckverweis);
+      }
+    });
+  }
+
+  const auswahl = document.getElementById("verweisHintergrund");
+  if (auswahl) {
+    document.getElementById("verweisSchliessen").addEventListener("click", () => {
+      auswahl.hidden = true;
+    });
+    auswahl.addEventListener("click", ereignis => {
+      if (ereignis.target === auswahl) auswahl.hidden = true;
+    });
+
+    const feld = document.getElementById("verweisSuchfeld");
+    if (feld) {
+      feld.addEventListener("input", () => {
+        verweisSuche = feld.value;
+        verweisListeZeichnen();
+      });
+    }
+
+    document.getElementById("verweisListe").addEventListener("click", ereignis => {
+      const ziel = ereignis.target && ereignis.target.closest
+        ? ereignis.target.closest("[data-verweis-waehlen]") : null;
+      if (!ziel) return;
+      verweisUmschalten(ziel.getAttribute("data-verweis-waehlen"));
+    });
+  }
+
+  // Hell und dunkel: die drei Knöpfe im ⚙-Fenster.
+  const themaBereich = document.getElementById("themaBereich");
+  if (themaBereich) {
+    themaBereich.addEventListener("click", ereignis => {
+      const ziel = ereignis.target && ereignis.target.closest
+        ? ereignis.target.closest("[data-thema]") : null;
+      if (!ziel) return;
+      themaSetzen(ziel.getAttribute("data-thema"));
+    });
+  }
+
+  /* Steht die Wahl auf "Automatisch", muss ein Wechsel am Gerät sofort
+     ankommen – am iPhone etwa, wenn die Zeitschaltung abends umstellt.
+     Ohne das hier bliebe die App hell, bis man sie neu lädt. */
+  if (window.matchMedia) {
+    const dunkelAbfrage = window.matchMedia("(prefers-color-scheme: dark)");
+    const reagieren = () => { if (thema === "auto") themaAnwenden(); };
+    if (dunkelAbfrage.addEventListener) {
+      dunkelAbfrage.addEventListener("change", reagieren);
+    } else if (dunkelAbfrage.addListener) {
+      dunkelAbfrage.addListener(reagieren);
+    }
+  }
+}
+
 
 function knoepfeVerbinden() {
   // Alle Notiz-Knöpfe laufen über diesen einen Zuhörer, siehe notizKlick().
@@ -3060,8 +4091,34 @@ function knoepfeVerbinden() {
     });
     document.getElementById("terminInhalt").addEventListener("click", ereignis => {
       const ziel = ereignis.target.closest
-        ? ereignis.target.closest("[data-notiz-bearbeiten],[data-termin-bearbeiten]") : null;
+        ? ereignis.target.closest("[data-notiz-bearbeiten],[data-termin-bearbeiten],"
+                                  + "[data-zettel-oeffnen],[data-zettel-neu],"
+                                  + "[data-zettel-fach]") : null;
       if (!ziel) return;
+
+      // Eine verknüpfte Notiz öffnen.
+      const zuOeffnen = ziel.getAttribute("data-zettel-oeffnen");
+      if (zuOeffnen) {
+        terminFenster.hidden = true;
+        zettelFensterZeigen(zuOeffnen);
+        return;
+      }
+
+      // Eine neue Notiz, schon verknüpft mit Termin oder Modul.
+      const neueNotiz = ziel.getAttribute("data-zettel-neu");
+      if (neueNotiz) {
+        terminFenster.hidden = true;
+        zettelFensterZeigen("", [neueNotiz]);
+        return;
+      }
+
+      // Alle Notizen des Moduls im Notizbereich zeigen.
+      const zumFach = ziel.getAttribute("data-zettel-fach");
+      if (zumFach) {
+        terminFenster.hidden = true;
+        zettelFilterSetzen("fach:" + zumFach);
+        return;
+      }
 
       const eigener = ziel.getAttribute("data-termin-bearbeiten");
       if (eigener) {
@@ -3132,7 +4189,16 @@ function starten() {
   aufgaben = aufgabenLaden();
   grabsteine = grabsteineLaden();
   eigeneTermine = eigeneTermineLaden();
+  zettel = zettelLaden();
   abgewaehlteFaecher = filterLaden();
+
+  /* Das Thema steht schon am <html>, gesetzt vom kurzen Skript im Kopf der
+     index.html. Hier wird es nur noch in die Variable geholt, damit der
+     Schalter im ⚙-Fenster den richtigen Knopf hervorhebt – und einmal neu
+     angewendet, weil erst jetzt das Stilblatt geladen ist und die
+     Statusleistenfarbe ausgelesen werden kann. */
+  thema = themaLaden();
+  themaAnwenden();
 
   // Ein Code in der Adresse muss vor Abgleich.einrichten() gelesen werden –
   // sonst startet der Abgleich noch mit dem alten Code oder gar keinem.
@@ -3143,8 +4209,8 @@ function starten() {
     if (gemerkt === "kalender" || gemerkt === "liste") ansicht = gemerkt;
 
     const gemerkteSeite = localStorage.getItem(SPEICHER_SEITE);
-    if (gemerkteSeite === "plan" || gemerkteSeite === "todos"
-        || gemerkteSeite === "aenderungen") {
+    if (gemerkteSeite === "plan" || gemerkteSeite === "zettel"
+        || gemerkteSeite === "todos" || gemerkteSeite === "aenderungen") {
       seite = gemerkteSeite;
     }
   } catch (fehler) { /* dann bleibt es bei Liste und Plan */ }
@@ -3153,6 +4219,7 @@ function starten() {
   knoepfeVerbinden();
   geraeteVerbinden();
   terminFormVerbinden();
+  zettelVerbinden();
   // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
   // hier kein weiterer Zeichen-Aufruf.
