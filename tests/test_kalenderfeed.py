@@ -32,6 +32,9 @@ import urllib.request
 URL = "https://copydwpdqpnwjvknsakz.supabase.co"
 OEFFENTLICH = "sb_publishable_d7pxVkeMCqwhFsLrupDovA_ag2SmffE"
 TESTRAUM = "TESTLAUFKALENDERFEEDPRUEFUNG"
+# Ein zweiter Raum fuer Abschnitt 10: er wird nie beschrieben und dient
+# nur dazu, aus der Sicht eines FREMDEN Codes in den Feed zu schauen.
+FREMDRAUM = "TESTLAUFKALENDERFREMDERBLICK"
 
 fehler = []
 bereich = ""
@@ -346,6 +349,64 @@ pruefe("keine Aufgaben mehr", int(kopf3.get("x-aufgaben", "-1")) == 0)
 # Der Stundenplan bleibt - der haengt nicht am Testraum.
 pruefe("der Stundenplan steht weiterhin drin",
        int(kopf3.get("x-stundenplan", "0")) > 0)
+
+
+# ---------------------------------------------------------------------------
+abschnitt("11. Ein fremder Code sieht nichts von diesem Raum")
+
+"""
+Der Kalender-Feed ist die ZWEITE Tuer zu denselben Daten.
+
+Die erste ist die App, und dass dort ein Code nur seinen eigenen Raum
+sieht, prueft test_abgleich_ablage.py. Der Feed aber laeuft als Edge
+Function mit dem Dienstschluessel - also mit vollem Zugriff auf die
+Tabelle. Er reicht den Code an dieselbe Datenbankfunktion weiter und ist
+damit genauso eng, aber das ist eine Eigenschaft von drei Zeilen Code in
+einer anderen Datei. Wer dort einmal den Raum aus dem Code herausnimmt
+oder versehentlich alle Zeilen liest, oeffnet jeden Kalender fuer jeden -
+und in der App faellt davon nichts auf.
+
+Deshalb wird hier ein zweiter Code benutzt, der nie etwas geschrieben hat,
+und geprueft, dass er die Termine des ersten nicht zu sehen bekommt.
+"""
+
+# Erst wieder etwas Unverwechselbares in den ersten Raum legen.
+antwort = schreiben({"v": 2, "eintraege": {
+    "termin-fremdblick": {
+        "art": "termin", "titel": "GEHEIMER TESTTERMIN",
+        "start": "2026-10-05T10:00", "ende": "2026-10-05T11:00",
+        "ganztags": False, "ort": "", "notiz": "", "wichtig": False,
+        "geaendert": 1790000000000},
+}})
+pruefe("der Testtermin liegt im ersten Raum", antwort.get("erfolg") is True)
+
+lage, roh5, kopf5 = feed_holen()
+pruefe("der eigene Code sieht ihn",
+       b"GEHEIMER TESTTERMIN" in roh5
+       and int(kopf5.get("x-termine", "0")) == 1)
+
+lage6, roh6, kopf6 = feed_holen_mit("", FREMDRAUM)
+pruefe("der fremde Code bekommt trotzdem eine Antwort", lage6 == 200)
+pruefe("aber KEINEN einzigen Termin daraus",
+       int(kopf6.get("x-termine", "-1")) == 0)
+pruefe("und der Titel steht nirgends in der Datei",
+       b"GEHEIMER TESTTERMIN" not in roh6)
+
+"""
+Ein Code, der sich nur in einem Zeichen unterscheidet, ist kein Angriff,
+sondern ein Tippfehler - und darf trotzdem nicht in einen fremden Raum
+fuehren. Der Raum entsteht aus einem SHA-256 des Codes, ein einziges
+anderes Zeichen ergibt also einen voellig anderen Raum.
+"""
+knapp_daneben = TESTRAUM[:-1] + ("A" if TESTRAUM[-1] != "A" else "B")
+lage7, roh7, kopf7 = feed_holen_mit("", knapp_daneben)
+pruefe("ein um ein Zeichen falscher Code sieht ebenfalls nichts",
+       int(kopf7.get("x-termine", "-1")) == 0
+       and b"GEHEIMER TESTTERMIN" not in roh7)
+
+# Und wieder aufraeumen.
+antwort = schreiben({"v": 2, "eintraege": {}})
+pruefe("der Testtermin ist wieder weg", antwort.get("erfolg") is True)
 
 
 # ---------------------------------------------------------------------------
