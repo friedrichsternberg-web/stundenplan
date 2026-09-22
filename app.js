@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "ab9ac0be";
+const GEBAUTE_VERSION = "8337fa3e";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -120,7 +120,14 @@ const SPEICHER_NOTIZEN = "stundenplan.notizen";
    Sie brauchen einen eigenen Speicher und nicht bloß einen weiteren Eintrag
    bei den Notizen: eine Notiz gehört zu genau einem Termin, an einem Tag
    können aber beliebig viele freie Aufgaben liegen. Deshalb ist das hier
-   eine Liste und keine Zuordnung. */
+   eine Liste und keine Zuordnung.
+
+   ACHTUNG BEIM LESEN: in der Oberfläche heißt das Ding seit dem 22.09.2026
+   "To-do", im Code weiter "Aufgabe". Das ist kein Versehen und auch keine
+   Nachlässigkeit – es umzubenennen hieße, das Feld "art": "aufgabe" in der
+   Ablage mitzuändern, und das steht dort auf jedem Gerät und in jeder
+   Sicherung. Ein Umbenennen im Code wäre eine Stunde Arbeit und ein Risiko
+   ohne Gegenwert. Also: Aufgabe im Code, To-do auf dem Bildschirm. */
 const SPEICHER_AUFGABEN = "stundenplan.aufgaben";
 
 /* Was du gelöscht hast, und wann.
@@ -696,7 +703,7 @@ function listeBauen(tage) {
           ? `<div class="tag-fuss">
                <button type="button" class="notiz-neu"
                        data-aufgabe-neu="${sicher(eintrag.schluessel)}">
-                 + Aufgabe für diesen Tag
+                 + To-do für diesen Tag
                </button>
                <button type="button" class="notiz-neu"
                        data-termin-neu="${sicher(eintrag.schluessel)}">
@@ -1416,7 +1423,7 @@ function freieAufgabeZeichnen(aufgabe) {
 
   return `
     <div class="termin termin-aufgabe">
-      <div class="termin-zeit">Aufgabe</div>
+      <div class="termin-zeit">To-do</div>
       <div class="termin-inhalt">
         <div class="${klassen}" data-notiz-oeffnen="${sicher(aufgabe.id)}"
              title="Zum Bearbeiten anklicken">
@@ -2291,11 +2298,11 @@ function todosZeichnen() {
   // --- Deine Aufgaben ------------------------------------------------
   stuecke.push(`
     <div class="todo-kopfzeile">
-      <h2 class="todo-ueberschrift">Meine Aufgaben</h2>
+      <h2 class="todo-ueberschrift">Meine To-dos</h2>
       ${offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
         <button type="button" class="knopf-schlicht"
                 data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">
-          + Neue Aufgabe
+          + Neues To-do
         </button>`}
     </div>`);
 
@@ -2310,8 +2317,8 @@ function todosZeichnen() {
   if (alle.length === 0) {
     stuecke.push(`
       <p class="leer-text">
-        Noch nichts eingetragen. Über <strong>+ Neue Aufgabe</strong> legst du
-        etwas an, das an keiner Vorlesung hängt. Notizen zu einer bestimmten
+        Noch nichts eingetragen. Über <strong>+ Neues To-do</strong> legst du
+        etwas an, das an keiner Vorlesung hängt. Zu einer bestimmten
         Vorlesung schreibst du im Plan über <strong>Bearbeiten</strong>.
       </p>`);
   } else if (offen.length === 0) {
@@ -3304,7 +3311,7 @@ function geraeteZeichnen(meldung) {
   if (!Abgleich.code()) {
     bereich.innerHTML = `
       <p class="filter-hinweis">
-        Notizen, Aufgaben und eigene Termine liegen bisher nur in diesem
+        Notizen, To-dos und eigene Termine liegen bisher nur in diesem
         Browser. Schalte den Abgleich ein, dann zeigen Handy und Laptop
         dasselbe.
       </p>
@@ -3348,7 +3355,7 @@ function geraeteZeichnen(meldung) {
       <h3 class="melden-titel">Apple Kalender</h3>
       <p class="filter-hinweis">
         <strong>Alles in einem Kalender:</strong> der Stundenplan der HWR,
-        deine eigenen Termine und die offenen Aufgaben. Einmal abonniert,
+        deine eigenen Termine und die offenen To-dos. Einmal abonniert,
         holt sich die Kalender App auch Raumwechsel und Ausfälle von selbst.
       </p>
       <p class="filter-hinweis">

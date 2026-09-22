@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=ab9ac0be">
+<link rel="stylesheet" href="style.css?v=8337fa3e">
 </head>
 <body>
 
@@ -144,8 +144,9 @@
   <!-- ================= Bereich 3: To-dos ================= -->
   <section id="seiteTodos" hidden>
     <p class="bereich-hinweis">
-      Alles, was du dir zu einzelnen Terminen notiert hast – und die Hinweise,
-      die schon im Stundenplan der HWR stehen.
+      Alles zum Abhaken: die Kurznotizen an einzelnen Terminen, eigene
+      To-dos ohne Vorlesung, und die Hinweise, die schon im Stundenplan der
+      HWR stehen.
     </p>
     <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
     <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
@@ -309,12 +310,12 @@
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=ab9ac0be"></script>
-<script src="melden.js?v=ab9ac0be"></script>
+<script src="sync.js?v=8337fa3e"></script>
+<script src="melden.js?v=8337fa3e"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=ab9ac0be"></script>
+<script src="app.js?v=8337fa3e"></script>
 
 </body>
 </html>
