@@ -1,6 +1,6 @@
 # Uni-Dashboard
 
-Stundenplan der HWR, eigene Termine, Aufgaben und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
+Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
 
 Übersichts-App zum Studium: HWR-Stundenplan (Tourismus, Semester 5, Kurs),
 eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
@@ -167,23 +167,39 @@ Dozent, Gruppe, HWR-Hinweis, deine Notiz. Am Rechner half bisher der
 Hinweistext beim Überfahren mit der Maus — auf dem Handy gibt es den nicht,
 und damit war die Kalenderansicht dort halb blind.
 
-### Aufgaben ohne Vorlesung
+### To-dos ohne Vorlesung
 
-„Bibliotheksbuch zurückgeben" hängt an keinem Termin. Solche Aufgaben legst
-du im Reiter **To-dos** über **+ Neue Aufgabe** an, oder im Plan über
-*Bearbeiten* → **+ Aufgabe für diesen Tag**. Sie haben einen Tag, aber keine
-Uhrzeit, und stehen im Plan unten im jeweiligen Tageskasten.
+„Bibliotheksbuch zurückgeben" hängt an keinem Termin. So etwas legst du im
+Reiter **To-dos** über **+ Neues To-do** an, oder im Plan über *Bearbeiten*
+→ **+ To-do für diesen Tag**. Sie haben einen Tag, aber keine Uhrzeit, und
+stehen im Plan unten im jeweiligen Tageskasten.
 
 Sie brauchen einen **eigenen Speicher** (`stundenplan.aufgaben`) und nicht
 bloß einen weiteren Eintrag bei den Notizen: eine Notiz gehört zu genau einem
-Termin, an einem Tag können aber beliebig viele freie Aufgaben liegen —
-deshalb eine Liste statt einer Zuordnung. Ihre Kennungen beginnen mit
-`eigen-`, dadurch lassen sie sich überall von den HWR-Terminen (`sked.de…`)
-unterscheiden.
+Termin, an einem Tag können aber beliebig viele davon liegen — deshalb eine
+Liste statt einer Zuordnung. Ihre Kennungen beginnen mit `eigen-`, dadurch
+lassen sie sich überall von den HWR-Terminen (`sked.de…`) unterscheiden.
 
-Liegt an einem Samstag oder Sonntag eine Aufgabe, wird dieser Tag im Plan
-angezeigt, obwohl dort keine Vorlesung ist — sonst käme man nicht an sie
-heran.
+Liegt an einem Samstag oder Sonntag ein To-do, wird dieser Tag im Plan
+angezeigt, obwohl dort keine Vorlesung ist — sonst käme man nicht daran.
+
+#### Im Code heißt es weiter „Aufgabe"
+
+Auf dem Bildschirm steht seit dem 22.09.2026 überall **To-do**; im Code
+heißt dasselbe Ding weiter `aufgabe` — `SPEICHER_AUFGABEN`,
+`aufgabeSetzen()`, die Vorsilbe `eigen-` und das Feld `"art": "aufgabe"`
+im Abgleich.
+
+Das ist Absicht. Den Code umzubenennen hieße, auch `"art": "aufgabe"` zu
+ändern, und dieses Wort steht in der Ablage bei Supabase, auf jedem deiner
+Geräte und in jeder Sicherung. Ein Umbenennen wäre eine Stunde Arbeit, ein
+Wanderungsschritt für vorhandene Einträge und ein Risiko — für null
+Gegenwert. Die Beschriftung zu ändern kostet nichts.
+
+Abschnitt 9 von `tests/test_ansicht.js` prüft die eine Richtung, auf die es
+ankommt: dass auf dem Bildschirm nirgends mehr „Aufgabe" steht. Bezeichner
+wie `data-aufgabe-neu` werden vor dem Vergleich herausgeschnitten — sie
+sind Code, kein Text.
 
 Gespeichert wird nach der **Termin-Kennung** (`sked.de1200291`), nicht nach
 Datum und Uhrzeit. Dadurch bleibt die Notiz am Termin kleben, auch wenn der

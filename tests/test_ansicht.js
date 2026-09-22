@@ -113,6 +113,9 @@ const werkzeug = eval(
   "  nachZeitgruppen: nachZeitgruppen," +
   "  ZEITGRUPPEN: ZEITGRUPPEN," +
   "  naechstenZeichnen: naechstenZeichnen," +
+  "  todosZeichnen: todosZeichnen," +
+  "  listeBauen: listeBauen," +
+  "  bearbeiten: function (an) { bearbeitenModus = an; }," +
   "  kalenderBauen: kalenderBauen," +
   "  aufgabenSammeln: aufgabenSammeln," +
   "  setzen: function (n, a) { notizen = n; aufgaben = a; grabsteine = {}; }," +
@@ -464,6 +467,68 @@ pruefe("dazu Ort und Notiz", kasten.indexOf("Rostock · Anrufen nicht vergessen"
 pruefe("beides in getrennten Zeilen, damit gekuerzt werden kann",
        kasten.indexOf("kalender-ganztag-titel") >= 0
        && kasten.indexOf("kalender-ganztag-zusatz") >= 0);
+
+
+abschnitt("9. Auf dem Bildschirm heisst es \"To-do\", nicht \"Aufgabe\"");
+
+/* Die App nannte dasselbe Ding an drei Stellen verschieden: "+ Notiz"
+   unter einem Termin, "Aufgabe" in der Tageszeile, "Meine Aufgaben" im
+   To-do-Bereich - und der Reiter darueber hiess "To-dos". Wer darauf
+   drueckte, wusste nicht, was herauskommt.
+
+   IM CODE heisst es weiter "Aufgabe", und das bleibt auch so: das Feld
+   "art": "aufgabe" steht in der Ablage auf jedem Geraet. Geprueft wird
+   hier also nur, was auf dem Bildschirm landet.
+
+   Das ist die Sorte Pruefung, die beim naechsten Umbau anschlaegt, wenn
+   jemand eine neue Schaltflaeche einbaut und dabei aus Gewohnheit das
+   Wort aus dem Code uebernimmt. */
+
+werkzeug.setzen({}, [{ id: "eigen-1", text: "Bibliotheksbuch zurueck",
+                       datum: "2026-08-24", erledigt: false, wichtig: false,
+                       geaendert: 1 }]);
+werkzeug.todosZeichnen();
+let bildschirm = document.getElementById("todoInhalt").innerHTML;
+
+pruefe("die Ueberschrift heisst \"Meine To-dos\"",
+       bildschirm.indexOf("Meine To-dos") >= 0);
+pruefe("der Anlegen-Knopf heisst \"+ Neues To-do\"",
+       bildschirm.indexOf("+ Neues To-do") >= 0);
+
+/* Der Knopf traegt weiter data-aufgabe-neu - das ist ein Bezeichner im
+   Code, kein Text auf dem Bildschirm, und er darf bleiben. Beim Suchen
+   nach dem Wort muessen die Bezeichner deshalb heraus, sonst schlaegt die
+   Pruefung bei etwas an, das voellig in Ordnung ist. */
+function nurSichtbares(html) {
+  return String(html)
+    .replace(/data-[a-z-]+="[^"]*"/g, "")
+    .replace(/\bid="[^"]*"/g, "")
+    .replace(/\bclass="[^"]*"/g, "");
+}
+
+pruefe("und nirgends steht mehr \"Aufgabe\"",
+       nurSichtbares(bildschirm).indexOf("Aufgabe") < 0);
+
+// Dasselbe in der Listenansicht des Plans.
+werkzeug.filterLeeren();
+werkzeug.bearbeiten(true);
+bildschirm = werkzeug.listeBauen([{
+  datum: new Date("2026-08-24T00:00"), schluessel: "2026-08-24",
+  termine: [], ganztags: [],
+  aufgaben: [{ id: "eigen-1", text: "Bibliotheksbuch zurueck",
+               datum: "2026-08-24", erledigt: false, wichtig: false }],
+  istHeute: false,
+}]);
+
+pruefe("der Tagesknopf heisst \"+ To-do für diesen Tag\"",
+       bildschirm.indexOf("+ To-do für diesen Tag") >= 0);
+pruefe("die Zeile vor einem freien To-do heisst \"To-do\"",
+       bildschirm.indexOf(">To-do</div>") >= 0);
+pruefe("auch hier steht nirgends \"Aufgabe\"",
+       nurSichtbares(bildschirm).indexOf("Aufgabe") < 0);
+
+werkzeug.bearbeiten(false);
+werkzeug.setzen({}, []);
 
 
 /* ====================================================================== */
