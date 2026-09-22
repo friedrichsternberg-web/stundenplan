@@ -138,6 +138,14 @@ const werkzeug = eval(
   "  verweiseSaeubern: verweiseSaeubern," +
   "  verweisBeschreiben: verweisBeschreiben," +
   "  listeBauen: listeBauen," +
+  "  erinnerungZeitpunkt: erinnerungZeitpunkt," +
+  "  erinnerungFelder: erinnerungFelder," +
+  "  datumSchnellRechnen: datumSchnellRechnen," +
+  "  aufgabeSetzen: aufgabeSetzen," +
+  "  ERINNERUNG_TAG: ERINNERUNG_TAG," +
+  "  ERINNERUNG_UHRZEIT: ERINNERUNG_UHRZEIT," +
+  "  zettelTeile: zettelTeile," +
+  "  zettelZusammensetzen: zettelZusammensetzen," +
   "  bearbeiten: function (an) { bearbeitenModus = an; }," +
   "  lage: function () { return { notizen: notizen, aufgaben: aufgaben," +
   "        termine: eigeneTermine, zettel: zettel, grabsteine: grabsteine," +
@@ -225,11 +233,17 @@ abschnitt("3. Der Rundlauf: nichts geht verloren");
 const ausgangslage = {
   notizen: { "sked.a1": { text: "11:25 Beginn", erledigt: false,
                           wichtig: true, geaendert: 111 } },
+  // Mit gesetzter Erinnerung: ein Rundlauf, der nur leere Felder
+  // durchreicht, prueft an dieser Stelle gar nichts.
   aufgaben: [{ id: "eigen-1", text: "Hausarbeit drucken", datum: "2026-09-30",
-               erledigt: false, wichtig: false, geaendert: 222 }],
+               erledigt: false, wichtig: false,
+               erinnerungVorgabe: "vortag18", erinnerung: "2026-09-29T18:00",
+               geaendert: 222 }],
   termine: [{ id: "termin-1", titel: "Zahnarzt", start: "2026-09-30T10:00",
               ende: "2026-09-30T11:00", ganztags: false, ort: "Praxis",
-              notiz: "Karte mitnehmen", wichtig: false, geaendert: 333 }],
+              notiz: "Karte mitnehmen", wichtig: false,
+              erinnerungVorgabe: "1std", erinnerung: "2026-09-30T09:00",
+              geaendert: 333 }],
   zettel: [
     { id: "zettel-1", text: "Klausurvorbereitung\n\nKapitel 3 und 4.",
       verweise: ["fach:34 - Schluesselkompetenzen V", "termin:sked.b1"],
@@ -468,7 +482,197 @@ werkzeug.bearbeiten(false);
 werkzeug.setzen({});
 
 
-abschnitt("10. Der Themenschluessel steht an zwei Stellen und muss gleich sein");
+abschnitt("10. Erinnerungen: wann genau meldet sich das?");
+
+/* Das Rechnen mit Zeit ist die Stelle, an der so etwas schiefgeht - und
+   zwar lautlos: eine Erinnerung, die eine Stunde zu frueh oder einen Tag
+   zu spaet kommt, sieht aus wie eine Erinnerung.
+
+   Zwei Regeln stecken dahinter:
+
+   1. Tage und Minuten werden nie vermischt. "Einen Tag vorher" verschiebt
+      nur das Datum, "eine Stunde vorher" nur die Uhrzeit. Rechnete man
+      beides ueber einen Zeitstempel, verschoebe sich in der Nacht der
+      Zeitumstellung die Uhrzeit um eine Stunde.
+
+   2. Die Angabe ist Ortszeit ohne Zeitzone. Der Server vergleicht sie mit
+      der Berliner Zeit im selben Format - damit gibt es die Sommerzeit an
+      dieser Stelle gar nicht erst. */
+
+const zeitfaelle = [
+  // [Vorgabe, Bezug, erwartet, Erlaeuterung]
+  ["tag9",     "2026-09-25",       "2026-09-25T09:00", "am Tag frueh"],
+  ["tag18",    "2026-09-25",       "2026-09-25T18:00", "am Tag abends"],
+  ["vortag18", "2026-09-25",       "2026-09-24T18:00", "am Vortag"],
+  ["3tage18",  "2026-09-25",       "2026-09-22T18:00", "drei Tage vorher"],
+  ["woche18",  "2026-09-25",       "2026-09-18T18:00", "eine Woche vorher"],
+  ["15min",    "2026-09-25T14:00", "2026-09-25T13:45", "eine Viertelstunde"],
+  ["1std",     "2026-09-25T14:00", "2026-09-25T13:00", "eine Stunde"],
+  ["3std",     "2026-09-25T14:00", "2026-09-25T11:00", "drei Stunden"],
+  ["1tag",     "2026-09-25T14:00", "2026-09-24T14:00", "ein Tag, gleiche Zeit"],
+];
+
+for (const fall of zeitfaelle) {
+  const bekommen = werkzeug.erinnerungZeitpunkt(fall[0], fall[1]);
+  pruefe(fall[3] + ": " + fall[1] + " -> " + fall[2],
+         bekommen === fall[2]);
+  if (bekommen !== fall[2]) console.log("         bekommen: " + bekommen);
+}
+
+/* Ueber Mitternacht zurueck. Ein Termin um 00:30 minus eine Stunde liegt
+   am Vortag - wer nur die Stunden abzieht, bekommt "-1:30" oder "23:30"
+   am selben Tag, und beides ist falsch. */
+pruefe("eine Stunde vor 00:30 ist der Vortag um 23:30",
+       werkzeug.erinnerungZeitpunkt("1std", "2026-09-25T00:30")
+       === "2026-09-24T23:30");
+pruefe("drei Stunden vor 01:00 ebenso",
+       werkzeug.erinnerungZeitpunkt("3std", "2026-09-25T01:00")
+       === "2026-09-24T22:00");
+
+/* Ueber Monats- und Jahresgrenzen. tagVerschieben() rechnet ueber ein
+   echtes Datum und nicht ueber "minus 24 Stunden", deshalb muss das hier
+   stimmen - aber pruefen kostet nichts. */
+pruefe("ueber die Monatsgrenze",
+       werkzeug.erinnerungZeitpunkt("vortag18", "2026-10-01")
+       === "2026-09-30T18:00");
+pruefe("ueber die Jahresgrenze",
+       werkzeug.erinnerungZeitpunkt("woche18", "2027-01-03")
+       === "2026-12-27T18:00");
+
+/* Die Zeitumstellung. In Deutschland endet die Sommerzeit am letzten
+   Sonntag im Oktober - 2026 ist das der 25.10. Ein Termin am Montag
+   danach, eine Woche vorher erinnert, muss am 19.10. um 18:00 landen und
+   nicht um 17:00 oder 19:00. */
+pruefe("die Zeitumstellung verschiebt die Uhrzeit nicht",
+       werkzeug.erinnerungZeitpunkt("woche18", "2026-10-26")
+       === "2026-10-19T18:00");
+pruefe("auch nicht am Tag der Umstellung selbst",
+       werkzeug.erinnerungZeitpunkt("vortag18", "2026-10-26")
+       === "2026-10-25T18:00");
+
+// Was sich nicht ausrechnen laesst, gibt es nicht.
+pruefe("ohne Uhrzeit gibt es kein \"eine Stunde vorher\"",
+       werkzeug.erinnerungZeitpunkt("1std", "2026-09-25") === "");
+pruefe("ohne Vorgabe kommt nichts heraus",
+       werkzeug.erinnerungZeitpunkt("", "2026-09-25T14:00") === "");
+pruefe("eine erfundene Vorgabe ebenso",
+       werkzeug.erinnerungZeitpunkt("uebernaechsten-dienstag", "2026-09-25") === "");
+
+/* Und der Fall, der am teuersten waere: eine Vorgabe, die sich nicht
+   ausrechnen laesst, darf nicht als gesetzte Erinnerung dastehen. Sonst
+   sieht man im Fenster "1 Stunde vorher" und es kommt nie etwas. */
+const halbgar = werkzeug.erinnerungFelder("1std", "2026-09-25");
+pruefe("eine unausrechenbare Vorgabe wird verworfen",
+       halbgar.erinnerungVorgabe === "" && halbgar.erinnerung === "");
+
+const ganz = werkzeug.erinnerungFelder("vortag18", "2026-09-25");
+gleich("eine gueltige Vorgabe ergibt beide Felder", ganz,
+       { erinnerungVorgabe: "vortag18", erinnerung: "2026-09-24T18:00" });
+
+
+abschnitt("11. Die Erinnerung wandert mit dem Faelligkeitsdatum");
+
+/* Der Grund, warum die Vorgabe mitgespeichert wird und nicht nur der
+   ausgerechnete Zeitpunkt: verschiebt man ein To-do, soll die Erinnerung
+   mitgehen. Sonst meldet sie sich zum alten Termin - also zu frueh, und
+   man merkt es erst, wenn es zu spaet ist. */
+werkzeug.setzen({});
+werkzeug.aufgabeSetzen("eigen-w", "Hausarbeit abgeben", "2026-09-25",
+                       false, "vortag18");
+let stand = werkzeug.lage().aufgaben[0];
+pruefe("die Erinnerung sitzt am Vortag",
+       stand.erinnerung === "2026-09-24T18:00");
+
+// Dasselbe To-do, neues Datum, Erinnerung NICHT angefasst.
+werkzeug.aufgabeSetzen("eigen-w", "Hausarbeit abgeben", "2026-10-02", false);
+stand = werkzeug.lage().aufgaben[0];
+pruefe("nach dem Verschieben sitzt sie am neuen Vortag",
+       stand.erinnerung === "2026-10-01T18:00");
+pruefe("und die Vorgabe steht unveraendert da",
+       stand.erinnerungVorgabe === "vortag18");
+
+// Abwaehlen raeumt beides weg.
+werkzeug.aufgabeSetzen("eigen-w", "Hausarbeit abgeben", "2026-10-02", false, "");
+stand = werkzeug.lage().aufgaben[0];
+pruefe("abgewaehlt ist wirklich beides weg",
+       stand.erinnerung === "" && stand.erinnerungVorgabe === "");
+
+// Und durch den Abgleich muessen beide Felder auch kommen.
+werkzeug.aufgabeSetzen("eigen-w", "Hausarbeit abgeben", "2026-10-02",
+                       false, "3tage18");
+werkzeug.uebernehmen(werkzeug.sammeln());
+stand = werkzeug.lage().aufgaben[0];
+gleich("beide Felder ueberleben den Abgleich",
+       { v: stand.erinnerungVorgabe, z: stand.erinnerung },
+       { v: "3tage18", z: "2026-09-29T18:00" });
+werkzeug.setzen({});
+
+
+abschnitt("12. Heute, morgen, uebermorgen, naechster Montag");
+
+/* Feste Bezugstage statt "heute", sonst haengt der Test vom Wochentag ab,
+   an dem er laeuft - und faellt genau einmal in sieben Wochen um. */
+pruefe("heute ist heute",
+       werkzeug.datumSchnellRechnen("heute", "2026-09-25") === "2026-09-25");
+pruefe("morgen ist der naechste Tag",
+       werkzeug.datumSchnellRechnen("morgen", "2026-09-25") === "2026-09-26");
+pruefe("uebermorgen der uebernaechste",
+       werkzeug.datumSchnellRechnen("uebermorgen", "2026-09-25") === "2026-09-27");
+
+/* Der 25.09.2026 ist ein Freitag. Naechster Montag ist der 28.09. */
+pruefe("von Freitag aus ist der naechste Montag der 28.09.",
+       werkzeug.datumSchnellRechnen("montag", "2026-09-25") === "2026-09-28");
+
+/* Und der Fall, ueber den man stolpert: steht man selbst auf einem
+   Montag, ist der KOMMENDE gemeint, nicht heute. Fuer heute gibt es den
+   Knopf daneben. */
+pruefe("von einem Montag aus ist es der Montag darauf",
+       werkzeug.datumSchnellRechnen("montag", "2026-09-28") === "2026-10-05");
+pruefe("von einem Sonntag aus der Tag darauf",
+       werkzeug.datumSchnellRechnen("montag", "2026-09-27") === "2026-09-28");
+pruefe("ueber den Monatswechsel hinweg",
+       werkzeug.datumSchnellRechnen("montag", "2026-09-30") === "2026-10-05");
+
+
+abschnitt("13. Ueberschrift und Text lassen sich trennen und wieder fuegen");
+
+/* Im Fenster stehen zwei Felder, gespeichert wird EIN Text. Geht das
+   Zerlegen und Zusammenfuegen nicht genau ineinander auf, wandert bei
+   jedem Oeffnen und Schliessen eine Zeile nach oben - und nach dreimal
+   sieht die Notiz anders aus als geschrieben. */
+
+const texte = [
+  "Klausur Montag\n\nKapitel 3 lesen.\nKapitel 4 auch.",
+  "Nur eine Zeile",
+  "",
+  "\n\nMit Leerzeilen davor\nund Text",
+];
+
+for (const text of texte) {
+  const teile = werkzeug.zettelTeile(text);
+  const wieder = werkzeug.zettelZusammensetzen(teile.titel, teile.rest);
+  const nochmal = werkzeug.zettelTeile(wieder);
+  gleich("zweimal zerlegt ergibt dasselbe: " + JSON.stringify(text.slice(0, 22)),
+         { t: nochmal.titel, r: nochmal.rest },
+         { t: teile.titel, r: teile.rest });
+}
+
+const geteilt = werkzeug.zettelTeile("Klausur Montag\n\nKapitel 3 lesen.");
+pruefe("die erste Zeile wird die Ueberschrift",
+       geteilt.titel === "Klausur Montag");
+pruefe("und steht nicht noch einmal im Text",
+       geteilt.rest === "Kapitel 3 lesen.");
+
+pruefe("eine Ueberschrift ohne Text bleibt eine Ueberschrift",
+       werkzeug.zettelZusammensetzen("Nur Titel", "") === "Nur Titel");
+pruefe("Zeilenumbrueche in der Ueberschrift werden zu Leerzeichen",
+       werkzeug.zettelZusammensetzen("Erste\nZweite", "Text")
+       === "Erste Zweite\n\nText");
+pruefe("ganz leer bleibt ganz leer",
+       werkzeug.zettelZusammensetzen("", "") === "");
+
+
+abschnitt("14. Der Themenschluessel steht an zwei Stellen und muss gleich sein");
 
 /* Hell oder dunkel wird zweimal gelesen: einmal von einem kurzen Skript im
    Kopf der index.html, damit das erste Bild schon stimmt, und einmal von

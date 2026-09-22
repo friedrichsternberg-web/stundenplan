@@ -174,6 +174,15 @@ Reiter **To-dos** über **+ Neues To-do** an, oder im Plan über *Bearbeiten*
 → **+ To-do für diesen Tag**. Sie haben einen Tag, aber keine Uhrzeit, und
 stehen im Plan unten im jeweiligen Tageskasten.
 
+Beim Fälligkeitsdatum stehen vier Knöpfe: **Heute**, **Morgen**,
+**Übermorgen**, **Nächster Montag**. Ein Datumsfeld ist auf dem Handy drei
+Drehrädchen, und „morgen" ist das, was man in neun von zehn Fällen meint —
+dafür sollte man nicht durch einen Kalender blättern müssen.
+
+„Nächster Montag" heißt immer der **kommende**, nie heute. Steht man an
+einem Montag und tippt darauf, ist eine Aufgabe für heute nicht gemeint;
+dafür gibt es den Knopf daneben.
+
 Sie brauchen einen **eigenen Speicher** (`stundenplan.aufgaben`) und nicht
 bloß einen weiteren Eintrag bei den Notizen: eine Notiz gehört zu genau einem
 Termin, an einem Tag können aber beliebig viele davon liegen — deshalb eine
@@ -468,10 +477,21 @@ trotzdem begraben. Geprüft in `tests/test_planer.js`, Abschnitt 4.
 ## Das Notizbuch
 
 Seit dem 22.09.2026 gibt es den Bereich **Notizen**. Er funktioniert wie die
-Notizen-App von Apple: eine Liste von Notizen, ein Textfeld zum Schreiben,
-und die erste Zeile ist automatisch die Überschrift. Ein zweites Feld nur
-für den Titel gibt es bewusst nicht — wer eine Überschrift will, schreibt
-sie einfach zuerst.
+Notizen-App von Apple: eine Liste, ein Fenster zum Schreiben, und ganz oben
+eine **große fette Überschrift** — daran erkennt man eine Notiz beim
+Überfliegen der Liste wieder.
+
+Im Fenster sind es zwei Felder, gespeichert wird **ein** Text, dessen erste
+Zeile die Überschrift ist. Ein `<textarea>` kann seine erste Zeile nicht
+anders formatieren als die übrigen; dafür bräuchte es ein
+`contenteditable`, und das bringt auf dem Handy mehr Ärger mit als es wert
+ist. Zwei Felder sind ehrlicher und obendrein bedienbarer — die
+Tabulatortaste springt von der Überschrift in den Text.
+
+`zettelTeile()` zerlegt, `zettelZusammensetzen()` fügt wieder zusammen. Die
+beiden müssen genau ineinander aufgehen, sonst wanderte bei jedem Öffnen
+und Schließen eine Zeile nach oben; Abschnitt 13 von `tests/test_zettel.js`
+prüft das, indem es zweimal hintereinander zerlegt.
 
 ### Zwei Sorten Notiz, und warum beide bleiben
 
@@ -544,6 +564,97 @@ ohne es anzufassen.
 
 `tests/test_zettel.js` spielt diese alte Fassung Zeile für Zeile nach,
 statt sich darauf zu verlassen.
+
+## Erinnerungen
+
+Seit dem 22.09.2026 kann sich ein To-do oder ein eigener Termin per
+Push-Benachrichtigung melden. Eingestellt wird das beim Eintrag selbst.
+
+| Bei einem To-do | Bei einem Termin mit Uhrzeit |
+|---|---|
+| Am Tag, 9:00 | 15 Minuten vorher |
+| Am Tag, 18:00 | 1 Stunde vorher |
+| Am Vortag, 18:00 | 3 Stunden vorher |
+| 3 Tage vorher, 18:00 | 1 Tag vorher, gleiche Zeit |
+| 1 Woche vorher, 18:00 | Am Vortag, 18:00 / 1 Woche vorher |
+
+Zwei Listen, weil ein To-do keine Uhrzeit hat: „eine Stunde vorher" — vor
+wann? Ein ganztägiger Termin bekommt aus demselben Grund die linke Liste.
+Unter der Auswahl steht immer, **wann das konkret ist** („Meldet sich
+Mi 23.09., 18:00") — sonst müsste man selbst nachrechnen, und genau das
+ist die Frage beim Einstellen.
+
+### Zwei Felder, nicht eins
+
+Gespeichert wird beides:
+
+```
+erinnerungVorgabe  "vortag18"           ← was du ausgewählt hast
+erinnerung         "2026-09-24T18:00"   ← wann das konkret ist
+```
+
+Die **Vorgabe**, damit die Erinnerung mitwandert, wenn du das
+Fälligkeitsdatum verschiebst. Schiebst du ein To-do von Freitag auf
+Montag, rechnet `aufgabeSetzen()` die Erinnerung bei jedem Speichern neu
+aus — ohne dass du daran denken musst.
+
+Der **Zeitpunkt**, damit der Server nichts rechnen muss. Er vergleicht
+zwei Zeichenketten, fertig. Die Alternative wäre gewesen, nur die Vorgabe
+zu speichern und den Server rechnen zu lassen — dann stünde dieselbe
+Rechnerei zweimal da, einmal in JavaScript und einmal in TypeScript, und
+liefe beim nächsten Umbau auseinander.
+
+### Warum die Zeit als Text verglichen wird
+
+Die Angabe ist **Ortszeit ohne Zeitzone**: `2026-09-24T18:00` heißt
+18 Uhr in Berlin. Der Server holt sich die Berliner Zeit im selben Format
+und vergleicht mit `<`. Das sieht nach einer Abkürzung aus, ist aber die
+verlässlichere Rechnung: die Sommerzeit gibt es an dieser Stelle gar nicht
+erst. Wer in UTC rechnet, muss zweimal im Jahr richtig liegen, und zwar in
+beide Richtungen.
+
+Aus demselben Grund werden **Tage und Minuten nie vermischt**. „Einen Tag
+vorher" verschiebt nur das Datum, „eine Stunde vorher" nur die Uhrzeit.
+`tagVerschieben()` rechnet dabei über 12:00 UTC — ab Mitternacht gerechnet
+landet man in der Nacht der Zeitumstellung beim Vortag.
+
+### Wer verschickt
+
+Nicht die App und nicht GitHub, sondern **pg_cron in der Datenbank**: alle
+fünf Minuten ruft sie die Edge Function `erinnern` auf. Die GitHub-Automatik
+läuft laut GitHub nur „nach Möglichkeit" und kam beim Ausprobieren schon
+zwanzig Minuten zu spät — für den Stundenplan egal, für eine Erinnerung um
+08:00 nicht.
+
+`erinnern` liest alle Räume, sucht fällige Erinnerungen, **vermerkt sie vor
+dem Verschicken** und reicht sie an `stundenplan-melden` weiter. Der
+Vermerk kommt zuerst, weil der umgekehrte Weg bei einem Fehlschlag alle
+fünf Minuten dieselbe Meldung auf den Sperrbildschirm schöbe. Eine
+verpasste Erinnerung ist ärgerlich, eine Dauerschleife ist schlimmer.
+
+Der Vermerk liegt in einer eigenen Tabelle, nicht am Eintrag. Sonst
+schriebe der Server in einen Raum, während das Handy es auch tut, und die
+Fassungsprüfung schlüge fehl.
+
+### Das Lebenszeichen
+
+Beim Einrichten rief der Zeitplan `extensions.http_post()` auf — die
+Funktion liegt aber in `net`. Der Auftrag lief alle fünf Minuten an und
+scheiterte jedes Mal, **und meldete sich bei niemandem**. Es wäre einfach
+nie eine Erinnerung gekommen, und man hätte gedacht, man habe keine
+gestellt.
+
+Das ist die unangenehmste Sorte Fehler: einer, der wie Abwesenheit
+aussieht. Seitdem schreibt jeder Lauf seine Zeit weg, und zwei Stellen
+lesen sie:
+
+- das ⚙-Fenster unter **Erinnerungen** („Läuft. Zuletzt vor 3 Min.")
+- `tests/test_erinnern.py`, der abbricht, wenn der letzte Lauf über eine
+  Viertelstunde her ist
+
+Die Abfrage ist bewusst öffentlich — sie verrät nichts außer der Zahl der
+Sekunden. Wäre sie geschützt, könnte die App sie nicht anzeigen, und genau
+dort gehört sie hin.
 
 ## Hell oder dunkel
 
@@ -822,6 +933,10 @@ osascript -l JavaScript tests/test_zettel.js
 ```
 
 ```bash
+python3 tests/test_erinnern.py
+```
+
+```bash
 python3 tests/test_kalenderfeed.py
 ```
 
@@ -901,7 +1016,9 @@ Plan als „entfallen" gemeldet wird.
 | `sw.js` | nimmt Benachrichtigungen entgegen (sonst nichts) |
 | `manifest.json` | beschreibt die Seite als App |
 | `tests/alle.sh` | ruft alle Testsammlungen nacheinander auf |
-| `tests/test_zettel.js` | Notizbuch: Verknüpfungen, Rundlauf, altes Gerät |
+| `tests/test_zettel.js` | Notizbuch, Erinnerungen, Datums-Schnellwahl |
+| `tests/test_erinnern.py` | Läuft der Erinnerungs-Zeitplan noch? |
+| Edge Function `erinnern` | verschickt fällige Erinnerungen, alle 5 Min. |
 | `daten/plan.js` | die Daten fürs Dashboard (erzeugt) |
 | `daten/stand.json` | zuletzt gesehener Stand für den Vergleich (erzeugt) |
 | `daten/protokoll.log` | Ausgaben des Hintergrund-Jobs (erzeugt) |

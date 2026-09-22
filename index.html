@@ -243,6 +243,15 @@
         <textarea id="formNotiz" rows="2" maxlength="500"></textarea>
       </label>
 
+      <label class="form-feld">
+        <span>🔔 Erinnerung</span>
+        <!-- Die Auswahlmöglichkeiten hängen davon ab, ob der Termin eine
+             Uhrzeit hat – "15 Minuten vorher" ergibt bei einem ganztägigen
+             Termin nichts. Gefüllt wird deshalb aus app.js. -->
+        <select id="formErinnerung"></select>
+      </label>
+      <p class="erinnerung-hinweis" id="formErinnerungHinweis"></p>
+
       <label class="form-haken">
         <input type="checkbox" id="formWichtig">
         <span>★ Wichtig</span>
@@ -304,6 +313,10 @@
          erst nach Rueckfrage beim Browser feststeht und deshalb spaeter
          nachgetragen wird - siehe meldenZeichnen() in app.js. -->
     <div id="meldenBereich"></div>
+    <!-- Laeuft der Erinnerungsdienst noch? Ein abgestuerzter Zeitplan
+         meldet sich bei niemandem - es kaeme einfach nie eine Erinnerung.
+         Siehe erinnerungsdienstZeichnen() in app.js. -->
+    <div id="erinnerungsdienst"></div>
   </div>
 </div>
 

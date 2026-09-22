@@ -46,6 +46,10 @@ echo "== Ablage (echter Server) =="
 python3 tests/test_abgleich_ablage.py
 
 echo
+echo "== Erinnerungsdienst (laeuft der Zeitplan noch?) =="
+python3 tests/test_erinnern.py
+
+echo
 echo "== Benachrichtigungen (echter Server und echter Absender) =="
 python3 tests/test_melden.py
 

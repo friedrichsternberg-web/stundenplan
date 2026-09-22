@@ -160,6 +160,40 @@ function gleich(was, a, b) {
   }
 }
 
+/* Schneidet die Felder weg, die es zur Zeit des alten Bestands noch nicht
+   gab.
+
+   Seit dem 22.09.2026 tragen To-dos und eigene Termine zwei weitere
+   Felder: erinnerungVorgabe und erinnerung. Alte Eintraege haben sie
+   nicht, und beim Einlesen entstehen sie als leere Zeichenketten. Das ist
+   richtig so - aber ein Vergleich Feld fuer Feld schlaegt darueber fehl,
+   obwohl nichts verlorengegangen ist.
+
+   Also zweigeteilt pruefen: hier die alten Felder unveraendert, darunter
+   ausdruecklich, dass die neuen leer dazugekommen sind. Die Felder
+   einfach in die Testdaten zu schreiben waere bequemer gewesen und haette
+   die Frage verdeckt, um die es hier geht: was passiert mit Daten, die
+   vor der Aenderung entstanden sind? */
+const SPAETER_DAZUGEKOMMEN = ["erinnerungVorgabe", "erinnerung"];
+
+function ohneNeueFelder(liste) {
+  return liste.map(function (eintrag) {
+    const kopie = {};
+    for (const feld of Object.keys(eintrag)) {
+      if (SPAETER_DAZUGEKOMMEN.indexOf(feld) < 0) kopie[feld] = eintrag[feld];
+    }
+    return kopie;
+  });
+}
+
+function nurLeereNeueFelder(liste) {
+  return liste.every(function (eintrag) {
+    return SPAETER_DAZUGEKOMMEN.every(function (feld) {
+      return eintrag[feld] === "";
+    });
+  });
+}
+
 // Der Datenbestand, wie ihn die Fassung VOR dem Umbau hinterlassen hat.
 function alterBestand() {
   return {
@@ -191,7 +225,10 @@ let lage = werkzeug.lage();
 
 gleich("die Notizen sind unveraendert", lage.notizen, alt.notizen);
 gleich("die Aufgaben sind unveraendert",
-       lage.aufgaben.sort((a, b) => a.id.localeCompare(b.id)), alt.aufgaben);
+       ohneNeueFelder(lage.aufgaben.sort((a, b) => a.id.localeCompare(b.id))),
+       alt.aufgaben);
+pruefe("und haben leere Erinnerungsfelder dazubekommen",
+       nurLeereNeueFelder(lage.aufgaben));
 gleich("die Grabsteine sind unveraendert", lage.grabsteine, alt.grabsteine);
 pruefe("es sind keine eigenen Termine dazuerfunden worden",
        lage.termine.length === 0);
@@ -216,7 +253,10 @@ werkzeug.uebernehmen(nutzlast2);
 lage = werkzeug.lage();
 
 gleich("die Termine kommen unveraendert zurueck",
-       lage.termine.sort((a, b) => a.id.localeCompare(b.id)), termine);
+       ohneNeueFelder(lage.termine.sort((a, b) => a.id.localeCompare(b.id))),
+       termine);
+pruefe("auch sie haben leere Erinnerungsfelder dazubekommen",
+       nurLeereNeueFelder(lage.termine));
 pruefe("und der alte Bestand steht weiterhin daneben",
        Object.keys(lage.notizen).length === 2 && lage.aufgaben.length === 2);
 
