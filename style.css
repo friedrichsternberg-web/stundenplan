@@ -1877,3 +1877,38 @@ a.knopf-schlicht {
 
 #themaBereich { margin-top: 22px; }
 #themaBereich .schalter { display: inline-flex; }
+
+
+/* Die beiden Anlege-Knoepfe unter einem Termin im Bearbeiten-Modus.
+   Nebeneinander, mit Umbruch: auf dem Handy passen sie sonst nicht in eine
+   Zeile und der zweite waere abgeschnitten. */
+.termin-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Eine Notiz aus dem Notizbuch, die an diesem Termin haengt. Sieht aus wie
+   die Marken im Notizbereich, damit man sie als dasselbe wiedererkennt. */
+.termin-zettel-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 5px;
+  margin-right: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--notiz-rand);
+  border-radius: 999px;
+  background: var(--notiz-flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.termin-zettel-marke:hover { background: var(--notiz-flaeche-hell); }

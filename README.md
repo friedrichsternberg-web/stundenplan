@@ -63,15 +63,35 @@ tritt der Fall wieder auf, und ohne die Aufteilung läge ein Termin unsichtbar
 unter dem anderen. Geprüft wird sie mit erfundenen Terminen, nicht mit dem
 echten Plan — sonst würde der Test stillschweigend nichts mehr messen.
 
-## Eigene Notizen und To-dos
+## Kurznotizen und To-dos
 
 Zu jedem Termin lässt sich ein kurzer Text hinterlegen: „heute online",
 „Abgabe bis Freitag", „fällt aus" — alles, was nicht im HWR-System steht.
+Eine Zeile lang, abhakbar, und sie steht im Kalenderkästchen. Das ist die
+**Kurznotiz**; die längeren Notizen stehen im [Notizbuch](#das-notizbuch).
 
-**Angelegt** werden sie im Plan über den Knopf **Bearbeiten**. Erst dann
-erscheinen die „+ Notiz"-Knöpfe. Das ist Absicht: bei 133 Terminen stünden
-sonst über hundert Knöpfe herum, für eine Handvoll Notizen. Vorhandene
-Notizen sind immer sichtbar und immer anklickbar, auch ohne Bearbeiten-Modus.
+**Angelegt** wird sie im Plan über den Knopf **Bearbeiten**. Erst dann
+erscheinen unter jedem Termin zwei Knöpfe. Das ist Absicht: bei 133
+Terminen stünden sonst über zweihundert Knöpfe herum, für eine Handvoll
+Einträge. Vorhandenes ist immer sichtbar und immer anklickbar, auch ohne
+Bearbeiten-Modus.
+
+| Knopf | legt an |
+|---|---|
+| **+ To-do** | die Kurznotiz: eine Zeile, abhakbar, steht im Kalenderkästchen und im Reiter To-dos |
+| **+ Notiz** | eine Notiz im Notizbuch, gleich mit diesem Termin verknüpft: langer Text, kein Häkchen |
+
+Bis zum 22.09.2026 stand dort ein einziger Knopf, und der hieß „+ Notiz",
+legte aber die Kurznotiz an — man drückte auf „Notiz" und bekam ein To-do.
+Solange es nur eine Sorte gab, fiel das nicht weiter auf; seit es das
+Notizbuch gibt, sind es zwei Dinge und brauchen zwei Knöpfe.
+
+Notizen aus dem Notizbuch, die an **genau diesem Termin** hängen, stehen in
+der Liste als kleine Marke darunter und öffnen sich per Klick. Modulweite
+Notizen bleiben dort draußen: sie gelten für alle Termine des Fachs und
+stünden sonst unter jeder einzelnen Vorlesung — bei zwanzig Terminen
+zwanzigmal derselbe Text. Im Fenster eines angetippten Termins stehen sie
+dagegen mit dabei, dort wiederholt sich nichts.
 
 **Gesammelt** werden sie im Reiter **To-dos**, und zwar nach Zeit sortiert
 in Fächern:

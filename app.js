@@ -731,6 +731,8 @@ function terminZeichnen(termin) {
           ? `<div class="termin-korrektur">✎ ${sicher(termin.korrektur)}</div>`
           : ""}
         ${notizZeichnen(termin)}
+        ${terminZettelZeile(termin)}
+        ${terminKnoepfeZeichnen(termin)}
       </div>
     </div>`;
 }
@@ -1463,16 +1465,59 @@ function notizZeichnen(termin) {
       </div>`;
   }
 
-  /* Ohne Notiz steht hier normalerweise NICHTS.
+  /* Ohne Kurznotiz steht hier nichts. Die Knöpfe zum Anlegen stehen in
+     terminKnoepfeZeichnen() – siehe dort, warum sie getrennt sind. */
+  return "";
+}
 
-     Ein "+ Notiz" unter jedem einzelnen Termin macht die Liste unruhig –
-     bei dir wären das über hundert Knöpfe für eine Handvoll Notizen.
-     Deshalb erscheint er nur, wenn du oben auf "Bearbeiten" gegangen bist. */
+
+/* Die beiden Knöpfe unter einem Termin im Bearbeiten-Modus.
+
+   Früher stand hier ein einziger Knopf "+ Notiz". Der war falsch
+   beschriftet: was er anlegte, war die Kurznotiz – und die steht mit einem
+   Häkchen im To-do-Bereich. Man drückte also auf "Notiz" und bekam ein
+   To-do. Seit es das Notizbuch gibt, sind das zwei verschiedene Dinge, und
+   beide sollen von hier aus erreichbar sein:
+
+     + Notiz   legt eine Notiz im Notizbuch an, gleich mit diesem Termin
+               verknüpft. Langer Text, kein Häkchen.
+     + To-do   legt die Kurznotiz an. Eine Zeile, abhakbar, steht im
+               Kalenderkästchen und im To-do-Bereich.
+
+   Sichtbar nur im Bearbeiten-Modus: zwei Knöpfe unter jedem der über
+   hundert Termine machten die Liste sonst unlesbar. */
+function terminKnoepfeZeichnen(termin) {
   if (!bearbeitenModus) return "";
+  if (offeneNotiz === termin.id) return "";
 
   return `
-    <button type="button" class="notiz-neu"
-            data-notiz-oeffnen="${sicher(termin.id)}">+ Notiz</button>`;
+    <div class="termin-knoepfe">
+      <button type="button" class="notiz-neu"
+              data-zettel-neu="termin:${sicher(termin.id)}">+ Notiz</button>
+      ${notizText(termin.id) ? "" : `
+        <button type="button" class="notiz-neu"
+                data-notiz-oeffnen="${sicher(termin.id)}">+ To-do</button>`}
+    </div>`;
+}
+
+
+/* Die Notizen aus dem Notizbuch, die an DIESEM Termin hängen.
+
+   Modulweite Notizen bleiben hier bewusst draußen. Sie gelten zwar auch
+   für diesen Termin – im Fenster eines angetippten Termins stehen sie
+   deshalb mit dabei –, aber in einer Wochenliste erschiene dieselbe Notiz
+   unter jeder einzelnen Vorlesung des Moduls. Bei zwanzig Terminen wäre
+   das zwanzigmal derselbe Text. */
+function terminZettelZeile(termin) {
+  const passende = zettel.filter(
+    z => z.verweise.indexOf("termin:" + termin.id) >= 0);
+  if (passende.length === 0) return "";
+
+  return passende.map(z => `
+    <button type="button" class="termin-zettel-marke"
+            data-zettel-oeffnen="${sicher(z.id)}">
+      ${z.wichtig ? "★" : "✎"} ${sicher(zettelTitel(z))}
+    </button>`).join("");
 }
 
 /* Nach dem Öffnen den Cursor ins Textfeld setzen, und zwar ans Ende des
@@ -1498,9 +1543,23 @@ function notizKlick(ereignis) {
     ? ereignis.target.closest("[data-notiz-oeffnen],[data-notiz-speichern],"
                               + "[data-notiz-abbrechen],[data-notiz-loeschen],"
                               + "[data-todo-haken],[data-aufgabe-neu],[data-termin],"
-                              + "[data-termin-neu],[data-termin-bearbeiten]")
+                              + "[data-termin-neu],[data-termin-bearbeiten],"
+                              + "[data-zettel-neu],[data-zettel-oeffnen]")
     : null;
   if (!ziel) return;
+
+  /* Notizbuch: eine neue Notiz, schon mit dem Termin verknüpft, oder eine
+     vorhandene öffnen.
+
+     Die Knöpfe liegen innerhalb eines Termin-Kastens, der bei eigenen
+     Terminen selbst ein data-termin-bearbeiten trägt. Das geht gut, weil
+     closest() den NÄCHSTEN Treffer von innen nach außen liefert – und das
+     ist der Knopf selbst. */
+  const neueNotiz = ziel.getAttribute("data-zettel-neu");
+  if (neueNotiz) { zettelFensterZeigen("", [neueNotiz]); return; }
+
+  const zettelOeffnen = ziel.getAttribute("data-zettel-oeffnen");
+  if (zettelOeffnen) { zettelFensterZeigen(zettelOeffnen); return; }
 
   // Eigener Termin: neu anlegen oder ändern.
   const neuerTermin = ziel.getAttribute("data-termin-neu");

@@ -137,6 +137,8 @@ const werkzeug = eval(
   "  zettelRueckverweise: zettelRueckverweise," +
   "  verweiseSaeubern: verweiseSaeubern," +
   "  verweisBeschreiben: verweisBeschreiben," +
+  "  listeBauen: listeBauen," +
+  "  bearbeiten: function (an) { bearbeitenModus = an; }," +
   "  lage: function () { return { notizen: notizen, aufgaben: aufgaben," +
   "        termine: eigeneTermine, zettel: zettel, grabsteine: grabsteine," +
   "        unbekannt: unbekannteEintraege }; }," +
@@ -391,7 +393,82 @@ pruefe("und traegt seinen Namen",
        lebendesModul.titel === "34 - Schluesselkompetenzen V");
 
 
-abschnitt("9. Der Themenschluessel steht an zwei Stellen und muss gleich sein");
+abschnitt("9. Unter einem Termin stehen ZWEI Knoepfe, und sie tun Verschiedenes");
+
+/* Warum das geprueft wird: in der Listenansicht stand lange ein einziger
+   Knopf "+ Notiz". Der legte aber die Kurznotiz an - und die steht mit
+   einem Haekchen im To-do-Bereich. Man drueckte also auf "Notiz" und bekam
+   ein To-do.
+
+   Seit es das Notizbuch gibt, sind das zwei verschiedene Dinge. Beide
+   muessen von hier aus erreichbar sein, und zwar so, dass am Knopf steht,
+   was herauskommt. */
+
+function terminTag() {
+  return [{
+    datum: new Date("2026-09-28T00:00"), schluessel: "2026-09-28",
+    termine: [{
+      id: "sked.a1", start: "2026-09-28T09:45", ende: "2026-09-28T11:15",
+      art: "SU", titel: "34 - Schluesselkompetenzen V", dozent: "Hechel",
+      raum: "CL: 6A.206", anmerkung: "", gruppe: "",
+    }],
+    aufgaben: [], ganztags: [], istHeute: false,
+  }];
+}
+
+werkzeug.setzen({});
+werkzeug.bearbeiten(true);
+let liste = werkzeug.listeBauen(terminTag());
+
+pruefe("der Notizbuch-Knopf verweist auf den Termin",
+       liste.indexOf('data-zettel-neu="termin:sked.a1"') >= 0);
+pruefe("und heisst \"+ Notiz\"",
+       liste.indexOf("+ Notiz") >= 0);
+pruefe("der To-do-Knopf legt die Kurznotiz an",
+       liste.indexOf('data-notiz-oeffnen="sked.a1"') >= 0);
+pruefe("und heisst \"+ To-do\"",
+       liste.indexOf("+ To-do") >= 0);
+
+/* Die beiden duerfen nicht dasselbe Ziel haben - genau das war der Fehler,
+   den es zu beheben galt. */
+pruefe("die beiden Knoepfe zeigen NICHT auf dasselbe",
+       liste.indexOf('data-zettel-neu="termin:sked.a1"')
+       !== liste.indexOf('data-notiz-oeffnen="sked.a1"'));
+
+// Ohne Bearbeiten-Modus steht dort nichts - sonst waere die Liste unlesbar.
+werkzeug.bearbeiten(false);
+liste = werkzeug.listeBauen(terminTag());
+pruefe("ohne Bearbeiten-Modus steht dort kein Knopf",
+       liste.indexOf("+ Notiz") < 0 && liste.indexOf("+ To-do") < 0);
+
+/* Eine Notiz, die an DIESEM Termin haengt, steht in der Liste. Eine, die
+   nur am Modul haengt, nicht - sonst stuende sie unter jeder einzelnen
+   Vorlesung des Moduls, bei zwanzig Terminen also zwanzigmal. */
+werkzeug.setzen({ zettel: [
+  { id: "zettel-hier", text: "Klausurthemen", verweise: ["termin:sked.a1"],
+    wichtig: false, geaendert: 1 },
+  { id: "zettel-modul", text: "Gilt fuers ganze Modul",
+    verweise: ["fach:34 - Schluesselkompetenzen V"], wichtig: false, geaendert: 2 },
+]});
+liste = werkzeug.listeBauen(terminTag());
+
+pruefe("die Notiz an diesem Termin steht in der Liste",
+       liste.indexOf("Klausurthemen") >= 0);
+pruefe("und ist antippbar",
+       liste.indexOf('data-zettel-oeffnen="zettel-hier"') >= 0);
+pruefe("die Modulnotiz steht dort NICHT",
+       liste.indexOf("Gilt fuers ganze Modul") < 0);
+
+/* Gegenprobe: im Fenster eines angetippten Termins gehoert sie sehr wohl
+   dazu. Dort steht ein Termin allein, es wiederholt sich nichts. */
+pruefe("im Terminfenster ist die Modulnotiz aber dabei",
+       werkzeug.zettelFuerTermin("sked.a1").map(z => z.id).indexOf("zettel-modul") >= 0);
+
+werkzeug.bearbeiten(false);
+werkzeug.setzen({});
+
+
+abschnitt("10. Der Themenschluessel steht an zwei Stellen und muss gleich sein");
 
 /* Hell oder dunkel wird zweimal gelesen: einmal von einem kurzen Skript im
    Kopf der index.html, damit das erste Bild schon stimmt, und einmal von
