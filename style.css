@@ -6,6 +6,12 @@
    ========================================================================= */
 
 :root {
+  /* Sagt dem Browser, in welcher Richtung er das zeichnen soll, was WIR
+     nicht zeichnen: Datums- und Uhrzeitfelder, Bildlaufleisten, das
+     Auswahlmenue eines <select>. Ohne diese Zeile blieben die im
+     Dunkelmodus hellgrau. */
+  color-scheme: light;
+
   --hintergrund: #f4f5f7;
   --flaeche: #ffffff;
   --flaeche-gedaempft: #eceef1;
@@ -30,11 +36,23 @@
   --wichtig-flaeche: #fdeceb;
 }
 
-/* Wenn das Betriebssystem auf dunkel steht, drehen wir die Farben um.
-   Es bleiben dieselben Variablennamen, deshalb muss unten nichts doppelt
-   geschrieben werden. */
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Die dunklen Farben. Es bleiben dieselben Variablennamen, deshalb muss
+   unten nichts doppelt geschrieben werden.
+
+   Frueher stand hier @media (prefers-color-scheme: dark), die Einstellung
+   des Betriebssystems entschied also allein. Seit es im ⚙-Fenster eine
+   eigene Wahl gibt - Automatisch, Hell, Dunkel - haengt es stattdessen an
+   data-thema am <html>-Element. Gesetzt wird das an zwei Stellen: von
+   einem kurzen Skript im Kopf der index.html, damit schon das erste Bild
+   stimmt und es nicht kurz weiss aufblitzt, und danach von themaAnwenden()
+   in app.js.
+
+   Zwei Farbbloecke - einen fuer die Systemeinstellung, einen fuer die
+   eigene Wahl - waere die Alternative gewesen. Dann stuenden dieselben
+   zwanzig Farben doppelt da und wuerden mit Sicherheit irgendwann
+   auseinanderlaufen. */
+:root[data-thema="dunkel"] {
+    color-scheme: dark;
     --hintergrund: #16181c;
     --flaeche: #1f2226;
     --flaeche-gedaempft: #282c31;
@@ -52,7 +70,6 @@
     --notiz-flaeche-hell: #2f2b42;
     --wichtig: #f0706e;
     --wichtig-flaeche: #352424;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -1546,3 +1563,317 @@ a.knopf-schlicht {
   text-decoration: none;
   text-align: center;
 }
+
+
+/* --- Das Notizbuch ------------------------------------------------------
+
+   Eine Liste von Karten, ein Fenster zum Schreiben, ein Fenster zum
+   Verknuepfen. Die Verknuepfungen tragen ueberall dieselbe Form - eine
+   kleine Marke mit Symbol davor -, damit man sie als dasselbe wiedererkennt,
+   egal ob sie in einer Karte, im Schreibfenster oder im Terminfenster steht.
+   ---------------------------------------------------------------------- */
+
+.zettel-leiste {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 14px;
+}
+
+.zettel-leiste input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 15px;
+}
+
+.zettel-leiste .knopf-schlicht { flex: 0 0 auto; }
+
+/* Der Balken, der sagt "du siehst gerade nicht alles". */
+.zettel-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--notiz-flaeche);
+  border: 1px solid var(--notiz-rand);
+  border-radius: var(--rundung);
+  font-size: 14px;
+}
+
+.zettel-karte {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.zettel-karte:hover { border-color: var(--notiz-rand); }
+
+.zettel-karte:focus-visible {
+  outline: 2px solid var(--akzent);
+  outline-offset: 2px;
+}
+
+/* Wichtiges bekommt einen farbigen Streifen an der Seite statt einer
+   anderen Fuellfarbe: die Karte soll noch wie eine Karte aussehen. */
+.zettel-karte-wichtig { border-left: 4px solid var(--wichtig); }
+
+.zettel-karte-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zettel-karte-titel {
+  font-weight: 600;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.zettel-karte-zeit {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--schrift-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Zwei Zeilen Vorschau, wie in der Notizen-App. Mehr braucht es nicht, um
+   eine Notiz wiederzuerkennen, und weniger reicht oft nicht. */
+.zettel-karte-vorschau {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--schrift-leise);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.zettel-karte-marken { margin-top: 8px; }
+
+/* --- Die Marken -------------------------------------------------------- */
+
+.zettel-marken {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.zettel-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--notiz-rand);
+  border-radius: 999px;
+  background: var(--notiz-flaeche);
+  color: var(--schrift);
+  font-size: 12.5px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zettel-karte-marken .zettel-marke { max-width: 48%; }
+
+/* Ein Verweis, dessen Ziel es nicht mehr gibt. Er wird nicht versteckt:
+   dass die Verknuepfung da ist, gehoert zur Notiz, auch wenn das Ziel aus
+   dem Zeitfenster gefallen ist. */
+.zettel-marke-fehlt {
+  border-style: dashed;
+  color: var(--schrift-leise);
+  background: transparent;
+}
+
+/* Im Schreibfenster sind die Marken Knoepfe und muessen groesser sein -
+   ein 12-px-Kreuzchen trifft man auf dem Handy nicht. */
+.zettel-marken-gross .zettel-marke { padding: 2px 4px 2px 10px; font-size: 13px; }
+
+.zettel-marke-text {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 4px 0;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zettel-marke-text small { color: var(--schrift-leise); margin-left: 4px; }
+
+.zettel-marke-weg {
+  border: 0;
+  background: none;
+  color: var(--schrift-leise);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  padding: 6px 8px;
+  margin: -4px 0;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.zettel-marke-weg:hover { color: var(--entfallen); background: var(--flaeche-gedaempft); }
+
+/* Der "+ Verknuepfen"-Knopf sieht aus wie eine Marke, ist aber leer -
+   so ist er als Teil derselben Reihe erkennbar. */
+.zettel-marke-neu {
+  border-style: dashed;
+  background: transparent;
+  color: var(--notiz-rand);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 12px;
+}
+
+.zettel-verweise-kopf {
+  margin: 16px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+
+/* --- Das Schreibfeld --------------------------------------------------- */
+
+.zettel-feld {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  resize: vertical;
+  /* Die erste Zeile ist die Ueberschrift - sie darf auch so aussehen.
+     Geht nur ueber die erste Zeile des Feldes hinweg nicht, deshalb bleibt
+     es bei gleicher Groesse; das Fettdrucken uebernimmt die Liste. */
+  min-height: 160px;
+}
+
+.zettel-feld:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
+
+/* --- Das Fenster zum Verknuepfen --------------------------------------- */
+
+.verweis-suche {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 15px;
+}
+
+.verweis-gruppe { margin-bottom: 16px; }
+
+.verweis-gruppe-kopf {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+  margin-bottom: 6px;
+}
+
+.verweis-zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  cursor: pointer;
+}
+
+.verweis-zeile:hover { border-color: var(--notiz-rand); }
+
+.verweis-zeile-aktiv {
+  border-color: var(--notiz-rand);
+  background: var(--notiz-flaeche);
+}
+
+.verweis-symbol { flex: 0 0 auto; color: var(--notiz-rand); }
+
+.verweis-text { flex: 1 1 auto; min-width: 0; }
+.verweis-text strong { display: block; font-weight: 600; overflow-wrap: break-word; }
+.verweis-text small {
+  display: block;
+  color: var(--schrift-leise);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verweis-haken {
+  flex: 0 0 auto;
+  width: 24px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--notiz-rand);
+}
+
+/* --- Notizen im Terminfenster ------------------------------------------ */
+
+.termin-zettel { margin-top: 14px; }
+
+.termin-zettel-zeile {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  margin-top: 4px;
+  border: 1px solid var(--notiz-rand);
+  border-radius: var(--rundung);
+  background: var(--notiz-flaeche);
+  color: var(--schrift);
+  font: inherit;
+  cursor: pointer;
+}
+
+.termin-zettel-zeile strong { display: block; font-weight: 600; }
+.termin-zettel-zeile small { color: var(--schrift-leise); font-size: 12px; }
+
+.termin-zettel-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* --- Aussehen-Schalter im ⚙-Fenster ------------------------------------ */
+
+#themaBereich { margin-top: 22px; }
+#themaBereich .schalter { display: inline-flex; }
