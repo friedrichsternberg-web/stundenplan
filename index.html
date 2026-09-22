@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=8337fa3e">
+<link rel="stylesheet" href="style.css?v=e74f7499">
 </head>
 <body>
 
@@ -243,6 +243,15 @@
         <textarea id="formNotiz" rows="2" maxlength="500"></textarea>
       </label>
 
+      <label class="form-feld">
+        <span>🔔 Erinnerung</span>
+        <!-- Die Auswahlmöglichkeiten hängen davon ab, ob der Termin eine
+             Uhrzeit hat – "15 Minuten vorher" ergibt bei einem ganztägigen
+             Termin nichts. Gefüllt wird deshalb aus app.js. -->
+        <select id="formErinnerung"></select>
+      </label>
+      <p class="erinnerung-hinweis" id="formErinnerungHinweis"></p>
+
       <label class="form-haken">
         <input type="checkbox" id="formWichtig">
         <span>★ Wichtig</span>
@@ -304,18 +313,22 @@
          erst nach Rueckfrage beim Browser feststeht und deshalb spaeter
          nachgetragen wird - siehe meldenZeichnen() in app.js. -->
     <div id="meldenBereich"></div>
+    <!-- Laeuft der Erinnerungsdienst noch? Ein abgestuerzter Zeitplan
+         meldet sich bei niemandem - es kaeme einfach nie eine Erinnerung.
+         Siehe erinnerungsdienstZeichnen() in app.js. -->
+    <div id="erinnerungsdienst"></div>
   </div>
 </div>
 
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=8337fa3e"></script>
-<script src="melden.js?v=8337fa3e"></script>
+<script src="sync.js?v=e74f7499"></script>
+<script src="melden.js?v=e74f7499"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=8337fa3e"></script>
+<script src="app.js?v=e74f7499"></script>
 
 </body>
 </html>

@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "8337fa3e";
+const GEBAUTE_VERSION = "e74f7499";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -848,6 +848,177 @@ function notizSetzen(kennung, text, wichtig) {
   notizenSpeichern();
 }
 
+/* --- Erinnerungen --------------------------------------------------------
+
+   Eine Erinnerung besteht aus zwei Feldern, und das hat einen Grund:
+
+     erinnerungVorgabe  "vortag18"           – was du ausgewählt hast
+     erinnerung         "2026-09-24T18:00"   – wann das konkret ist
+
+   Gespeichert wird beides. Die Vorgabe, damit die Auswahl beim nächsten
+   Öffnen wieder dasteht und damit die Erinnerung MITWANDERT, wenn du das
+   Fälligkeitsdatum verschiebst. Der ausgerechnete Zeitpunkt, damit der
+   Server nichts rechnen muss: er vergleicht zwei Zeichenketten, fertig.
+
+   Die Alternative wäre gewesen, nur die Vorgabe zu speichern und den
+   Server rechnen zu lassen. Dann stünde dieselbe Rechnerei zweimal da –
+   einmal hier in JavaScript, einmal in TypeScript auf dem Server – und
+   liefe beim nächsten Umbau auseinander. Dass eine Erinnerung ein paar
+   Zeichen mehr Platz braucht, ist der bessere Preis.
+
+   Die Zeitangabe ist ORTSZEIT ohne Zeitzone: "2026-09-24T18:00" heißt
+   18 Uhr in Berlin. Der Server vergleicht sie mit der Berliner Zeit im
+   selben Format. Damit gibt es die Sommerzeit an dieser Stelle gar nicht
+   erst – wer in UTC rechnet, muss zweimal im Jahr richtig liegen.
+   ------------------------------------------------------------------------ */
+
+/* Für Dinge mit Tag, aber ohne Uhrzeit: To-dos und ganztägige Termine.
+   "Eine Stunde vorher" ergibt dort nichts – vor wann? */
+const ERINNERUNG_TAG = [
+  ["", "Keine Erinnerung"],
+  ["tag9", "Am Tag, 9:00"],
+  ["tag18", "Am Tag, 18:00"],
+  ["vortag18", "Am Vortag, 18:00"],
+  ["3tage18", "3 Tage vorher, 18:00"],
+  ["woche18", "1 Woche vorher, 18:00"],
+];
+
+/* Für Dinge mit Uhrzeit: eigene Termine. */
+const ERINNERUNG_UHRZEIT = [
+  ["", "Keine Erinnerung"],
+  ["15min", "15 Minuten vorher"],
+  ["1std", "1 Stunde vorher"],
+  ["3std", "3 Stunden vorher"],
+  ["1tag", "1 Tag vorher, gleiche Zeit"],
+  ["vortag18", "Am Vortag, 18:00"],
+  ["woche18", "1 Woche vorher, 18:00"],
+];
+
+function erinnerungBeschriftung(vorgabe) {
+  const alle = ERINNERUNG_TAG.concat(ERINNERUNG_UHRZEIT);
+  for (const eintrag of alle) {
+    if (eintrag[0] === vorgabe) return eintrag[1];
+  }
+  return "";
+}
+
+/* Rechnet aus, wann erinnert wird.
+
+   bezug ist "2026-09-25" (ein To-do) oder "2026-09-25T14:00" (ein Termin).
+   Kommt nichts Sinnvolles heraus, ist das Ergebnis leer – dann gibt es
+   eben keine Erinnerung, statt einer zu einem erfundenen Zeitpunkt.
+
+   Tage und Minuten werden getrennt gerechnet und nie vermischt. Das ist
+   der Trick gegen die Sommerzeit: "einen Tag früher" verschiebt nur das
+   Datum und lässt die Uhrzeit stehen, "eine Stunde früher" nur die
+   Uhrzeit. Würde man beides über einen Zeitstempel rechnen, verschöbe
+   sich zweimal im Jahr die Uhrzeit um eine Stunde. */
+function erinnerungZeitpunkt(vorgabe, bezug) {
+  if (!vorgabe || !bezug || bezug.length < 10) return "";
+
+  const datum = bezug.slice(0, 10);
+  const zeit = bezug.length >= 16 ? bezug.slice(11, 16) : "";
+
+  if (vorgabe === "tag9") return datum + "T09:00";
+  if (vorgabe === "tag18") return datum + "T18:00";
+
+  const abendsVorTagen = { vortag18: 1, "3tage18": 3, woche18: 7 };
+  if (Object.prototype.hasOwnProperty.call(abendsVorTagen, vorgabe)) {
+    return tagVerschieben(datum, -abendsVorTagen[vorgabe]) + "T18:00";
+  }
+
+  // Gleiche Uhrzeit, einen Tag früher. Ohne Uhrzeit hilfsweise 9 Uhr.
+  if (vorgabe === "1tag") {
+    return tagVerschieben(datum, -1) + "T" + (zeit || "09:00");
+  }
+
+  const vorMinuten = { "15min": 15, "1std": 60, "3std": 180 };
+  if (Object.prototype.hasOwnProperty.call(vorMinuten, vorgabe)) {
+    // Ohne Uhrzeit gibt es keinen Bezugspunkt, von dem aus man abzieht.
+    if (!zeit) return "";
+    let minuten = Number(zeit.slice(0, 2)) * 60 + Number(zeit.slice(3, 5))
+                - vorMinuten[vorgabe];
+    let tag = datum;
+    // Über Mitternacht zurück: ein Termin um 00:30 minus eine Stunde.
+    while (minuten < 0) {
+      minuten += 1440;
+      tag = tagVerschieben(tag, -1);
+    }
+    return tag + "T" + String(Math.floor(minuten / 60)).padStart(2, "0")
+               + ":" + String(minuten % 60).padStart(2, "0");
+  }
+
+  return "";
+}
+
+/* Tage auf ein Datum rechnen, ohne über die Ortszeit zu stolpern.
+
+   Der Umweg über 12:00 UTC ist Absicht: rechnete man ab Mitternacht,
+   läge man in der Nacht der Zeitumstellung eine Stunde daneben und
+   bekäme den Vortag oder den Folgetag. Mittags ist der Abstand zu beiden
+   Rändern so groß, dass das nicht passieren kann. */
+function tagVerschieben(datum, tage) {
+  const punkt = new Date(datum + "T12:00:00Z");
+  if (!isFinite(punkt.getTime())) return datum;
+  punkt.setUTCDate(punkt.getUTCDate() + tage);
+  return punkt.toISOString().slice(0, 10);
+}
+
+/* Die Erinnerung eines Eintrags neu ausrechnen.
+
+   Wird bei JEDEM Speichern aufgerufen, nicht nur wenn man die Auswahl
+   anfasst. Genau darin liegt der Sinn: verschiebst du ein To-do von
+   Freitag auf Montag, wandert die Erinnerung mit, ohne dass du daran
+   denken musst. */
+function erinnerungFelder(vorgabe, bezug) {
+  const sauber = erinnerungBeschriftung(vorgabe) ? vorgabe : "";
+  const zeitpunkt = erinnerungZeitpunkt(sauber, bezug);
+  // Lässt sich nichts ausrechnen, gilt die Erinnerung als nicht gesetzt -
+  // eine Vorgabe ohne Zeitpunkt wäre ein Versprechen, das niemand einlöst.
+  if (!zeitpunkt) return { erinnerungVorgabe: "", erinnerung: "" };
+  return { erinnerungVorgabe: sauber, erinnerung: zeitpunkt };
+}
+
+/* Lesbar für die Anzeige: "Am Vortag, 18:00 · Mi 24.09., 18:00". */
+function erinnerungLesbar(eintrag) {
+  if (!eintrag || !eintrag.erinnerung) return "";
+  const beschriftung = erinnerungBeschriftung(eintrag.erinnerungVorgabe);
+  const wann = zeitpunktLesbar(eintrag.erinnerung);
+  return beschriftung ? beschriftung + " · " + wann : wann;
+}
+
+/* Die Schnellwahl beim Fälligkeitsdatum.
+
+   Ein Datumsfeld ist auf dem Handy drei Drehrädchen. "Morgen" ist aber
+   das, was man in neun von zehn Fällen meint – dafür sollte man nicht
+   durch einen Kalender blättern müssen. */
+const DATUM_SCHNELL = [
+  ["heute", "Heute"],
+  ["morgen", "Morgen"],
+  ["uebermorgen", "Übermorgen"],
+  ["montag", "Nächster Montag"],
+];
+
+function datumSchnellRechnen(name, heuteText) {
+  const heute = heuteText || tagesSchluessel(new Date());
+  if (name === "heute") return heute;
+  if (name === "morgen") return tagVerschieben(heute, 1);
+  if (name === "uebermorgen") return tagVerschieben(heute, 2);
+
+  /* "Nächster Montag" heißt immer der KOMMENDE, nie heute.
+
+     Steht man an einem Montag und tippt darauf, ist eine Aufgabe für
+     heute nicht gemeint – dafür gibt es den Knopf daneben. Also immer
+     mindestens ein Tag Abstand, höchstens sieben. */
+  if (name === "montag") {
+    const wochentag = new Date(heute + "T12:00:00Z").getUTCDay();  // 0 = So
+    const bisMontag = ((8 - wochentag) % 7) || 7;
+    return tagVerschieben(heute, bisMontag);
+  }
+  return heute;
+}
+
+
 /* --- Freie Aufgaben ------------------------------------------------------
 
    Alles, was an einem Tag zu tun ist, ohne zu einer Vorlesung zu gehören.
@@ -868,6 +1039,9 @@ function aufgabenLaden() {
         datum: a.datum,
         erledigt: Boolean(a.erledigt),
         wichtig: Boolean(a.wichtig),
+        erinnerungVorgabe: typeof a.erinnerungVorgabe === "string"
+                             ? a.erinnerungVorgabe : "",
+        erinnerung: typeof a.erinnerung === "string" ? a.erinnerung : "",
         // Siehe notizenLaden() – 0 heißt "von vor dem Geräteabgleich".
         geaendert: Number(a.geaendert) || 0,
       }));
@@ -941,6 +1115,9 @@ function eigeneTermineLaden() {
         ort: typeof t.ort === "string" ? t.ort : "",
         notiz: typeof t.notiz === "string" ? t.notiz : "",
         wichtig: Boolean(t.wichtig),
+        erinnerungVorgabe: typeof t.erinnerungVorgabe === "string"
+                             ? t.erinnerungVorgabe : "",
+        erinnerung: typeof t.erinnerung === "string" ? t.erinnerung : "",
         geaendert: Number(t.geaendert) || 0,
       }));
   } catch (fehler) {
@@ -1003,6 +1180,14 @@ function terminSetzen(kennung, felder) {
     wichtig: Boolean(felder.wichtig),
     geaendert: Abgleich.jetzt(),
   };
+
+  /* Die Erinnerung hängt am Anfang des Termins und wird bei jedem
+     Speichern neu ausgerechnet – verschiebst du den Termin, wandert sie
+     mit. Bei einem ganztägigen Termin gibt es keine Uhrzeit, deshalb
+     bekommt erinnerungZeitpunkt() nur das Datum zu sehen. */
+  Object.assign(neuer, erinnerungFelder(
+    felder.erinnerungVorgabe || "",
+    neuer.ganztags ? neuer.start.slice(0, 10) : neuer.start));
 
   /* Ende vor Anfang wäre im Kalender ein Kästchen mit negativer Höhe –
      also unsichtbar. Lieber stillschweigend geraderücken als einen Termin
@@ -1160,6 +1345,40 @@ function zettelTitel(z) {
     if (sauber) return sauber.length > 90 ? sauber.slice(0, 90) + "…" : sauber;
   }
   return "Ohne Titel";
+}
+
+/* Zerlegt den Text in Überschrift und Rest.
+
+   Im Fenster stehen zwei Felder: oben eine fette Zeile für die
+   Überschrift, darunter der Fließtext. Gespeichert wird trotzdem EIN
+   Text, in dem die erste Zeile die Überschrift ist – so wie in der
+   Notizen-App von Apple.
+
+   Warum nicht zwei Felder auch im Speicher? Weil es dieselbe Notiz
+   bliebe, nur mit einem Feld mehr, das durch den Abgleich muss und das
+   ältere Geräte nicht kennen. Und weil eine Notiz ohne Überschrift dann
+   eine leere Überschrift hätte statt einfach keine.
+
+   Die Zerlegung ist umkehrbar: was hier auseinandergeht, fügt
+   zettelZusammensetzen() genau so wieder zusammen. Ohne das wanderte beim
+   Öffnen und Schließen jedes Mal eine Zeile nach oben. */
+function zettelTeile(text) {
+  const zeilen = String(text || "").split("\n");
+  let i = 0;
+  while (i < zeilen.length && !zeilen[i].trim()) i++;
+  if (i >= zeilen.length) return { titel: "", rest: "" };
+  return {
+    titel: zeilen[i].trim(),
+    rest: zeilen.slice(i + 1).join("\n").replace(/^\n+/, ""),
+  };
+}
+
+function zettelZusammensetzen(titel, rest) {
+  const kopf = String(titel || "").replace(/[\r\n]+/g, " ").trim();
+  const koerper = String(rest || "");
+  if (!kopf) return koerper.trim();
+  if (!koerper.trim()) return kopf;
+  return kopf + "\n\n" + koerper.replace(/^\n+/, "");
 }
 
 /* Alles nach der Überschrift, in einer Zeile, für die Übersicht. */
@@ -1328,7 +1547,7 @@ function aufgabenFuerTag(tagesschluessel) {
 
 /* Legt eine Aufgabe an oder ändert eine bestehende. Leerer Text löscht sie –
    genau wie bei den Notizen. */
-function aufgabeSetzen(kennung, text, datum, wichtig) {
+function aufgabeSetzen(kennung, text, datum, wichtig, erinnerungVorgabe) {
   const sauber = (text || "").trim();
 
   if (!sauber) {
@@ -1343,16 +1562,25 @@ function aufgabeSetzen(kennung, text, datum, wichtig) {
     vorhandene.text = sauber;
     if (datum) vorhandene.datum = datum;
     if (wichtig !== undefined) vorhandene.wichtig = Boolean(wichtig);
+    if (erinnerungVorgabe !== undefined) {
+      vorhandene.erinnerungVorgabe = erinnerungVorgabe;
+    }
+    /* Die Erinnerung wird bei JEDEM Speichern neu ausgerechnet, nicht nur
+       wenn man die Auswahl anfasst. Verschiebst du ein To-do von Freitag
+       auf Montag, wandert sie damit von selbst mit. */
+    Object.assign(vorhandene, erinnerungFelder(
+      vorhandene.erinnerungVorgabe, vorhandene.datum));
     vorhandene.geaendert = Abgleich.jetzt();
   } else {
-    aufgaben.push({
+    const tag = datum || tagesSchluessel(new Date());
+    aufgaben.push(Object.assign({
       id: kennung,
       text: sauber,
-      datum: datum || tagesSchluessel(new Date()),
+      datum: tag,
       erledigt: false,
       wichtig: Boolean(wichtig),
       geaendert: Abgleich.jetzt(),
-    });
+    }, erinnerungFelder(erinnerungVorgabe || "", tag)));
   }
   // Siehe notizSetzen(): ein Grabstein an derselben Kennung ist jetzt falsch.
   grabsteinEntfernen(kennung);
@@ -1394,6 +1622,25 @@ function notizFeldZeichnen(kennung, text, datum) {
           <span>★ Wichtig</span>
         </label>
       </div>
+
+      ${mitDatum ? `
+        <div class="datum-schnell">
+          ${DATUM_SCHNELL.map(eintrag => `
+            <button type="button" class="notiz-neu"
+                    data-datum-schnell="${eintrag[0]}">${eintrag[1]}</button>`).join("")}
+        </div>` : ""}
+
+      ${mitDatum ? `
+        <label class="notiz-erinnerung">
+          <span>🔔 Erinnerung</span>
+          <select id="aufgabeErinnerung">
+            ${ERINNERUNG_TAG.map(eintrag => `
+              <option value="${eintrag[0]}"${
+                (aufgabeZuKennung(kennung) || {}).erinnerungVorgabe === eintrag[0]
+                  ? " selected" : ""}>${eintrag[1]}</option>`).join("")}
+          </select>
+        </label>
+        <p class="erinnerung-hinweis" id="erinnerungHinweis"></p>` : ""}
       <div class="notiz-knoepfe">
         <button type="button" class="knopf-schlicht"
                 data-notiz-speichern="${sicher(kennung)}">Speichern</button>
@@ -1527,10 +1774,44 @@ function terminZettelZeile(termin) {
     </button>`).join("");
 }
 
+/* Schreibt unter die Auswahl, wann konkret erinnert wird.
+
+   Ohne das steht dort "Am Vortag, 18:00" und man muss selbst nachrechnen,
+   welcher Tag das ist. Die Zeile beantwortet genau die Frage, die man beim
+   Einstellen hat: bekomme ich das rechtzeitig? */
+function erinnerungHinweisSetzen() {
+  const hinweis = document.getElementById("erinnerungHinweis");
+  if (!hinweis) return;
+
+  const auswahl = document.getElementById("aufgabeErinnerung");
+  const datumsfeld = document.getElementById("aufgabeDatum");
+  const vorgabe = auswahl ? auswahl.value : "";
+  const datum = datumsfeld ? datumsfeld.value : "";
+
+  const zeitpunkt = erinnerungZeitpunkt(vorgabe, datum);
+  if (!zeitpunkt) { hinweis.textContent = ""; return; }
+
+  const vergangen = zeitpunkt < new Date().toISOString().slice(0, 16);
+  hinweis.textContent = vergangen
+    ? "Dieser Zeitpunkt ist schon vorbei – es kommt keine Meldung mehr."
+    : "Meldet sich " + zeitpunktLesbar(zeitpunkt) + ".";
+  hinweis.classList.toggle("erinnerung-vorbei", vergangen);
+}
+
 /* Nach dem Öffnen den Cursor ins Textfeld setzen, und zwar ans Ende des
    vorhandenen Textes – nicht an den Anfang, wo man beim Weiterschreiben
    alles verschieben würde. */
 function notizfeldAktivieren() {
+  /* Die Hinweiszeile muss auf jede Änderung reagieren – an Datum wie an
+     Auswahl. Die Zuhörer hängen hier und nicht in knoepfeVerbinden(),
+     weil es die Felder dort noch gar nicht gibt: sie entstehen erst,
+     wenn jemand ein To-do öffnet. */
+  const auswahl = document.getElementById("aufgabeErinnerung");
+  const datumsfeld = document.getElementById("aufgabeDatum");
+  if (auswahl) auswahl.addEventListener("change", erinnerungHinweisSetzen);
+  if (datumsfeld) datumsfeld.addEventListener("change", erinnerungHinweisSetzen);
+  erinnerungHinweisSetzen();
+
   const feld = document.getElementById("notizFeld");
   if (!feld) return;
   feld.focus();
@@ -1551,9 +1832,24 @@ function notizKlick(ereignis) {
                               + "[data-notiz-abbrechen],[data-notiz-loeschen],"
                               + "[data-todo-haken],[data-aufgabe-neu],[data-termin],"
                               + "[data-termin-neu],[data-termin-bearbeiten],"
-                              + "[data-zettel-neu],[data-zettel-oeffnen]")
+                              + "[data-zettel-neu],[data-zettel-oeffnen],"
+                              + "[data-datum-schnell]")
     : null;
   if (!ziel) return;
+
+  /* Schnellwahl beim Fälligkeitsdatum. Ändert nur das Feld, speichert
+     nicht – so kann man erst "Morgen" tippen und dann noch den Text
+     fertig schreiben. Ein Neuzeichnen wäre hier sogar schädlich: es
+     würde das Textfeld ersetzen und den halb getippten Text wegwerfen. */
+  const schnell = ziel.getAttribute("data-datum-schnell");
+  if (schnell) {
+    const feld = document.getElementById("aufgabeDatum");
+    if (feld) {
+      feld.value = datumSchnellRechnen(schnell, tagesSchluessel(new Date()));
+      erinnerungHinweisSetzen();
+    }
+    return;
+  }
 
   /* Notizbuch: eine neue Notiz, schon mit dem Termin verknüpft, oder eine
      vorhandene öffnen.
@@ -1621,16 +1917,18 @@ function notizKlick(ereignis) {
     const feld = document.getElementById("notizFeld");
     const datumsfeld = document.getElementById("aufgabeDatum");
     const wichtigfeld = document.getElementById("notizWichtig");
+    const erinnerungsfeld = document.getElementById("aufgabeErinnerung");
     const text = feld ? feld.value : "";
     const datum = datumsfeld ? datumsfeld.value : "";
     const wichtig = wichtigfeld ? Boolean(wichtigfeld.checked) : false;
+    const erinnerung = erinnerungsfeld ? erinnerungsfeld.value : "";
 
     if (zuSpeichern.indexOf("neu:") === 0) {
       // Erst jetzt bekommt die Aufgabe eine Kennung.
       aufgabeSetzen(neueAufgabenKennung(), text,
-                    datum || zuSpeichern.slice(4), wichtig);
+                    datum || zuSpeichern.slice(4), wichtig, erinnerung);
     } else if (zuSpeichern.indexOf("eigen-") === 0) {
-      aufgabeSetzen(zuSpeichern, text, datum, wichtig);
+      aufgabeSetzen(zuSpeichern, text, datum, wichtig, erinnerung);
     } else {
       notizSetzen(zuSpeichern, text, wichtig);
     }
@@ -1970,8 +2268,15 @@ function terminFensterZeigen(kennung) {
   const inhalt = document.getElementById("terminInhalt");
   if (!termin || !fenster || !inhalt) return;
 
+  /* Die Erinnerung steht am eigenen Termin, nicht an der Plandarstellung.
+     eigeneTermineAlsPlan() lässt sie weg, weil ein HWR-Termin keine hat -
+     hier wird sie deshalb beim Original nachgeschlagen. */
+  const eigener = termin.eigen ? terminZuEigenerKennung(kennung) : null;
+
   const zeilen = [
     ["Wann", zeitpunktLesbar(termin.start) + "–" + uhrzeit(termin.ende)],
+    ["Erinnerung", eigener && eigener.erinnerung
+                     ? "🔔 " + erinnerungLesbar(eigener) : ""],
     ["Raum", termin.raum],
     ["Dozent", termin.dozent],
     ["Gruppe", termin.gruppe],
@@ -2157,6 +2462,8 @@ function aufgabenSammeln() {
       wichtig: Boolean(aufgabe.wichtig),
       termin: null,
       datum: aufgabe.datum,
+      erinnerung: aufgabe.erinnerung || "",
+      erinnerungVorgabe: aufgabe.erinnerungVorgabe || "",
       start: aufgabe.datum + "T00:00",
     });
   }
@@ -2428,6 +2735,9 @@ function aufgabeZeichnen(aufgabe, fach) {
         <div class="todo-wann">
           ${markeZeigen ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
         </div>
+        ${aufgabe.erinnerung && !aufgabe.erledigt ? `
+          <div class="todo-erinnerung">🔔 ${sicher(erinnerungLesbar(aufgabe))}</div>`
+          : ""}
       </div>
     </div>`;
 }
@@ -2669,9 +2979,14 @@ let offenerZettelText = "";
 let offenerZettelWichtig = false;
 
 function zettelWerteLesen() {
+  const kopf = document.getElementById("zettelTitel");
   const feld = document.getElementById("zettelFeld");
   const haken = document.getElementById("zettelWichtig");
-  if (feld) offenerZettelText = feld.value;
+  // Beide Felder ergeben zusammen wieder einen Text - siehe zettelTeile().
+  if (kopf || feld) {
+    offenerZettelText = zettelZusammensetzen(
+      kopf ? kopf.value : "", feld ? feld.value : "");
+  }
   if (haken) offenerZettelWichtig = Boolean(haken.checked);
 }
 
@@ -2696,8 +3011,8 @@ function zettelFensterZeigen(kennung, vorgabe) {
      vorhandenen nicht: dort will man meistens erst lesen, und die
      Bildschirmtastatur würde die halbe Notiz verdecken. */
   if (!vorhandener) {
-    const feld = document.getElementById("zettelFeld");
-    if (feld && feld.focus) feld.focus();
+    const kopf = document.getElementById("zettelTitel");
+    if (kopf && kopf.focus) kopf.focus();
   }
 }
 
@@ -2711,10 +3026,15 @@ function zettelFensterZeichnen() {
   const titel = document.getElementById("zettelFensterTitel");
   if (titel) titel.textContent = vorhandener ? "Notiz" : "Neue Notiz";
 
+  const teile = zettelTeile(offenerZettelText);
+
   inhalt.innerHTML = `
-    <textarea id="zettelFeld" class="zettel-feld" rows="10"
-              placeholder="Die erste Zeile wird die Überschrift …"
-              >${sicher(offenerZettelText)}</textarea>
+    <input type="text" id="zettelTitel" class="zettel-titel"
+           placeholder="Überschrift" maxlength="120" autocomplete="off"
+           value="${sicher(teile.titel)}">
+    <textarea id="zettelFeld" class="zettel-feld" rows="9"
+              placeholder="Text …"
+              >${sicher(teile.rest)}</textarea>
 
     <label class="form-haken">
       <input type="checkbox" id="zettelWichtig"${offenerZettelWichtig ? " checked" : ""}>
@@ -3002,6 +3322,83 @@ function themaSetzen(neues) {
   themaZeichnen();
 }
 
+/* Zeigt, ob der Erinnerungsdienst noch laeuft.
+
+   Erinnerungen verschickt nicht die App, sondern ein Zeitplan in der
+   Datenbank, der alle fuenf Minuten nachschaut. Faellt der aus, passiert
+   etwas Tueckisches: gar nichts. Keine Fehlermeldung, kein roter Kasten -
+   es kommt einfach keine Erinnerung mehr, und man denkt, man habe keine
+   gestellt.
+
+   Beim Einrichten ist genau das passiert: der Zeitplan rief eine Funktion
+   auf, die es nicht gibt, und scheiterte zwei Mal in Folge lautlos.
+   Deshalb hinterlaesst jeder Lauf seither eine Spur, und hier steht sie.
+
+   Die Abfrage verraet nichts: nur, wie viele Sekunden der letzte Lauf her
+   ist. Keine Notizen, keine Raeume, kein Code. */
+function erinnerungsdienstZeichnen() {
+  const bereich = document.getElementById("erinnerungsdienst");
+  if (!bereich) return;
+
+  bereich.innerHTML = `
+    <h3 class="melden-titel">Erinnerungen</h3>
+    <p class="filter-hinweis" id="erinnerungsdienstStand">wird geprüft …</p>`;
+
+  const anzeige = document.getElementById("erinnerungsdienstStand");
+
+  /* Die Adresse steht in sync.js. Fehlt die Datei - beim Öffnen per
+     Doppelklick aus einem unvollständigen Ordner etwa -, gibt es die
+     Konstante nicht, und ein Zugriff darauf wäre ein Absturz mitten im
+     Einstellungsfenster. Dieselbe Vorsicht wie bei den Ersatzstücken für
+     Abgleich weiter oben. */
+  if (typeof ABGLEICH_URL === "undefined") {
+    anzeige.textContent = "Ohne sync.js gibt es keine Erinnerungen.";
+    anzeige.className = "melden-hindernis";
+    return;
+  }
+
+  fetch(ABGLEICH_URL + "/rest/v1/rpc/erinnerungen_laufen", {
+    method: "POST",
+    headers: {
+      apikey: ABGLEICH_OEFFENTLICH,
+      Authorization: "Bearer " + ABGLEICH_OEFFENTLICH,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  })
+    .then(antwort => antwort.ok ? antwort.json() : null)
+    .then(stand => {
+      if (!anzeige) return;
+      if (!stand) {
+        anzeige.textContent = "Der Erinnerungsdienst ließ sich nicht erreichen.";
+        anzeige.className = "melden-hindernis";
+        return;
+      }
+      const sekunden = Number(stand.sekunden) || 0;
+      /* Der Zeitplan laeuft alle fuenf Minuten. Bis zu einer Viertelstunde
+         Rueckstand ist also normal - zwei ausgelassene Laeufe koennen
+         vorkommen. Darueber stimmt etwas nicht. */
+      if (sekunden <= 900) {
+        anzeige.className = "filter-hinweis";
+        anzeige.textContent =
+          "Läuft. Zuletzt vor " + Math.round(sekunden / 60) + " Min. nachgeschaut. "
+          + "Erinnerungen kommen auf bis zu fünf Minuten genau.";
+      } else {
+        anzeige.className = "melden-hindernis";
+        anzeige.textContent =
+          "Der Erinnerungsdienst hat seit "
+          + Math.round(sekunden / 60) + " Minuten nicht nachgeschaut. "
+          + "Gestellte Erinnerungen kommen gerade nicht an.";
+      }
+    })
+    .catch(() => {
+      if (anzeige) {
+        anzeige.textContent = "Der Erinnerungsdienst ließ sich nicht erreichen.";
+        anzeige.className = "melden-hindernis";
+      }
+    });
+}
+
 function themaZeichnen() {
   const bereich = document.getElementById("themaBereich");
   if (!bereich) return;
@@ -3072,6 +3469,10 @@ function abgleichSammeln() {
       datum: aufgabe.datum,
       erledigt: Boolean(aufgabe.erledigt),
       wichtig: Boolean(aufgabe.wichtig),
+      /* Beide Erinnerungsfelder gehen mit. "erinnerung" liest der Server,
+         "erinnerungVorgabe" das andere Gerät – siehe erinnerungFelder(). */
+      erinnerungVorgabe: aufgabe.erinnerungVorgabe || "",
+      erinnerung: aufgabe.erinnerung || "",
       geaendert: Number(aufgabe.geaendert) || 0,
     };
   }
@@ -3086,6 +3487,8 @@ function abgleichSammeln() {
       ort: termin.ort || "",
       notiz: termin.notiz || "",
       wichtig: Boolean(termin.wichtig),
+      erinnerungVorgabe: termin.erinnerungVorgabe || "",
+      erinnerung: termin.erinnerung || "",
       geaendert: Number(termin.geaendert) || 0,
     };
   }
@@ -3178,6 +3581,10 @@ function abgleichUebernehmen(nutzlast) {
         ort: typeof eintrag.ort === "string" ? eintrag.ort : "",
         notiz: typeof eintrag.notiz === "string" ? eintrag.notiz : "",
         wichtig: Boolean(eintrag.wichtig),
+        erinnerungVorgabe: typeof eintrag.erinnerungVorgabe === "string"
+                             ? eintrag.erinnerungVorgabe : "",
+        erinnerung: typeof eintrag.erinnerung === "string"
+                      ? eintrag.erinnerung : "",
         geaendert: zeitpunkt,
       });
       continue;
@@ -3215,6 +3622,10 @@ function abgleichUebernehmen(nutzlast) {
         datum: eintrag.datum,
         erledigt: Boolean(eintrag.erledigt),
         wichtig: Boolean(eintrag.wichtig),
+        erinnerungVorgabe: typeof eintrag.erinnerungVorgabe === "string"
+                             ? eintrag.erinnerungVorgabe : "",
+        erinnerung: typeof eintrag.erinnerung === "string"
+                      ? eintrag.erinnerung : "",
         geaendert: zeitpunkt,
       });
     } else {
@@ -3513,6 +3924,7 @@ function terminFormularZeigen(kennung, vorgabeTag) {
   document.getElementById("formWichtig").checked = vorhandener
     ? Boolean(vorhandener.wichtig) : false;
 
+  erinnerungAuswahlFuellen(vorhandener ? vorhandener.erinnerungVorgabe : "");
   zeitfelderUmschalten();
   fenster.hidden = false;
 
@@ -3527,6 +3939,57 @@ function terminFormularZeigen(kennung, vorgabeTag) {
 function zeitfelderUmschalten() {
   const ganztags = document.getElementById("formGanztags").checked;
   document.getElementById("formZeiten").hidden = ganztags;
+  /* Die Erinnerungsliste hängt daran: ohne Uhrzeit gibt es kein "15
+     Minuten vorher". Deshalb wird sie hier mit umgestellt und nicht
+     einmalig beim Öffnen. */
+  erinnerungAuswahlFuellen();
+  formErinnerungHinweisSetzen();
+}
+
+/* Füllt die Erinnerungsliste des Terminformulars.
+
+   Ohne Argument bleibt die bisherige Auswahl stehen, soweit es sie in der
+   neuen Liste noch gibt. Das ist der Fall, den man beim Umschalten auf
+   "ganztägig" erlebt: "Am Vortag, 18:00" steht in beiden Listen und soll
+   bleiben, "15 Minuten vorher" gibt es nur in einer und fällt weg. */
+function erinnerungAuswahlFuellen(vorgabe) {
+  const auswahl = document.getElementById("formErinnerung");
+  if (!auswahl) return;
+
+  const ganztags = document.getElementById("formGanztags").checked;
+  const liste = ganztags ? ERINNERUNG_TAG : ERINNERUNG_UHRZEIT;
+  const gewuenscht = vorgabe === undefined ? auswahl.value : (vorgabe || "");
+
+  auswahl.innerHTML = liste.map(eintrag => `
+    <option value="${eintrag[0]}"${
+      eintrag[0] === gewuenscht ? " selected" : ""}>${eintrag[1]}</option>`).join("");
+
+  // Stand dort etwas, das es jetzt nicht mehr gibt, greift keine Auswahl -
+  // dann ausdrücklich auf "keine" stellen statt auf den ersten Eintrag.
+  if (auswahl.value !== gewuenscht) auswahl.value = "";
+}
+
+/* Wie erinnerungHinweisSetzen() beim To-do, nur für das Terminformular.
+   Zwei Funktionen für dasselbe sind unschön, aber die Felder heißen
+   anders und der Bezug ist ein anderer: dort ein Tag, hier ein Zeitpunkt. */
+function formErinnerungHinweisSetzen() {
+  const hinweis = document.getElementById("formErinnerungHinweis");
+  if (!hinweis) return;
+
+  const auswahl = document.getElementById("formErinnerung");
+  const ganztags = document.getElementById("formGanztags").checked;
+  const tag = document.getElementById("formDatum").value;
+  const von = document.getElementById("formVon").value;
+
+  const bezug = ganztags ? tag : (tag && von ? tag + "T" + von : "");
+  const zeitpunkt = erinnerungZeitpunkt(auswahl ? auswahl.value : "", bezug);
+  if (!zeitpunkt) { hinweis.textContent = ""; return; }
+
+  const vergangen = zeitpunkt < new Date().toISOString().slice(0, 16);
+  hinweis.textContent = vergangen
+    ? "Dieser Zeitpunkt ist schon vorbei – es kommt keine Meldung mehr."
+    : "Meldet sich " + zeitpunktLesbar(zeitpunkt) + ".";
+  hinweis.classList.toggle("erinnerung-vorbei", vergangen);
 }
 
 function terminFormularSpeichern() {
@@ -3549,6 +4012,7 @@ function terminFormularSpeichern() {
     ort: document.getElementById("formOrt").value,
     notiz: document.getElementById("formNotiz").value,
     wichtig: document.getElementById("formWichtig").checked,
+    erinnerungVorgabe: document.getElementById("formErinnerung").value,
   });
 
   document.getElementById("terminFormHintergrund").hidden = true;
@@ -3582,6 +4046,13 @@ function terminFormVerbinden() {
 
   document.getElementById("formGanztags")
     .addEventListener("change", zeitfelderUmschalten);
+
+  /* Die Hinweiszeile muss auf alles reagieren, was den Zeitpunkt
+     verschiebt: Auswahl, Tag und Anfangszeit. */
+  for (const feldName of ["formErinnerung", "formDatum", "formVon"]) {
+    const feld = document.getElementById(feldName);
+    if (feld) feld.addEventListener("change", formErinnerungHinweisSetzen);
+  }
 
   document.getElementById("terminForm").addEventListener("submit", ereignis => {
     // Ohne das lädt der Browser die Seite neu und alles ist weg.
@@ -3651,6 +4122,7 @@ function geraeteVerbinden() {
   function oeffnen() {
     geraeteZeichnen();
     meldenZeichnen();
+    erinnerungsdienstZeichnen();
     themaZeichnen();
     fenster.hidden = false;
   }

@@ -1637,8 +1637,13 @@ a.knopf-schlicht {
   gap: 10px;
 }
 
+/* In der Uebersicht traegt die Ueberschrift die ganze Arbeit: man sucht
+   eine Notiz, indem man die Liste ueberfliegt. Deshalb groesser und
+   fetter als der Rest der Karte, nicht nur "etwas hervorgehoben". */
 .zettel-karte-titel {
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
   overflow-wrap: break-word;
   min-width: 0;
 }
@@ -1756,6 +1761,40 @@ a.knopf-schlicht {
 }
 
 /* --- Das Schreibfeld --------------------------------------------------- */
+
+/* Die Ueberschrift ist ein eigenes Feld, gross und fett - wie in der
+   Notizen-App von Apple. Gespeichert wird sie trotzdem als erste Zeile
+   desselben Textes, siehe zettelTeile() in app.js.
+
+   Ein <textarea> kann seine erste Zeile nicht anders formatieren als die
+   uebrigen; dafuer braeuchte es ein contenteditable, und das bringt auf
+   dem Handy mehr Aerger mit als es wert ist. Zwei Felder sind ehrlicher
+   und obendrein bedienbarer: die Tabulatortaste springt von der
+   Ueberschrift in den Text. */
+.zettel-titel {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung) var(--rundung) 0 0;
+  border-bottom: 0;
+  background: var(--flaeche);
+  color: var(--schrift);
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.zettel-titel:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
+.zettel-titel::placeholder { font-weight: 600; color: var(--schrift-leise); }
+
+/* Die beiden Felder sollen als EIN Blatt wirken, nicht als zwei Kaesten.
+   Deshalb stossen sie ohne Luecke aneinander und teilen sich die
+   Abrundung. */
+.zettel-titel + .zettel-feld {
+  border-radius: 0 0 var(--rundung) var(--rundung);
+  min-height: 150px;
+}
 
 .zettel-feld {
   width: 100%;
@@ -1912,3 +1951,58 @@ a.knopf-schlicht {
 }
 
 .termin-zettel-marke:hover { background: var(--notiz-flaeche-hell); }
+
+
+/* --- Erinnerungen -------------------------------------------------------- */
+
+/* Die Schnellwahl beim Faelligkeitsdatum: Heute, Morgen, Uebermorgen,
+   Naechster Montag. Dieselbe Knopfform wie "+ To-do", damit sie als
+   Nebensache erkennbar bleibt und nicht mit Speichern konkurriert. */
+.datum-schnell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.notiz-erinnerung {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--schrift-leise);
+}
+
+.notiz-erinnerung select,
+#formErinnerung {
+  padding: 7px 9px;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 14px;
+  max-width: 100%;
+}
+
+/* Sagt, WANN das konkret ist. "Am Vortag, 18:00" allein zwingt sonst zum
+   Nachrechnen, und genau das ist die Frage beim Einstellen. */
+.erinnerung-hinweis {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--schrift-leise);
+  min-height: 1em;
+}
+
+/* Ein Zeitpunkt in der Vergangenheit ist keine Erinnerung mehr, sondern
+   eine stille Enttaeuschung. Also deutlich sagen, dass nichts kommt. */
+.erinnerung-vorbei { color: var(--geaendert); font-weight: 600; }
+
+.todo-erinnerung {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--notiz-rand);
+  font-weight: 600;
+}
