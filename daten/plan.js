@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-23T20:55",
+ "geprueftAm": "2026-09-24T00:07",
  "fensterVon": "2026-09-21T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -1541,7 +1541,7 @@ const STUNDENPLAN = {
    "art": "Klausur",
    "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
    "dozent": "Knobloch",
-   "raum": "",
+   "raum": "CL: 5.0002",
    "anmerkung": "",
    "gruppe": ""
   },
@@ -1668,6 +1668,33 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-09-24T00:07",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1215572",
+      "start": "2026-10-20T15:00",
+      "ende": "2026-10-20T16:00",
+      "art": "Klausur",
+      "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
+      "dozent": "Knobloch",
+      "raum": "CL: 5.0002",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 5.0002"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-18T21:58",
    "anzahl": 4,
