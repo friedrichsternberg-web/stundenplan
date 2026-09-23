@@ -196,6 +196,15 @@ let angezeigterMontag = montagDerWoche(new Date());
 // "liste" oder "kalender".
 let ansicht = "liste";
 
+/* Für welche Woche die vergangenen Tage in der Liste aufgeklappt sind,
+   als Montag ("2026-09-21"). Leer heißt: zugeklappt.
+
+   Die Woche statt eines einfachen Ja/Nein, damit das Aufklappen nicht in
+   die nächste Woche mitwandert: wer diese Woche zurückschaut und dann
+   eine Woche weiterblättert, will dort nicht plötzlich alles offen sehen.
+   Nicht gespeichert – beim nächsten Öffnen steht wieder heute oben. */
+let vergangeneOffenFuer = "";
+
 // Welcher Bereich gerade offen ist: "plan", "zettel", "todos" oder
 // "aenderungen".
 let seite = "plan";
@@ -674,9 +683,57 @@ function kalenderTexteAnpassen() {
    Ein Kasten je Tag, Termine untereinander. Gut auf schmalen Bildschirmen
    und beim schnellen Nachschauen. */
 
-function listeBauen(tage) {
+/* In der Listenansicht steht der heutige Tag oben.
+
+   Montag und Dienstag sind am Mittwoch vorbei – und doch standen sie bis
+   jetzt ganz oben, und man musste an ihnen vorbeiscrollen, um zu sehen,
+   was heute ansteht. Jetzt sind sie eingeklappt, und ein Knopf darüber
+   holt sie zurück.
+
+   Das gilt nur für die LAUFENDE Woche. Blättert man zurück, will man ja
+   gerade das Vergangene sehen; blättert man vor, gibt es nichts
+   Vergangenes. Und nur für die Liste: im Kalender stehen die Tage
+   nebeneinander, dort kostet ein vergangener Tag keinen Platz nach unten.
+
+   heuteText lässt sich übergeben, damit der Test nicht vom Wochentag
+   abhängt, an dem er läuft. */
+function listeBauen(tage, heuteText) {
   const stuecke = [];
-  for (const eintrag of tage) {
+  const heute = heuteText || tagesSchluessel(new Date());
+
+  let sichtbar = tage;
+  if (tage.length > 0) {
+    const montag = tagesSchluessel(montagDerWoche(tage[0].datum));
+    const sonntag = tagesSchluessel(tageDazu(montagDerWoche(tage[0].datum), 6));
+    const laufendeWoche = montag <= heute && heute <= sonntag;
+    const vergangen = laufendeWoche
+      ? tage.filter(eintrag => eintrag.schluessel < heute) : [];
+
+    if (vergangen.length > 0) {
+      const offen = vergangeneOffenFuer === montag;
+      if (!offen) sichtbar = tage.filter(eintrag => eintrag.schluessel >= heute);
+
+      stuecke.push(`
+        <button type="button" class="vergangene-knopf"
+                data-vergangene-umschalten="${sicher(montag)}">
+          ${offen
+            ? "▾ Vergangene Tage ausblenden"
+            : "▸ " + vergangen.length + (vergangen.length === 1
+                ? " vergangenen Tag" : " vergangene Tage")
+              + " dieser Woche anzeigen"}
+        </button>`);
+
+      /* Ist heute ein freier Samstag, bleibt nach dem Einklappen nichts
+         übrig. Ein leerer Bereich unter dem Knopf sähe aus wie ein Fehler. */
+      if (!offen && sichtbar.length === 0) {
+        stuecke.push(`<p class="leer-text">
+          Für den Rest dieser Woche steht nichts mehr an.
+        </p>`);
+      }
+    }
+  }
+
+  for (const eintrag of sichtbar) {
     const tag = eintrag.datum;
     const termineDesTages = eintrag.termine;
     const istHeute = eintrag.istHeute;
@@ -1833,9 +1890,17 @@ function notizKlick(ereignis) {
                               + "[data-todo-haken],[data-aufgabe-neu],[data-termin],"
                               + "[data-termin-neu],[data-termin-bearbeiten],"
                               + "[data-zettel-neu],[data-zettel-oeffnen],"
-                              + "[data-datum-schnell]")
+                              + "[data-datum-schnell],[data-vergangene-umschalten]")
     : null;
   if (!ziel) return;
+
+  // Vergangene Tage der laufenden Woche auf- oder zuklappen.
+  const woche = ziel.getAttribute("data-vergangene-umschalten");
+  if (woche) {
+    vergangeneOffenFuer = vergangeneOffenFuer === woche ? "" : woche;
+    wocheZeichnen();
+    return;
+  }
 
   /* Schnellwahl beim Fälligkeitsdatum. Ändert nur das Feld, speichert
      nicht – so kann man erst "Morgen" tippen und dann noch den Text
@@ -3072,14 +3137,18 @@ function zettelFensterZeichnen() {
           </button>`).join("")}
       </div>`}
 
-    <div class="filter-knoepfe">
-      <button type="button" class="knopf-schlicht knopf-betont" id="zettelSpeichern">
-        Speichern
+    <!-- Kein Speichern-Knopf: gespeichert wird beim Tippen, siehe
+         zettelAutomatischSichern(). "Fertig" oben schließt nur noch.
+         Löschen steht immer im Dokument und wird für eine neue Notiz
+         nur versteckt - so kann es nach dem ersten automatischen
+         Speichern erscheinen, ohne das Fenster neu zu zeichnen und dabei
+         den Cursor aus dem Textfeld zu reißen. -->
+    <div class="zettel-fuss">
+      <span class="zettel-gesichert" id="zettelGesichert"></span>
+      <button type="button" class="knopf-schlicht knopf-gefahr" id="zettelLoeschen"
+              ${vorhandener ? "" : "hidden"}>
+        Löschen
       </button>
-      ${vorhandener ? `
-        <button type="button" class="knopf-schlicht knopf-gefahr" id="zettelLoeschen">
-          Löschen
-        </button>` : ""}
     </div>`;
 }
 
@@ -3090,6 +3159,10 @@ function zettelFensterZeichnen() {
    die Sorte Verlust, die man nicht bemerkt und nicht rückgängig machen
    kann. Die Notizen-App von Apple macht es ebenso. */
 function zettelFensterSchliessen() {
+  if (zettelSicherungsmarke) {
+    clearTimeout(zettelSicherungsmarke);
+    zettelSicherungsmarke = null;
+  }
   zettelSichern();
   offenerZettel = "";
   const fenster = document.getElementById("zettelHintergrund");
@@ -3097,6 +3170,49 @@ function zettelFensterSchliessen() {
   const auswahl = document.getElementById("verweisHintergrund");
   if (auswahl) auswahl.hidden = true;
   allesZeichnen();
+}
+
+/* Speichert, während man tippt – mit kurzer Verzögerung.
+
+   Vorher gab es zwei Knöpfe, "Fertig" und "Speichern", die dasselbe
+   taten. Einer genügt, und der braucht dann gar nicht mehr zu speichern:
+   die Notizen-App von Apple speichert auch, ohne dass man darum bittet.
+
+   Das ist mehr als Bequemlichkeit. Wischt man die App auf dem iPhone
+   weg, während das Fenster offen ist, gibt es kein "Fertig" mehr – bis
+   jetzt war dann alles Getippte verloren.
+
+   Die Verzögerung sorgt dafür, dass nicht jeder einzelne Buchstabe einen
+   Speichervorgang auslöst. Der Abgleich hat seine eigene Wartezeit
+   obendrauf, siehe WARTEN_NACH_EINGABE in sync.js. */
+let zettelSicherungsmarke = null;
+const ZETTEL_SICHERN_NACH = 700;
+
+function zettelAutomatischSichern() {
+  if (zettelSicherungsmarke) clearTimeout(zettelSicherungsmarke);
+  zettelSicherungsmarke = setTimeout(() => {
+    zettelSicherungsmarke = null;
+    zettelSichernUndMelden();
+  }, ZETTEL_SICHERN_NACH);
+}
+
+function zettelSichernUndMelden() {
+  if (!offenerZettel) return;
+  zettelSichern();
+
+  // Die Liste dahinter mitziehen, das Fenster selbst NICHT neu zeichnen –
+  // sonst spränge der Cursor mitten im Satz aus dem Textfeld.
+  zettelZeichnen();
+  reiterZahlenSetzen();
+
+  const gibtEs = Boolean(zettelZuKennung(offenerZettel));
+  const loeschen = document.getElementById("zettelLoeschen");
+  if (loeschen) loeschen.hidden = !gibtEs;
+  const titel = document.getElementById("zettelFensterTitel");
+  if (titel && gibtEs) titel.textContent = "Notiz";
+
+  const vermerk = document.getElementById("zettelGesichert");
+  if (vermerk) vermerk.textContent = gibtEs ? "Gespeichert" : "";
 }
 
 function zettelSichern() {
@@ -3238,6 +3354,8 @@ function verweisUmschalten(verweis) {
   offeneVerweise = verweiseSaeubern(offeneVerweise);
   verweisListeZeichnen();
   zettelFensterZeichnen();
+  // Auch eine Verknüpfung ist eine Änderung, die nicht verlorengehen darf.
+  zettelSichernUndMelden();
 }
 
 /* Einem Verweis folgen: Modul filtert die Liste, Notiz öffnet die Notiz,
@@ -4436,9 +4554,26 @@ function zettelVerbinden() {
       if (ereignis.target === fenster) zettelFensterSchliessen();
     });
 
+    /* Jede Eingabe in Überschrift oder Text stößt das Speichern an. Der
+       Zuhörer hängt am Kasten drumherum, der bleibt – die Felder selbst
+       werden beim Verknüpfen neu gezeichnet. */
+    document.getElementById("zettelInhalt").addEventListener("input", ereignis => {
+      const feld = ereignis.target;
+      if (feld && (feld.id === "zettelTitel" || feld.id === "zettelFeld")) {
+        const vermerk = document.getElementById("zettelGesichert");
+        if (vermerk) vermerk.textContent = "";
+        zettelAutomatischSichern();
+      }
+    });
+    document.getElementById("zettelInhalt").addEventListener("change", ereignis => {
+      if (ereignis.target && ereignis.target.id === "zettelWichtig") {
+        zettelSichernUndMelden();
+      }
+    });
+
     document.getElementById("zettelInhalt").addEventListener("click", ereignis => {
       const ziel = ereignis.target && ereignis.target.closest
-        ? ereignis.target.closest("#verweisNeu,#zettelSpeichern,#zettelLoeschen,"
+        ? ereignis.target.closest("#verweisNeu,#zettelLoeschen,"
                                   + "[data-verweis-weg],[data-verweis-oeffnen],"
                                   + "[data-zettel-oeffnen]") : null;
       if (!ziel) return;
@@ -4450,11 +4585,15 @@ function zettelVerbinden() {
         return;
       }
 
-      if (ziel.id === "zettelSpeichern") { zettelFensterSchliessen(); return; }
-
       if (ziel.id === "zettelLoeschen") {
         if (!confirm("Diese Notiz löschen?\n\n"
                      + "Sie verschwindet auch auf deinen anderen Geräten.")) return;
+        // Eine noch ausstehende Sicherung würde die Notiz sonst gleich
+        // wieder anlegen.
+        if (zettelSicherungsmarke) {
+          clearTimeout(zettelSicherungsmarke);
+          zettelSicherungsmarke = null;
+        }
         zettelSetzen(offenerZettel, { text: "", verweise: [] });
         offenerZettel = "";
         fenster.hidden = true;
@@ -4598,6 +4737,9 @@ function knoepfeVerbinden() {
 
   document.getElementById("wocheHeute").addEventListener("click", () => {
     angezeigterMontag = montagDerWoche(new Date());
+    /* Wer auf "Heute" tippt, will heute oben sehen - auch wenn er die
+       vergangenen Tage vorhin aufgeklappt hatte. */
+    vergangeneOffenFuer = "";
     wocheZeichnen();
   });
 

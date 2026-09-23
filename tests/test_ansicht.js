@@ -116,6 +116,7 @@ const werkzeug = eval(
   "  todosZeichnen: todosZeichnen," +
   "  listeBauen: listeBauen," +
   "  bearbeiten: function (an) { bearbeitenModus = an; }," +
+  "  vergangeneOffen: function (woche) { vergangeneOffenFuer = woche; }," +
   "  kalenderBauen: kalenderBauen," +
   "  aufgabenSammeln: aufgabenSammeln," +
   "  setzen: function (n, a) { notizen = n; aufgaben = a; grabsteine = {}; }," +
@@ -529,6 +530,95 @@ pruefe("auch hier steht nirgends \"Aufgabe\"",
 
 werkzeug.bearbeiten(false);
 werkzeug.setzen({}, []);
+
+
+abschnitt("10. In der Liste steht heute oben");
+
+/* Am Mittwoch sind Montag und Dienstag vorbei - trotzdem standen sie ganz
+   oben, und man musste an ihnen vorbeiscrollen. Jetzt sind sie in der
+   laufenden Woche eingeklappt, und ein Knopf holt sie zurueck.
+
+   "Heute" wird uebergeben statt aus der Uhr gelesen: sonst haengt der
+   Test vom Wochentag ab, an dem er laeuft, und faellt genau montags um,
+   weil es dann nichts Vergangenes gibt. */
+
+function wochentag(schluessel, titel) {
+  return {
+    datum: new Date(schluessel + "T00:00"), schluessel: schluessel,
+    termine: [{ id: "sked." + schluessel, start: schluessel + "T09:45",
+                ende: schluessel + "T11:15", titel: titel, raum: "",
+                dozent: "", art: "SU", anmerkung: "", gruppe: "" }],
+    aufgaben: [], ganztags: [], istHeute: false,
+  };
+}
+
+// Die Woche vom 21. bis 25.09.2026, Montag bis Freitag.
+const woche = [
+  wochentag("2026-09-21", "Montagsfach"),
+  wochentag("2026-09-22", "Dienstagsfach"),
+  wochentag("2026-09-23", "Mittwochsfach"),
+  wochentag("2026-09-24", "Donnerstagsfach"),
+  wochentag("2026-09-25", "Freitagsfach"),
+];
+
+werkzeug.bearbeiten(false);
+werkzeug.vergangeneOffen("");
+let liste = werkzeug.listeBauen(woche, "2026-09-23");
+
+pruefe("Montag steht NICHT in der Liste", liste.indexOf("Montagsfach") < 0);
+pruefe("Dienstag auch nicht", liste.indexOf("Dienstagsfach") < 0);
+pruefe("heute, Mittwoch, steht drin", liste.indexOf("Mittwochsfach") >= 0);
+pruefe("und der Rest der Woche", liste.indexOf("Freitagsfach") >= 0);
+pruefe("der Knopf sagt, wie viele fehlen",
+       liste.indexOf("2 vergangene Tage") >= 0);
+pruefe("und er steht VOR dem heutigen Tag",
+       liste.indexOf("data-vergangene-umschalten")
+       < liste.indexOf("Mittwochsfach"));
+
+// Aufgeklappt ist alles wieder da, in der richtigen Reihenfolge.
+werkzeug.vergangeneOffen("2026-09-21");
+liste = werkzeug.listeBauen(woche, "2026-09-23");
+pruefe("aufgeklappt steht Montag wieder da",
+       liste.indexOf("Montagsfach") >= 0);
+pruefe("vor dem Mittwoch",
+       liste.indexOf("Montagsfach") < liste.indexOf("Mittwochsfach"));
+pruefe("und der Knopf bietet das Zuklappen an",
+       liste.indexOf("ausblenden") >= 0);
+
+/* Das Aufklappen gilt fuer DIESE Woche. Blaettert man weiter, soll dort
+   nicht versehentlich alles offen sein - daher der Montag als Merker
+   statt eines einfachen Ja/Nein. */
+werkzeug.vergangeneOffen("2026-09-14");
+liste = werkzeug.listeBauen(woche, "2026-09-23");
+pruefe("aufgeklappt fuer eine ANDERE Woche bleibt hier zu",
+       liste.indexOf("Montagsfach") < 0);
+werkzeug.vergangeneOffen("");
+
+/* Andere Wochen: nichts eingeklappt. Zurueckblaettern heisst ja gerade,
+   das Vergangene sehen zu wollen. */
+liste = werkzeug.listeBauen(woche, "2026-10-07");
+pruefe("in einer vergangenen Woche steht alles da",
+       liste.indexOf("Montagsfach") >= 0 && liste.indexOf("Freitagsfach") >= 0);
+pruefe("ohne Knopf", liste.indexOf("data-vergangene-umschalten") < 0);
+
+liste = werkzeug.listeBauen(woche, "2026-09-10");
+pruefe("in einer kommenden Woche ebenso",
+       liste.indexOf("Montagsfach") >= 0
+       && liste.indexOf("data-vergangene-umschalten") < 0);
+
+// Montags gibt es nichts Vergangenes - also auch keinen Knopf.
+liste = werkzeug.listeBauen(woche, "2026-09-21");
+pruefe("am Montag gibt es keinen Knopf",
+       liste.indexOf("data-vergangene-umschalten") < 0);
+
+/* Ein freier Samstag: nach dem Einklappen bliebe nichts uebrig. Dann
+   muss dastehen, dass das Absicht ist - ein leerer Bereich sieht aus wie
+   ein Fehler. */
+liste = werkzeug.listeBauen(woche, "2026-09-26");
+pruefe("am freien Samstag steht ein Satz statt Leere",
+       liste.indexOf("Rest dieser Woche") >= 0);
+pruefe("und der Knopf zaehlt alle fuenf Tage",
+       liste.indexOf("5 vergangene Tage") >= 0);
 
 
 /* ====================================================================== */

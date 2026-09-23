@@ -36,6 +36,14 @@ merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
 
+In der **Liste** steht in der laufenden Woche immer der heutige Tag oben.
+Die vergangenen Tage dieser Woche sind eingeklappt; ein Knopf darüber holt
+sie zurück („▸ 2 vergangene Tage dieser Woche anzeigen"). In anderen Wochen
+ist nichts eingeklappt — wer zurückblättert, will ja gerade das Vergangene
+sehen. „Heute" klappt wieder zu. Im **Kalender** bleibt alles, wie es ist:
+dort stehen die Tage nebeneinander und kosten keinen Platz nach unten.
+
+
 Oben rechts schaltest du um; die Wahl bleibt im Browser gespeichert.
 
 - **Liste** — ein Kasten je Tag, Termine untereinander. Auf dem Handy am
@@ -487,6 +495,14 @@ anders formatieren als die übrigen; dafür bräuchte es ein
 `contenteditable`, und das bringt auf dem Handy mehr Ärger mit als es wert
 ist. Zwei Felder sind ehrlicher und obendrein bedienbarer — die
 Tabulatortaste springt von der Überschrift in den Text.
+
+**Gespeichert wird beim Tippen**, eine knappe Sekunde nach dem letzten
+Anschlag. Einen Speichern-Knopf gibt es nicht mehr; „Fertig" schließt nur
+noch. Vorher gab es beide, und sie taten dasselbe. Wichtiger als die
+Aufgeräumtheit: wischt man die App auf dem iPhone weg, während eine Notiz
+offen ist, gibt es kein „Fertig" — bis dahin war das Getippte dann weg.
+Beim Speichern wird nur die Liste dahinter neu gezeichnet, nie das Fenster
+selbst, sonst spränge der Cursor mitten im Satz aus dem Textfeld.
 
 `zettelTeile()` zerlegt, `zettelZusammensetzen()` fügt wieder zusammen. Die
 beiden müssen genau ineinander aufgehen, sonst wanderte bei jedem Öffnen
