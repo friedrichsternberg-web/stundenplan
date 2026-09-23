@@ -1118,6 +1118,15 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   max-height: 82vh;
   display: flex;
   flex-direction: column;
+  /* Das Fenster ist in der Hoehe begrenzt. Ohne diese Zeile durfte darin
+     aber nichts scrollen, und langer Inhalt lief unten aus dem weissen
+     Kasten heraus - im Verknuepfen-Fenster stand die halbe Modulliste
+     auf dem abgedunkelten Hintergrund. Jetzt scrollt das Fenster selbst,
+     und wo eine Liste eigens scrollen soll (Faecher, Verknuepfungen),
+     tut sie das weiterhin innen. overscroll-behavior verhindert, dass am
+     Ende der Liste die Seite dahinter mitrutscht. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .filter-kopf {
@@ -1125,6 +1134,13 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  /* Scrollt das Fenster, bleibt der Kopf mit "Fertig" oben stehen. Auf dem
+     Handy galt das schon, jetzt auch am Rechner. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--flaeche);
+  flex-shrink: 0;
 }
 
 .filter-hinweis {
@@ -1817,7 +1833,25 @@ a.knopf-schlicht {
 
 /* --- Das Fenster zum Verknuepfen --------------------------------------- */
 
+/* Im Verknuepfen-Fenster scrollt nur die Liste; Kopf und Suchfeld
+   bleiben stehen. Sonst verschwaende das Suchfeld beim Blaettern nach
+   oben, und man muesste zurueckscrollen, um etwas einzutippen.
+
+   min-height: 0 ist die entscheidende Zeile. Ein Element in einer
+   flex-Spalte wird sonst nie kleiner als sein Inhalt - dann greift auch
+   overflow nicht, und die Liste laeuft wieder aus dem Fenster. */
+#verweisListe {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Etwas Luft, damit die Randlinie der letzten Zeile nicht abgeschnitten
+     aussieht. */
+  padding-bottom: 2px;
+}
+
 .verweis-suche {
+  flex-shrink: 0;
   width: 100%;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -2005,4 +2039,54 @@ a.knopf-schlicht {
   font-size: 12px;
   color: var(--notiz-rand);
   font-weight: 600;
+}
+
+
+/* Der Fuss des Notizfensters. Vorher stiessen "+ Verknuepfen" und die
+   Knoepfe darunter ohne Abstand aneinander, die gestrichelte Marke sass
+   direkt auf dem Speichern-Knopf. Jetzt klar abgesetzt, mit einer Linie,
+   und links der leise Vermerk, dass gespeichert ist. */
+.zettel-fuss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--linie);
+  flex-shrink: 0;
+}
+
+.zettel-gesichert {
+  font-size: 12.5px;
+  color: var(--schrift-leise);
+  min-height: 1em;
+}
+
+/* Die Reihe der Verknuepfungen bekommt unten Luft, auch wenn sie leer ist
+   und nur den "+ Verknuepfen"-Knopf enthaelt. */
+.zettel-marken-gross { margin-bottom: 4px; }
+
+
+/* Der Knopf ueber der Liste, der die vergangenen Tage der Woche zurueckholt.
+   Breit und leise: er soll auffindbar sein, aber nicht mit dem heutigen
+   Tag darunter um Aufmerksamkeit konkurrieren. */
+.vergangene-knopf {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--linie);
+  border-radius: var(--rundung);
+  background: transparent;
+  color: var(--schrift-leise);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vergangene-knopf:hover {
+  border-style: solid;
+  color: var(--schrift);
 }
