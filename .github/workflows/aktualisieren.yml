@@ -159,10 +159,20 @@ jobs:
           # bei jedem Lauf ein leerer Eintrag entstehen.
           if git diff --staged --quiet; then
             echo "Nichts Neues - kein Commit."
-          else
-            git commit -m "Stand vom $(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')"
-            git push
+            exit 0
           fi
+          git commit -m "Stand vom $(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')"
+          # Bis zu drei Versuche. Am 24.09.2026 lehnte GitHub ein paar
+          # Minuten lang Uploads ab (auch von Hand) - ein Lauf gab sofort
+          # auf, und die Seite blieb auf dem alten Stand haengen, bis der
+          # naechste Zeitplan-Termin kam. Beim zweiten Versuch ging es.
+          for versuch in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Hochladen fehlgeschlagen (Versuch $versuch) - neuer Anlauf in 15 Sekunden."
+            sleep 15
+            git pull --rebase -q || true
+          done
+          exit 1
 
       - name: Benachrichtigung verschicken
         # Steht bewusst GANZ AM ENDE, nach dem Hochladen.
