@@ -129,8 +129,15 @@ const werkzeug = eval(
   "  setzen: function (n, a, t, g) { notizen = n; aufgaben = a;" +
   "        eigeneTermine = t || []; grabsteine = g || {};" +
   "        unbekannteEintraege = {}; }," +
-  "  filterSetzen: function (menge) { abgewaehlteFaecher = menge; }" +
+  "  filterSetzen: function (menge) { abgewaehlteFaecher = menge; }," +
+  /* Die Arbeit aus dem Uni-Plan haengt am echten Datum. Hier stoert sie
+     nur - diese Tests zaehlen HWR- und eigene Termine. Abschnitte, die sie
+     pruefen, stehen in test_ansicht.js. */
+  "  arbeitAus: function () { uniplan.arbeit = false; }," +
+  "  uniplanRoh: function (u) { if (u) uniplan = u; return uniplan; }," +
+  "  UNIPLAN_VORGABE: UNIPLAN_VORGABE" +
   "})");
+werkzeug.arbeitAus();
 
 
 /* --- Pruefwerk ---------------------------------------------------------- */
@@ -174,7 +181,7 @@ function gleich(was, a, b) {
    einfach in die Testdaten zu schreiben waere bequemer gewesen und haette
    die Frage verdeckt, um die es hier geht: was passiert mit Daten, die
    vor der Aenderung entstanden sind? */
-const SPAETER_DAZUGEKOMMEN = ["erinnerungVorgabe", "erinnerung"];
+const SPAETER_DAZUGEKOMMEN = ["erinnerungVorgabe", "erinnerung", "urlaub"];
 
 function ohneNeueFelder(liste) {
   return liste.map(function (eintrag) {
@@ -189,7 +196,8 @@ function ohneNeueFelder(liste) {
 function nurLeereNeueFelder(liste) {
   return liste.every(function (eintrag) {
     return SPAETER_DAZUGEKOMMEN.every(function (feld) {
-      return eintrag[feld] === "";
+      // Leer heisst: kein Text, bei "urlaub" false, bei Aufgaben gar nicht da.
+      return eintrag[feld] === "" || eintrag[feld] === false || eintrag[feld] === undefined;
     });
   });
 }
@@ -446,6 +454,35 @@ angestossen = 0;
 werkzeug.terminSetzen("termin-hand", { titel: "Von Hand", start: "2026-10-02T10:00" });
 pruefe("ein Eintrag von Hand dagegen schon", angestossen > 0);
 localStorage.removeItem("stundenplan.geraetecode");
+
+
+/* ====================================================================== */
+abschnitt("Uni-Plan: Einstellung und Urlaub ueberleben den Abgleich");
+
+werkzeug.setzen({}, [], [
+  { id: "termin-u", titel: "Urlaub", start: "2026-12-28T00:00", ende: "2027-01-01T23:59",
+    ganztags: true, ort: "", notiz: "", wichtig: false, urlaub: true, geaendert: 5 },
+], {});
+werkzeug.uniplanRoh({ arbeit: false, von: "07:30", bis: "16:00", land: "BB", geaendert: 77 });
+const mitEinstellung = werkzeug.sammeln();
+pruefe("die Einstellung wird mitgeschickt",
+       mitEinstellung.eintraege["einstellung-uniplan"]
+       && mitEinstellung.eintraege["einstellung-uniplan"].arbeit === "nein");
+werkzeug.setzen({}, [], [], {});
+werkzeug.uniplanRoh(Object.assign({}, werkzeug.UNIPLAN_VORGABE));
+werkzeug.uebernehmen(mitEinstellung);
+const zurueck = werkzeug.uniplanRoh();
+pruefe("und kommt auf dem anderen Geraet so an",
+       zurueck.arbeit === false && zurueck.von === "07:30" && zurueck.bis === "16:00"
+       && zurueck.land === "BB" && zurueck.geaendert === 77);
+pruefe("der Urlaub bleibt Urlaub", werkzeug.lage().termine.length === 1
+       && werkzeug.lage().termine[0].urlaub === true);
+
+// Nie geaendert: nichts mitschicken, damit keine Vorgabe fremde Einstellungen ueberschreibt.
+werkzeug.uniplanRoh(Object.assign({}, werkzeug.UNIPLAN_VORGABE));
+pruefe("eine nie geaenderte Einstellung wird nicht mitgeschickt",
+       !werkzeug.sammeln().eintraege["einstellung-uniplan"]);
+werkzeug.arbeitAus();
 
 
 /* ====================================================================== */

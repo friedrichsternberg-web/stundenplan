@@ -301,6 +301,9 @@
          steht hier, weil man ihn einmal im Semester braucht und nicht
          jeden Tag. Siehe faecherBereichZeichnen() in app.js. -->
     <div id="faecherBereich"></div>
+    <!-- Theorie- und Praxisphasen, Arbeitszeit, Urlaub. Das Fenster dazu
+         liegt unten; siehe uniplanBereichZeichnen() in app.js. -->
+    <div id="uniplanBereich"></div>
     <!-- Die Änderungen am Stundenplan. Früher ein eigener Reiter; neue
          Änderungen meldet jetzt die Übersicht mit einem großen Hinweis,
          die ganze Liste steht hier. Siehe aenderungenBereichZeichnen(). -->
@@ -354,6 +357,18 @@
       Was sich seit dem ersten Abruf am Plan geändert hat, das Neueste oben.
     </p>
     <div id="verlauf"></div>
+  </div>
+</div>
+
+<!-- Der Uni-Plan: Zeitplan des Studienjahrgangs, Arbeitszeit in den
+     Praxisphasen und Urlaub. Gefüllt von uniplanFensterZeichnen(). -->
+<div class="filter-hintergrund" id="uniplanHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Uni-Plan</h2>
+      <button type="button" class="knopf-schlicht" id="uniplanSchliessen">Fertig</button>
+    </div>
+    <div id="uniplanInhalt"></div>
   </div>
 </div>
 

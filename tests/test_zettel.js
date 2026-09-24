@@ -241,7 +241,7 @@ const ausgangslage = {
                geaendert: 222 }],
   termine: [{ id: "termin-1", titel: "Zahnarzt", start: "2026-09-30T10:00",
               ende: "2026-09-30T11:00", ganztags: false, ort: "Praxis",
-              notiz: "Karte mitnehmen", wichtig: false,
+              notiz: "Karte mitnehmen", wichtig: false, urlaub: false,
               erinnerungVorgabe: "1std", erinnerung: "2026-09-30T09:00",
               geaendert: 333 }],
   zettel: [

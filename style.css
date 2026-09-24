@@ -38,6 +38,12 @@
   --akzent-flaeche: #e7eefd;
   --neu-flaeche: #e3f4ea;
   --geaendert-flaeche: #fcf1dd;
+  /* Arbeit im Betrieb: bewusst gedeckt, damit sie neben Vorlesungen und
+     eigenen Terminen nicht schreit - sie ist ja jeden Tag gleich. */
+  --arbeit: #64748b;
+  --arbeit-flaeche: #eef1f5;
+  --theorie: #2f6fed;
+  --praxis: #1f9d55;
 }
 
 /* Die dunklen Farben. Es bleiben dieselben Variablennamen, deshalb muss
@@ -77,6 +83,10 @@
     --akzent-flaeche: #1f2a44;
     --neu-flaeche: #1b3025;
     --geaendert-flaeche: #33291a;
+    --arbeit: #94a3b8;
+    --arbeit-flaeche: #252a31;
+    --theorie: #5b8dfb;
+    --praxis: #3fbd76;
 }
 
 * { box-sizing: border-box; }
@@ -1703,11 +1713,11 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   --eigen-flaeche: #e6f5f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --eigen: #3ec79c;
-    --eigen-flaeche: #16302a;
-  }
+/* Dunkel nach der Wahl im ⚙-Fenster, nicht nach dem Betriebssystem -
+   sonst stimmte die Farbe nicht, wenn beides auseinanderliegt. */
+:root[data-thema="dunkel"] {
+  --eigen: #3ec79c;
+  --eigen-flaeche: #16302a;
 }
 
 /* In der Listenansicht ein farbiger Balken links, wie bei den Notizen. */
@@ -1774,7 +1784,8 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 .form-feld em { font-style: normal; opacity: .7; }
 
 .form-feld input,
-.form-feld textarea {
+.form-feld textarea,
+.form-feld select {
   font: inherit;
   font-size: 16px;   /* unter 16px zoomt iOS beim Antippen hinein */
   padding: 9px 11px;
@@ -1786,7 +1797,8 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 }
 
 .form-feld input:focus,
-.form-feld textarea:focus {
+.form-feld textarea:focus,
+.form-feld select:focus {
   outline: none;
   border-color: var(--eigen);
 }
@@ -2705,3 +2717,139 @@ a.knopf-schlicht {
 .tw-trend-hoch .tw-pfeil { color: var(--neu); }
 .tw-trend-runter .tw-pfeil { color: var(--wichtig); }
 .tw-trend-gleich .tw-pfeil { color: var(--akzent); }
+
+
+/* --- Uni-Plan: Arbeit im Kalender, Phasen-Widget, Fenster ----------------- */
+
+.termin-arbeit {
+  border-left: 3px solid var(--arbeit);
+  background: var(--arbeit-flaeche);
+  border-radius: 0 var(--rundung) var(--rundung) 0;
+}
+.termin-arbeit .termin-zeit { color: var(--arbeit); font-weight: 600; }
+
+.kalender-termin-arbeit {
+  background: var(--arbeit-flaeche);
+  color: var(--schrift);
+  border-left: 3px solid var(--arbeit);
+}
+
+.heute-arbeit .heute-punkt::after { border-color: var(--arbeit); }
+.heute-arbeit.heute-jetzt .heute-punkt::after { background: var(--arbeit); box-shadow: 0 0 0 4px var(--arbeit-flaeche); }
+
+/* Die laufende Phase mit Fortschrittsbalken. */
+.up-jetzt { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; }
+.up-jetzt-text { font-size: 14px; }
+.up-jetzt-rest { margin-left: auto; font-size: 13px; color: var(--schrift-leise); }
+
+.up-marke {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.up-marke-theorie { background: var(--theorie); }
+.up-marke-praxis { background: var(--praxis); }
+
+.up-fortschritt {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--flaeche-gedaempft);
+  margin: 8px 0 14px;
+  overflow: hidden;
+}
+.up-fortschritt span { display: block; height: 100%; border-radius: 999px; }
+.up-fortschritt-theorie span { background: var(--theorie); }
+.up-fortschritt-praxis span { background: var(--praxis); }
+
+/* Die Leiste bis zum Studienende: Phasen als farbige Stücke, Fristen als
+   Striche darüber. */
+.up-leiste {
+  position: relative;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--flaeche-gedaempft);
+  overflow: hidden;
+}
+.up-stueck { position: absolute; top: 0; bottom: 0; }
+.up-stueck + .up-stueck { box-shadow: inset 2px 0 0 var(--flaeche); }
+.up-stueck-theorie { background: var(--theorie); opacity: .85; }
+.up-stueck-praxis { background: var(--praxis); opacity: .85; }
+.up-strich {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--geaendert);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--flaeche);
+}
+
+.up-achse { position: relative; height: 18px; margin-top: 3px; font-size: 11px; color: var(--schrift-leise); }
+.up-achse > span:first-child { position: absolute; left: 0; }
+.up-jahr { position: absolute; transform: translateX(-50%); }
+.up-achse-ende { position: absolute; right: 0; }
+
+.up-legende { display: flex; gap: 14px; font-size: 12px; color: var(--schrift-leise); margin: 2px 0 8px; }
+.up-leg::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+.up-leg-theorie::before { background: var(--theorie); }
+.up-leg-praxis::before { background: var(--praxis); }
+.up-leg-frist::before { width: 3px; background: var(--geaendert); }
+
+.up-liste { border-top: 1px solid var(--linie); padding-top: 4px; }
+.up-eintrag { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
+.up-eintrag + .up-eintrag { border-top: 1px solid var(--linie); }
+.up-punkt { flex: 0 0 10px; height: 10px; border-radius: 3px; }
+.up-eintrag-theorie .up-punkt { background: var(--theorie); }
+.up-eintrag-praxis .up-punkt { background: var(--praxis); }
+.up-eintrag-frist .up-punkt { background: var(--geaendert); border-radius: 50%; }
+.up-eintrag-urlaub .up-punkt { background: var(--eigen); border-radius: 50%; }
+.up-eintrag-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.up-leise { font-size: 12px; color: var(--schrift-leise); }
+.up-block { display: block; }
+.up-wann { flex-shrink: 0; font-size: 12px; color: var(--schrift-leise); }
+
+/* Das Fenster */
+.up-abstand { margin-top: 22px; }
+
+.up-urlaub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linie);
+  font-size: 14px;
+}
+
+.up-urlaub-neu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.up-urlaub-neu .form-feld { flex: 1 1 130px; }
+
+.up-tabelle { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.up-tabelle td, .up-tabelle th { padding: 6px 4px; border-top: 1px solid var(--linie); text-align: left; vertical-align: top; }
+.up-halbjahr th { padding-top: 14px; border-top: 0; font-size: 13px; color: var(--schrift-leise); font-weight: 700; }
+.up-zahl { text-align: right; color: var(--schrift-leise); white-space: nowrap; }
+.up-frist-zeile td { color: var(--schrift); }
+.up-vorbei { opacity: .45; }
+.up-jetzt-zeile td { background: var(--akzent-flaeche); }
+
+.up-tabelle td:first-child { white-space: nowrap; }
+.up-frueher { margin-top: 14px; }
+.up-frueher summary { cursor: pointer; font-size: 13px; color: var(--akzent); padding: 4px 0; }

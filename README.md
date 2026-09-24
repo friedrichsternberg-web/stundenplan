@@ -56,6 +56,45 @@ Minute neu, damit „läuft“ nicht stehenbleibt.
 Welcher Reiter beim Öffnen kommt: der zuletzt benutzte, wenn das keine
 Viertelstunde her ist, sonst die Übersicht.
 
+## Uni-Plan: Theorie, Praxis, Arbeit und Urlaub
+
+Friedrich studiert dual und wechselt alle paar Monate zwischen Hochschule
+und Betrieb. Die Phasen stehen im Zeitplan des Fachbereichs Duales Studium
+für den Studienjahrgang 2024 (PDF, Stand 09.02.2023), abgetippt in
+`UNI_PLAN` in `app.js`: 15 Phasen in sechs Studienhalbjahren und die
+Fristen (Praxistransferberichte, Studienarbeit, Transferprüfung,
+Bachelorarbeit, Bachelorprüfung). Im PDF steht als Ende der mündlichen
+Transferprüfung der „31.02.2027“; den Tag gibt es nicht, übernommen ist
+der 31.01.2027 mit einem Hinweis.
+
+**Arbeit.** In den Praxisphasen steht montags bis freitags „Arbeit
+08:00–16:30“ im Plan (Liste, Kalender, Heute, Als Nächstes), in Grau.
+Diese Einträge werden ausgerechnet, nicht gespeichert (`arbeitsTermine()`):
+eine andere Arbeitszeit gilt sofort für alle Tage. Frei sind Wochenenden,
+gesetzliche Feiertage und Urlaub. Feiertage gelten nach dem Ort des
+Betriebs, voreingestellt Mecklenburg-Vorpommern (bundesweite Feiertage,
+dazu Frauentag seit 2023 und Reformationstag); Berlin und Brandenburg sind
+wählbar. Ostern rechnet `ostersonntag()`, daran hängen Karfreitag,
+Ostermontag, Himmelfahrt und Pfingstmontag.
+
+**Urlaub.** Unter ⚙ → Uni-Plan → „Uni-Plan und Urlaub“: von, bis, „+ Urlaub
+eintragen“. Ein Urlaub ist ein eigener ganztägiger Termin mit dem Feld
+`urlaub`, steht also auch im Kalender, wird abgeglichen und landet im
+Kalender-Feed. Neben jedem Urlaub steht, wie viele Arbeitstage er kostet.
+
+**Einstellungen abgleichen.** Arbeitszeit, An/Aus und Bundesland liegen als
+ein Eintrag `einstellung-uniplan` im Abgleich, damit Handy und Laptop
+dasselbe zeigen. Solange nie etwas geändert wurde, wird nichts
+mitgeschickt.
+
+**Widget „Studienphasen“.** Auf der Übersicht: die laufende Phase mit
+„Woche 7 von 12“ und Fortschrittsbalken, eine Leiste von heute bis zum
+Studienende (Theorie blau, Praxis grün, Fristen als Striche) und die
+nächsten fünf Stationen mit „in 6 Wochen“. Vergangenes steht dort nicht.
+
+Nicht im Apple-Kalender-Feed: die Arbeit. Der Feed wird auf dem Server
+gebaut und kennt den Uni-Plan nicht.
+
 ## Training aus Gymbro
 
 Gymbro (gymbro.tyl3r.de) ist die Web-App, in der Friedrich und seine

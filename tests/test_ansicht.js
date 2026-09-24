@@ -142,9 +142,24 @@ const werkzeug = eval(
   "  startAenderungen: startAenderungen," +
   "  ungesehen: ungeseheneAenderungen," +
   "  kurzerTitel: kurzerTitel," +
+  "  uniplanSetzenTest: function (felder) { uniplan = uniplanGeraderuecken(Object.assign({}, uniplan, felder)); }," +
+  "  arbeitsTermine: arbeitsTermine," +
+  "  feiertagAm: feiertagAm," +
+  "  ostersonntag: ostersonntag," +
+  "  uniplanAusblick: uniplanAusblick," +
+  "  uniplanStartKarte: uniplanStartKarte," +
+  "  urlaubEintragen: urlaubEintragen," +
+  "  urlaubsTage: urlaubsTage," +
+  "  alleAngezeigten: alleAngezeigtenTermine," +
+  "  uniplanWert: function () { return uniplan; }," +
+  "  UNIPLAN_VORGABE: UNIPLAN_VORGABE," +
   "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }" +
   "})");
 
+
+/* Die Arbeit aus dem Uni-Plan haengt am echten Datum und wuerde in "Als
+   Naechstes" und "Heute" auftauchen. Aus, bis Abschnitt 15 sie prueft. */
+werkzeug.uniplanSetzenTest({ arbeit: false });
 
 /* --- Pruefwerk ---------------------------------------------------------- */
 
@@ -1056,6 +1071,79 @@ trend = trendBei([].concat(trainingsWoche("2026-09-15", 2), trainingsWoche("2026
 pruefe("gleich viel: Trend gleich", trend.richtung === "gleich");
 trend = trendBei(trainingsWoche("2026-09-22", 3));
 pruefe("nur diese Woche trainiert: kein Trend, sie ist nicht vorbei", trend.richtung === "keine");
+
+
+/* ====================================================================== */
+abschnitt("15. Uni-Plan: Arbeit, Feiertage, Urlaub, Ausblick");
+
+pruefe("Ostern 2026 ist am 5. April", werkzeug.ostersonntag(2026) === "2026-04-05");
+pruefe("Ostern 2027 ist am 28. Maerz", werkzeug.ostersonntag(2027) === "2027-03-28");
+pruefe("Karfreitag 2027 ist frei", werkzeug.feiertagAm("2027-03-26", "BE") === "Karfreitag");
+pruefe("Frauentag in Berlin, nicht in Brandenburg",
+       werkzeug.feiertagAm("2027-03-08", "BE") === "Frauentag" && werkzeug.feiertagAm("2027-03-08", "BB") === "");
+pruefe("Reformationstag in Brandenburg, nicht in Berlin",
+       werkzeug.feiertagAm("2028-10-31", "BB") === "Reformationstag" && werkzeug.feiertagAm("2028-10-31", "BE") === "");
+pruefe("Mecklenburg-Vorpommern hat beide",
+       werkzeug.feiertagAm("2027-03-08", "MV") === "Frauentag"
+       && werkzeug.feiertagAm("2028-10-31", "MV") === "Reformationstag");
+pruefe("den Frauentag in MV aber erst seit 2023", werkzeug.feiertagAm("2022-03-08", "MV") === "");
+pruefe("Voreinstellung ist Mecklenburg-Vorpommern", werkzeug.UNIPLAN_VORGABE.land === "MV");
+
+werkzeug.eigene([]);
+werkzeug.uniplanSetzenTest({ arbeit: true, von: "08:00", bis: "16:30", land: "BE" });
+let arbeit = werkzeug.arbeitsTermine();
+const arbeitAm = tag => arbeit.filter(t => t.id === "arbeit-" + tag)[0];
+pruefe("Montag in der Praxisphase: Arbeit 08:00 bis 16:30",
+       arbeitAm("2026-11-02") && arbeitAm("2026-11-02").start === "2026-11-02T08:00"
+       && arbeitAm("2026-11-02").ende === "2026-11-02T16:30");
+pruefe("Samstag nicht", !arbeitAm("2026-11-07"));
+pruefe("in der Theoriephase nicht", !arbeitAm("2026-09-24") && !arbeitAm("2027-02-01"));
+pruefe("am 1. Weihnachtstag nicht", !arbeitAm("2026-12-25"));
+pruefe("am 1. Mai nicht, am Montag danach schon",
+       !arbeitAm("2026-05-01") && arbeitAm("2026-05-18"));
+pruefe("die letzte Praxisphase reicht bis Freitag, 24.09.2027",
+       arbeitAm("2027-09-24") && !arbeitAm("2027-09-27"));
+pruefe("Arbeit steht mit im Plan", werkzeug.alleAngezeigten().some(t => t.id === "arbeit-2026-11-02"));
+
+werkzeug.uniplanSetzenTest({ von: "09:00", bis: "17:30" });
+arbeit = werkzeug.arbeitsTermine();
+pruefe("andere Arbeitszeit gilt sofort fuer alle Tage",
+       arbeitAm("2026-11-02").start === "2026-11-02T09:00" && arbeitAm("2027-06-01").ende === "2027-06-01T17:30");
+
+// Urlaub zwischen den Jahren: 28.12. bis 1.1. - der 1.1. ist ohnehin Feiertag.
+werkzeug.urlaubEintragen("2026-12-28", "2027-01-01");
+arbeit = werkzeug.arbeitsTermine();
+pruefe("im Urlaub keine Arbeit", !arbeitAm("2026-12-28") && !arbeitAm("2026-12-31"));
+pruefe("davor und danach schon", arbeitAm("2026-12-23") && arbeitAm("2027-01-04"));
+pruefe("der Urlaub kostet vier Arbeitstage (der 1.1. ist Feiertag)",
+       werkzeug.urlaubsTage({ von: "2026-12-28", bis: "2027-01-01" }) === 4);
+pruefe("ein Urlaub in der Theoriephase kostet keinen",
+       werkzeug.urlaubsTage({ von: "2026-10-05", bis: "2026-10-09" }) === 0);
+pruefe("ohne ersten Tag gibt es eine Meldung statt eines kaputten Eintrags",
+       werkzeug.urlaubEintragen("", "") !== "");
+
+werkzeug.uniplanSetzenTest({ arbeit: false });
+pruefe("ausgeschaltet: keine Arbeit mehr", werkzeug.arbeitsTermine().length === 0);
+
+// Ausblick vom 24.09.2026 aus
+const blick = werkzeug.uniplanAusblick("2026-09-24");
+pruefe("gerade Theorie im 5. Studienhalbjahr",
+       blick.aktuell && blick.aktuell.art === "theorie" && blick.aktuell.halbjahr === 5);
+pruefe("Woche 7 von 12, noch 38 Tage", blick.aktuell.woche === 7 && blick.aktuell.wochen === 12
+       && blick.aktuell.nochTage === 38);
+pruefe("als Naechstes die Praxisphase ab 02.11.2026",
+       blick.eintraege.filter(e => e.art !== "urlaub")[0].von === "2026-11-02");
+pruefe("Vergangenes ist nicht dabei (Abgabe Studienarbeit 17.08.2026)",
+       !blick.eintraege.some(e => e.titel === "Abgabe der Studienarbeit"));
+pruefe("der Urlaub steht im Ausblick", blick.eintraege.some(e => e.art === "urlaub" && e.von === "2026-12-28"));
+pruefe("die Bachelorarbeit auch", blick.eintraege.some(e => e.titel === "Abgabe der Bachelorarbeit"));
+
+let karte = werkzeug.uniplanStartKarte(new Date(2026, 8, 24, 12, 0));
+pruefe("das Widget zeigt die laufende Woche", karte.indexOf("Woche 7 von 12") >= 0);
+pruefe("und nichts Vergangenes", karte.indexOf("Studienarbeit") < 0 && karte.indexOf("2025") < 0);
+pruefe("keine kaputten Werte im Widget", !/undefined|NaN/.test(karte));
+pruefe("nach dem Studium kein Widget", werkzeug.uniplanStartKarte(new Date(2027, 9, 5)) === "");
+werkzeug.eigene([]);
 
 
 /* ====================================================================== */
