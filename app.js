@@ -759,23 +759,6 @@ function startZeichnen() {
   const karten = [];
   const trainingKarteStart = trainingStartKarte(jetzt);
 
-  // --- Die vier nächsten To-dos -------------------------------------------
-  const gruppenTitel = {};
-  for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
-  const todoInhalt = todos.offen === 0
-    ? `<p class="start-leer">Nichts offen.</p>`
-    : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
-        gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
-          ? gruppenTitel[gruppe]
-          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
-        gruppe === "ueberfaellig")).join("");
-  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
-    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
-                  breit: !trainingKarteStart }));
-
-  // --- Training, oben rechts ----------------------------------------------
-  if (trainingKarteStart) karten.push(trainingKarteStart);
-
   // --- Heute: Termine, Ganztägiges, fällige To-dos ------------------------
   const h = heuteSammeln(jetzt);
   const anzahlText = [
@@ -824,6 +807,23 @@ function startZeichnen() {
     ${heuteTodos ? `<div class="heute-abschnitt">To-dos für heute</div>${heuteTodos}` : ""}
     ${leer ? "" : ""}`,
     { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
+
+  // --- Die vier nächsten To-dos -------------------------------------------
+  const gruppenTitel = {};
+  for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
+  const todoInhalt = todos.offen === 0
+    ? `<p class="start-leer">Nichts offen.</p>`
+    : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
+        gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+          ? gruppenTitel[gruppe]
+          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
+        gruppe === "ueberfaellig")).join("");
+  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
+    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
+                  breit: !trainingKarteStart }));
+
+  // --- Training, rechts neben den To-dos ------------------------------------
+  if (trainingKarteStart) karten.push(trainingKarteStart);
 
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
