@@ -2857,7 +2857,6 @@ a.knopf-schlicht {
    sind .start-karte; bereichKarte() in app.js baut sie für jeden Bereich. */
 
 .bereich-kopf,
-.plan-ueberblick,
 .gruppen-karte { margin-bottom: 14px; }
 
 .start-karte-kopf .knopf-schlicht.start-klein { flex-shrink: 0; }
@@ -2866,47 +2865,6 @@ a.knopf-schlicht {
 .start-symbol-grau { background: var(--flaeche-gedaempft); color: var(--schrift-leise); }
 
 /* --- Plan ---------------------------------------------------------------- */
-
-.woche-balken {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  height: 104px;
-  margin-top: 4px;
-}
-
-.woche-spalte {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-width: 0;
-}
-
-.woche-wert { font-size: 11px; font-weight: 600; color: var(--schrift-leise); height: 14px; }
-
-.woche-saeule {
-  flex: 1;
-  width: 100%;
-  max-width: 34px;
-  display: flex;
-  flex-direction: column-reverse;
-  border-radius: 6px;
-  background: var(--flaeche-gedaempft);
-  overflow: hidden;
-}
-.woche-teil { display: block; width: 100%; }
-.woche-teil + .woche-teil { box-shadow: 0 -2px 0 var(--flaeche); }
-.woche-teil-uni { background: var(--theorie); }
-.woche-teil-eigen { background: var(--eigen); }
-.woche-teil-arbeit { background: var(--arbeit); }
-
-.woche-name { font-size: 11px; color: var(--schrift-leise); }
-.woche-heute .woche-name { color: var(--akzent); font-weight: 700; }
-.woche-heute .woche-saeule { box-shadow: 0 0 0 2px var(--akzent-flaeche); }
-.woche-leg-eigen::before { background: var(--eigen); }
-.woche-leg-arbeit::before { background: var(--arbeit); }
 
 /* Tageskarten wie die Karten der Übersicht, mit einer Datumskachel. */
 .tag {
@@ -3107,3 +3065,25 @@ a.knopf-schlicht {
 #seiteTraining .start-zahl:hover { background: var(--flaeche); }
 #seiteTraining .start-zahl-wert { color: var(--notiz-rand); }
 #seiteTraining .training-alle { border-radius: 14px; }
+
+/* --- Übersicht: To-dos links, Training und Notizen rechts ----------------
+
+   Ein eigenes Raster über die ganze Breite, mit zwei gleich breiten
+   Spalten. stretch macht beide Spalten gleich hoch; rechts wächst die
+   letzte Karte mit, links die To-do-Karte - so enden beide unten auf
+   derselben Linie, egal welche Seite mehr Inhalt hat. */
+.start-paar {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.start-paar-allein { grid-template-columns: minmax(0, 1fr); }
+.start-spalte { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.start-spalte > .start-karte:last-child { flex: 1 1 auto; }
+
+@media (max-width: 700px) {
+  .start-paar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .start-spalte { gap: 12px; }
+}
