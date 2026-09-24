@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "b142f24f";
+const GEBAUTE_VERSION = "8cb3ea6d";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -705,6 +705,11 @@ const SYMBOLE = {
   training: '<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/>',
   notizen: '<path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
   hinweis: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.3v.2"/>',
+  balken: '<path d="M4 20V11M10 20V5M16 20v-8M21.5 20h-19"/>',
+  muskel: '<path d="M7 20c-2-3-2-7 1-10l3-3c1.5-1.5 4-1 4.5 1l.5 2c1.5-.5 3.5.5 3.5 2.5 0 3-3 5-6 5H11"/>',
+  gewicht: '<path d="M6.5 7h11l2 13h-15z"/><circle cx="12" cy="4.5" r="2"/>',
+  pokal: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7"/>',
+  pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
   phasen: '<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.5c3 2.2 8 2.2 11 0v-4.5M21.5 9.5v5"/>',
 };
 
@@ -861,6 +866,27 @@ function startZeichnen() {
   bereich.innerHTML = stuecke.join("");
 }
 
+/* Eine Karte im Stil der Übersicht, für alle Bereiche: Kopf mit farbigem
+   Symbol, Titel und Unterzeile, rechts Platz für einen Knopf, darunter
+   der Inhalt. So sehen Plan, To-dos, Notizen und Training aus wie die
+   Übersicht, ohne dass jeder Bereich seinen eigenen Kopf nachbaut.
+
+   o: { titel, symbol, farbe, unterzeile, rechts, inhalt, klasse } */
+function bereichKarte(o) {
+  return `
+    <section class="start-karte${o.klasse ? " " + o.klasse : ""}">
+      <div class="start-karte-kopf">
+        ${o.symbol ? `<span class="start-symbol start-symbol-${o.farbe || "blau"}">${symbol(o.symbol)}</span>` : ""}
+        <div class="start-karte-titel">
+          <h2>${sicher(o.titel)}</h2>
+          ${o.unterzeile ? `<span class="start-unterzeile">${sicher(o.unterzeile)}</span>` : ""}
+        </div>
+        ${o.rechts || ""}
+      </div>
+      ${o.inhalt ? `<div class="start-karte-inhalt">${o.inhalt}</div>` : ""}
+    </section>`;
+}
+
 /* Eine To-do-Zeile, wie sie in "Nächste To-dos" und in "Heute" steht. */
 function startTodoZeile(eintrag, wann, ueberfaellig) {
   return `
@@ -996,6 +1022,8 @@ function wocheZeichnen() {
       istHeute: schluessel === heuteSchluessel,
     });
   }
+
+  planUeberblickZeichnen(tage, montag);
 
   document.getElementById("tage").innerHTML =
     ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
@@ -1136,6 +1164,67 @@ function kalenderTexteAnpassen() {
 
    heuteText lässt sich übergeben, damit der Test nicht vom Wochentag
    abhängt, an dem er läuft. */
+/* Der Kopf über dem Plan: die Kalenderwoche, was in ihr los ist, und je
+   Tag ein Balken mit den Stunden - Vorlesung blau, eigene Termine grün,
+   Arbeit grau. So sieht man vor dem ersten Scrollen, welcher Tag voll
+   ist und wo Luft bleibt. */
+function planUeberblickZeichnen(tage, montag) {
+  const bereich = document.getElementById("planUeberblick");
+  if (!bereich) return;
+
+  const stunden = t => Math.max(0, (alsDatum(t.ende) - alsDatum(t.start)) / 3600000);
+  const heute = tagesSchluessel(new Date());
+  let uni = 0, eigen = 0, arbeit = 0, anzahl = 0;
+  const saeulen = tage.map(tag => {
+    const teile = { uni: 0, eigen: 0, arbeit: 0 };
+    for (const t of tag.termine) {
+      const art = t.arbeit ? "arbeit" : t.eigen ? "eigen" : "uni";
+      teile[art] += stunden(t);
+    }
+    uni += teile.uni; eigen += teile.eigen; arbeit += teile.arbeit;
+    anzahl += tag.termine.filter(t => !t.arbeit).length;
+    return { tag, teile, summe: teile.uni + teile.eigen + teile.arbeit };
+  });
+  const hoechste = Math.max(8, ...saeulen.map(x => x.summe));
+  const h = zahl => String(Math.round(zahl * 10) / 10).replace(".", ",");
+
+  const unterzeile = [
+    anzahl ? anzahl + (anzahl === 1 ? " Termin" : " Termine") : "",
+    uni ? h(uni) + " Std. Uni" : "",
+    arbeit ? h(arbeit) + " Std. Arbeit" : "",
+    eigen ? h(eigen) + " Std. Eigenes" : "",
+  ].filter(Boolean).join(" · ") || "Nichts eingetragen";
+
+  const phase = phaseAm(tagesSchluessel(tageDazu(montag, 2)));
+
+  bereich.innerHTML = bereichKarte({
+    titel: "KW " + kalenderwoche(montag),
+    symbol: "heute", farbe: "blau",
+    unterzeile: unterzeile,
+    rechts: phase ? `<span class="up-marke up-marke-${phase.art}">${PHASEN_NAME[phase.art]}</span>` : "",
+    klasse: "plan-ueberblick",
+    inhalt: `
+      <div class="woche-balken">
+        ${saeulen.map(x => `
+          <div class="woche-spalte${x.tag.schluessel === heute ? " woche-heute" : ""}"
+               title="${sicher(WOCHENTAGE[x.tag.datum.getDay()])}: ${h(x.summe)} Std.">
+            <span class="woche-wert">${x.summe ? h(x.summe) : ""}</span>
+            <span class="woche-saeule">
+              ${["arbeit", "eigen", "uni"].map(art => x.teile[art]
+                ? `<span class="woche-teil woche-teil-${art}" style="height:${(x.teile[art] / hoechste * 100).toFixed(1)}%"></span>`
+                : "").join("")}
+            </span>
+            <span class="woche-name">${WOCHENTAGE[x.tag.datum.getDay()].slice(0, 2)}</span>
+          </div>`).join("")}
+      </div>
+      <div class="up-legende">
+        ${uni ? `<span class="up-leg up-leg-theorie">Uni</span>` : ""}
+        ${eigen ? `<span class="up-leg woche-leg-eigen">Eigenes</span>` : ""}
+        ${arbeit ? `<span class="up-leg woche-leg-arbeit">Arbeit</span>` : ""}
+      </div>`,
+  });
+}
+
 function listeBauen(tage, heuteText) {
   const stuecke = [];
   const heute = heuteText || tagesSchluessel(new Date());
@@ -1187,8 +1276,10 @@ function listeBauen(tage, heuteText) {
     stuecke.push(`
       <div class="${klassen}">
         <div class="tag-kopf">
-          <span>${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}</span>
-          <span class="tag-kopf-zusatz">${kopfZusatz}</span>
+          <span class="tag-kachel"><small>${WOCHENTAGE[tag.getDay()].slice(0, 2)}</small><strong>${tag.getDate()}</strong></span>
+          <span class="tag-kopf-titel">${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}
+            <span class="tag-kopf-zusatz">${kopfZusatz}${termineDesTages.length
+              ? " · " + termineDesTages.length + (termineDesTages.length === 1 ? " Termin" : " Termine") : ""}</span></span>
         </div>
         ${termineDesTages.length === 0
           ? `<div class="tag-leer">Keine Veranstaltung.</div>`
@@ -1223,7 +1314,7 @@ function terminZeichnen(termin) {
   return `
     <div class="termin${termin.eigen ? " termin-eigen" : ""}${termin.arbeit ? " termin-arbeit" : ""}"${
       termin.eigen ? ` data-termin-bearbeiten="${sicher(termin.id)}"` : ""}>
-      <div class="termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
+      <div class="termin-zeit"><strong>${uhrzeit(termin.start)}</strong><span>${uhrzeit(termin.ende)}</span></div>
       <div class="termin-inhalt">
         <div class="termin-titel">${sicher(termin.titel)}</div>
         <div class="termin-details">${sicher(details)}</div>
@@ -3118,25 +3209,48 @@ function todosZeichnen() {
   const hinweise = hinweiseSammeln().filter(h => !istVorbei(h.start));
 
   const stuecke = [];
+  const faecher = nachZeitgruppen(offen, new Date());
 
-  // --- Deine Aufgaben ------------------------------------------------
-  stuecke.push(`
-    <div class="todo-kopfzeile">
-      <h2 class="todo-ueberschrift">Meine To-dos</h2>
-      ${offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
-        <button type="button" class="knopf-schlicht"
-                data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">
-          + Neues To-do
-        </button>`}
-    </div>`);
+  /* Der Kopf: wie viel offen ist, und als Balken, wie es sich auf die
+     Zeitgruppen verteilt. Ein langer roter Anteil vorn sagt mehr als die
+     Zahl darüber. */
+  const verteilung = ZEITGRUPPEN.filter(g => faecher[g.schluessel].length > 0)
+    .map(g => ({ g, n: faecher[g.schluessel].length }));
+  const kopfInhalt = offen.length === 0 ? "" : `
+    <div class="todo-verteilung" role="img"
+         aria-label="${sicher(verteilung.map(v => v.g.titel + " " + v.n).join(", "))}">
+      ${verteilung.map(v => `<span class="todo-anteil todo-anteil-${v.g.schluessel}"
+                                  style="flex-grow:${v.n}" title="${sicher(v.g.titel)}: ${v.n}"></span>`).join("")}
+    </div>
+    <div class="todo-legende">
+      ${verteilung.map(v => `<span class="todo-leg todo-leg-${v.g.schluessel}">${sicher(v.g.titel)} ${v.n}</span>`).join("")}
+    </div>`;
 
-  // Wird gerade eine neue Aufgabe geschrieben, steht das Feld ganz oben.
+  stuecke.push(bereichKarte({
+    titel: "Meine To-dos",
+    symbol: "todos", farbe: "gruen",
+    unterzeile: [offen.length + " offen",
+                 faecher.ueberfaellig.length ? faecher.ueberfaellig.length + " überfällig" : "",
+                 erledigt.length ? erledigt.length + " erledigt" : ""].filter(Boolean).join(" · "),
+    rechts: offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
+      <button type="button" class="knopf-schlicht start-klein"
+              data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">+ Neues To-do</button>`,
+    inhalt: kopfInhalt,
+    klasse: "bereich-kopf",
+  }));
+
+  // Wird gerade eine neue Aufgabe geschrieben, steht das Feld gleich darunter.
   if (offeneNotiz && offeneNotiz.indexOf("neu:") === 0) {
     stuecke.push(`
-      <div class="todo todo-offen-bearbeiten">
+      <div class="todo todo-offen-bearbeiten todo-einzeln">
         ${notizFeldZeichnen(offeneNotiz, "", offeneNotiz.slice(4))}
       </div>`);
   }
+
+  /* Jede Zeitgruppe ist eine eigene Karte, mit einem Farbpunkt im Kopf,
+     der zur Farbe im Balken oben passt. */
+  const GRUPPEN_FARBE = { ueberfaellig: "rot", heute: "gelb", morgen: "blau", woche: "blau",
+                          naechste: "lila", spaeter: "grau", ohne: "grau" };
 
   if (alle.length === 0) {
     stuecke.push(`
@@ -3148,17 +3262,20 @@ function todosZeichnen() {
   } else if (offen.length === 0) {
     stuecke.push(`<p class="leer-text">Nichts offen. Alles abgehakt.</p>`);
   } else {
-    const faecher = nachZeitgruppen(offen, new Date());
-
     for (const gruppe of ZEITGRUPPEN) {
       const drin = faecher[gruppe.schluessel];
       if (drin.length === 0) continue;          // leere Fächer bleiben stumm
       stuecke.push(`
-        <h3 class="todo-gruppe ${gruppe.klasse || ""}">
-          ${sicher(gruppe.titel)}
-          <span class="todo-anzahl">${drin.length}</span>
-        </h3>
-        ${drin.map(e => aufgabeZeichnen(e, gruppe.schluessel)).join("")}`);
+        <section class="start-karte gruppen-karte gruppen-karte-${gruppe.schluessel}">
+          <div class="start-karte-kopf todo-gruppe ${gruppe.klasse || ""}">
+            <span class="gruppen-punkt gruppen-punkt-${GRUPPEN_FARBE[gruppe.schluessel] || "grau"}"></span>
+            <div class="start-karte-titel"><h2>${sicher(gruppe.titel)}</h2></div>
+            <span class="todo-anzahl">${drin.length}</span>
+          </div>
+          <div class="start-karte-inhalt">
+            ${drin.map(e => aufgabeZeichnen(e, gruppe.schluessel)).join("")}
+          </div>
+        </section>`);
     }
   }
 
@@ -3170,24 +3287,28 @@ function todosZeichnen() {
      nicht über das Neuzeichnen hinweg, deshalb die Variable daneben. */
   if (erledigt.length > 0) {
     stuecke.push(`
-      <details class="todo-erledigt-fach" ${erledigteOffen ? "open" : ""}>
-        <summary class="todo-gruppe">
-          Erledigt <span class="todo-anzahl">${erledigt.length}</span>
+      <details class="start-karte gruppen-karte todo-erledigt-fach" ${erledigteOffen ? "open" : ""}>
+        <summary class="start-karte-kopf todo-gruppe">
+          <span class="gruppen-punkt gruppen-punkt-gruen"></span>
+          <div class="start-karte-titel"><h2>Erledigt</h2></div>
+          <span class="todo-anzahl">${erledigt.length}</span>
         </summary>
-        ${erledigt.map(e => aufgabeZeichnen(e, "erledigt")).join("")}
+        <div class="start-karte-inhalt">
+          ${erledigt.map(e => aufgabeZeichnen(e, "erledigt")).join("")}
+        </div>
       </details>`);
   }
 
   // --- Hinweise aus dem Plan ------------------------------------------
-  stuecke.push(`<h2 class="todo-ueberschrift">Hinweise aus dem Stundenplan</h2>`);
-
-  if (hinweise.length === 0) {
-    stuecke.push(`<p class="leer-text">
-      Für die kommenden Wochen ist nichts vermerkt.
-    </p>`);
-  } else {
-    stuecke.push(hinweise.map(hinweisZeichnen).join(""));
-  }
+  stuecke.push(bereichKarte({
+    titel: "Hinweise aus dem Stundenplan",
+    symbol: "hinweis", farbe: "gelb",
+    unterzeile: hinweise.length ? hinweise.length + (hinweise.length === 1 ? " Hinweis" : " Hinweise") : "",
+    inhalt: hinweise.length === 0
+      ? `<p class="start-leer">Für die kommenden Wochen ist nichts vermerkt.</p>`
+      : hinweise.map(hinweisZeichnen).join(""),
+    klasse: "gruppen-karte",
+  }));
 
   document.getElementById("todoInhalt").innerHTML = stuecke.join("");
 
@@ -3875,12 +3996,14 @@ function trainingZeichnen() {
 
   const abgerufen = training ? gymbroDatum(training.abgerufenAm) : null;
   const stand = abgerufen ? "Stand " + zeitpunktLesbar(alsZeitangabe(abgerufen)) : "";
-  stuecke.push(`
-    <div class="training-kopf">
-      <span class="training-stand">${sicher(stand)}${trainingLaeuft ? " · wird aktualisiert …" : ""}</span>
-      <button type="button" class="knopf-schlicht start-klein" data-training-neu
-              ${trainingLaeuft ? "disabled" : ""}>↻ Aktualisieren</button>
-    </div>`);
+  stuecke.push(bereichKarte({
+    titel: "Training",
+    symbol: "training", farbe: "lila",
+    unterzeile: stand + (trainingLaeuft ? " · wird aktualisiert …" : ""),
+    rechts: `<button type="button" class="knopf-schlicht start-klein" data-training-neu
+                     ${trainingLaeuft ? "disabled" : ""}>↻ Aktualisieren</button>`,
+    klasse: "bereich-kopf",
+  }));
   stuecke.push(trainingHinweis());
 
   if (!training) {
@@ -4030,11 +4153,13 @@ function trainingVerlaufZeichnen(daten, jetzt) {
     <button type="button" class="training-filter${trainingFilterTyp === wert ? " training-filter-aktiv" : ""}"
             data-training-typ="${sicher(wert)}">${sicher(text)}</button>`;
 
-  return `
-    <div class="training-kopf">
-      <button type="button" class="knopf-schlicht start-klein" data-training-verlauf>‹ Zurück</button>
-      <span class="training-stand">${gefiltert.length} von ${alle.length} Trainings</span>
-    </div>
+  return bereichKarte({
+    titel: "Alle Trainings",
+    symbol: "training", farbe: "lila",
+    unterzeile: gefiltert.length + " von " + alle.length + " Trainings",
+    rechts: `<button type="button" class="knopf-schlicht start-klein" data-training-verlauf>‹ Zurück</button>`,
+    klasse: "bereich-kopf",
+  }) + `
     <div class="training-filterleiste">
       ${knopf("", "Alle")}
       ${typen.map(t => knopf(t, trainingWort(t))).join("")}
@@ -4071,12 +4196,20 @@ function trainingVerlaufZeichnen(daten, jetzt) {
       </section>`).join("")}`;
 }
 
+/* Welches Symbol und welche Farbe eine Karte im Reiter Training trägt.
+   Nach dem Titel, damit die Aufrufe oben kurz bleiben. */
+const TRAINING_KARTEN_SYMBOL = {
+  "Letztes Training": ["training", "lila"],
+  "Die letzten 8 Wochen": ["balken", "blau"],
+  "Muskelgruppen zuletzt": ["muskel", "gruen"],
+  "Gewicht": ["gewicht", "gelb"],
+  "Neueste Bestleistungen": ["pokal", "gelb"],
+  "Pausen diesen Monat": ["pause", "grau"],
+};
+
 function trainingKarte(titel, inhalt) {
-  return `
-    <section class="start-karte">
-      <div class="start-karte-kopf"><div class="start-karte-titel"><h2>${sicher(titel)}</h2></div></div>
-      <div class="start-karte-inhalt">${inhalt}</div>
-    </section>`;
+  const [name, farbe] = TRAINING_KARTEN_SYMBOL[titel] || ["training", "lila"];
+  return bereichKarte({ titel, symbol: name, farbe, inhalt });
 }
 
 /* Die Karte auf der Übersicht: wie viele Trainings diese Woche, und wohin
@@ -4644,6 +4777,13 @@ function uniplanBereichZeichnen() {
 function zettelZeichnen() {
   const bereich = document.getElementById("zettelListe");
   if (!bereich) return;
+
+  const unterzeile = document.getElementById("zettelUnterzeile");
+  if (unterzeile) {
+    const markiert = zettel.filter(z => z.wichtig).length;
+    unterzeile.textContent = zettel.length + (zettel.length === 1 ? " Notiz" : " Notizen")
+      + (markiert ? " · " + markiert + " markiert" : "");
+  }
 
   let liste = zettelGefunden(zettelSuche);
   if (zettelFilter) {

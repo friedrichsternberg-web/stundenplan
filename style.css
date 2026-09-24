@@ -454,7 +454,6 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 }
 
-#faecherBereich { margin-bottom: 22px; }
 
 
 /* --- Hauptnavigation --------------------------------------------------- */
@@ -1626,7 +1625,9 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 /* Schmaler als der Faecherfilter: hier stehen ein paar Zeilen, keine Liste. */
 .filter-fenster-schmal { max-width: 420px; }
 
-.termin-titel {
+/* Nur die Überschrift im Fenster. Ohne das h3 galt die Regel auch für
+   jede Zeile der Listenansicht - daher die Lücke unter dem Titel dort. */
+h3.termin-titel {
   font-size: 17px;
   font-weight: 700;
   margin: 4px 0 14px;
@@ -2205,7 +2206,6 @@ a.knopf-schlicht {
 
 /* --- Aussehen-Schalter im ⚙-Fenster ------------------------------------ */
 
-#themaBereich { margin-top: 22px; }
 #themaBereich .schalter { display: inline-flex; }
 
 
@@ -2505,7 +2505,6 @@ a.knopf-schlicht {
 .start-geaendert-zeile .verlauf-eintrag { flex: 1; min-width: 0; padding: 0; border: 0; }
 .start-geaendert-knoepfe { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
-#aenderungenBereich { margin-bottom: 22px; }
 
 /* --- Alle Trainings ------------------------------------------------------ */
 
@@ -2848,3 +2847,263 @@ a.knopf-schlicht {
 .up-tabelle td:first-child { white-space: nowrap; }
 .up-frueher { margin-top: 14px; }
 .up-frueher summary { cursor: pointer; font-size: 13px; color: var(--akzent); padding: 4px 0; }
+
+
+/* --- Ein Stil für die ganze App (24.09.2026) ------------------------------
+
+   Was auf der Übersicht gut funktioniert hat, gilt jetzt überall: Karten
+   mit abgesetztem Kopf und farbigem Symbol, weiche Schatten, größere
+   Rundung, und kleine Grafiken dort, wo sie etwas sagen. Die Karten selbst
+   sind .start-karte; bereichKarte() in app.js baut sie für jeden Bereich. */
+
+.bereich-kopf,
+.plan-ueberblick,
+.gruppen-karte { margin-bottom: 14px; }
+
+.start-karte-kopf .knopf-schlicht.start-klein { flex-shrink: 0; }
+
+.start-symbol-rot { background: var(--wichtig-flaeche); color: var(--wichtig); }
+.start-symbol-grau { background: var(--flaeche-gedaempft); color: var(--schrift-leise); }
+
+/* --- Plan ---------------------------------------------------------------- */
+
+.woche-balken {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  height: 104px;
+  margin-top: 4px;
+}
+
+.woche-spalte {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.woche-wert { font-size: 11px; font-weight: 600; color: var(--schrift-leise); height: 14px; }
+
+.woche-saeule {
+  flex: 1;
+  width: 100%;
+  max-width: 34px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 6px;
+  background: var(--flaeche-gedaempft);
+  overflow: hidden;
+}
+.woche-teil { display: block; width: 100%; }
+.woche-teil + .woche-teil { box-shadow: 0 -2px 0 var(--flaeche); }
+.woche-teil-uni { background: var(--theorie); }
+.woche-teil-eigen { background: var(--eigen); }
+.woche-teil-arbeit { background: var(--arbeit); }
+
+.woche-name { font-size: 11px; color: var(--schrift-leise); }
+.woche-heute .woche-name { color: var(--akzent); font-weight: 700; }
+.woche-heute .woche-saeule { box-shadow: 0 0 0 2px var(--akzent-flaeche); }
+.woche-leg-eigen::before { background: var(--eigen); }
+.woche-leg-arbeit::before { background: var(--arbeit); }
+
+/* Tageskarten wie die Karten der Übersicht, mit einer Datumskachel. */
+.tag {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .05);
+  margin-bottom: 12px;
+}
+.tag-heute { border-width: 2px; }
+
+.tag-kopf {
+  background: var(--flaeche);
+  padding: 10px 14px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  border-bottom: 1px solid var(--linie);
+}
+
+.tag-kachel {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--akzent-flaeche);
+  color: var(--akzent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tag-kachel small { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.tag-kachel strong { font-size: 16px; margin-top: 2px; }
+.tag-heute .tag-kachel { background: var(--akzent); color: var(--akzent-schrift); }
+
+.tag-kopf-titel { display: flex; flex-direction: column; font-size: 15px; font-weight: 700; min-width: 0; }
+.tag-kopf-titel .tag-kopf-zusatz { font-size: 12px; font-weight: 400; margin-top: 1px; }
+
+.tag-kopf + .termin,
+.tag-kopf + .tag-leer { border-top: 0; }
+
+.termin-zeit {
+  flex: 0 0 52px;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  padding-top: 1px;
+}
+.termin-zeit strong { font-size: 14px; color: var(--schrift); }
+.termin-zeit span { font-size: 12px; color: var(--schrift-leise); }
+.termin-eigen .termin-zeit strong { color: var(--eigen); }
+.termin-arbeit .termin-zeit strong { color: var(--arbeit); }
+
+@media (max-width: 520px) {
+  .termin { flex-direction: row; gap: 10px; }
+  .termin-zeit { flex: 0 0 44px; font-weight: 400; }
+}
+
+.kalender-rahmen {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .05);
+}
+
+/* --- To-dos -------------------------------------------------------------- */
+
+.todo-verteilung {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  margin: 6px 0 8px;
+}
+.todo-anteil { display: block; min-width: 6px; border-radius: 4px; }
+.todo-anteil-ueberfaellig, .todo-leg-ueberfaellig::before { background: var(--wichtig); }
+.todo-anteil-heute, .todo-leg-heute::before { background: var(--geaendert); }
+.todo-anteil-morgen, .todo-leg-morgen::before { background: var(--akzent); }
+.todo-anteil-woche, .todo-leg-woche::before { background: var(--theorie); opacity: .6; }
+.todo-anteil-naechste, .todo-leg-naechste::before { background: var(--notiz-rand); }
+.todo-anteil-spaeter, .todo-leg-spaeter::before { background: var(--schrift-leise); }
+.todo-anteil-ohne, .todo-leg-ohne::before { background: var(--linie); }
+
+.todo-legende { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--schrift-leise); }
+.todo-leg::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+/* Die Zeitgruppen als Karten. Der Kopf ist keine klebende Zeile mehr,
+   sondern der Kopf der Karte. */
+.gruppen-karte .todo-gruppe {
+  position: static;
+  margin: 0;
+  padding: 11px 14px;
+  background: none;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: inherit;
+  color: var(--schrift);
+}
+.gruppen-karte .todo-gruppe-dringend h2 { color: var(--wichtig); }
+
+.gruppen-punkt { flex: 0 0 10px; height: 10px; border-radius: 50%; }
+.gruppen-punkt-rot { background: var(--wichtig); }
+.gruppen-punkt-gelb { background: var(--geaendert); }
+.gruppen-punkt-blau { background: var(--akzent); }
+.gruppen-punkt-lila { background: var(--notiz-rand); }
+.gruppen-punkt-grau { background: var(--schrift-leise); }
+.gruppen-punkt-gruen { background: var(--neu); }
+
+.gruppen-karte .start-karte-inhalt { padding-top: 2px; padding-bottom: 4px; }
+
+/* Einzelne To-dos in einer Gruppenkarte: Zeilen statt eigener Karten. */
+.gruppen-karte .todo {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 10px 0;
+}
+.gruppen-karte .start-karte-inhalt > .todo:first-child { border-top: 0; }
+.gruppen-karte .todo-wichtig { box-shadow: inset 3px 0 0 var(--wichtig); padding-left: 10px; }
+.gruppen-karte .todo-offen-bearbeiten { padding: 10px 0; }
+
+.todo-einzeln { margin-bottom: 14px; border-radius: 14px; }
+
+.todo-erledigt-fach > summary { list-style: none; }
+.todo-erledigt-fach:not([open]) > summary { border-bottom: 0; }
+
+/* --- Notizen ------------------------------------------------------------- */
+
+.bereich-kopf .zettel-leiste { display: block; margin: 0; }
+.bereich-kopf .zettel-leiste input[type="search"] { width: 100%; }
+
+.zettel-karte {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .05);
+  margin-bottom: 12px;
+}
+
+/* --- Einstellungen: jeder Abschnitt ein eigener Block mit Symbol --------- */
+
+#geraeteHintergrund .filter-fenster > div:not(.filter-kopf) {
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+#geraeteHintergrund .filter-fenster > div:empty { display: none; }
+#geraeteHintergrund .melden-kasten { border-top: 0; margin-top: 0; padding-top: 0; }
+
+#geraeteHintergrund .melden-titel { display: flex; align-items: center; gap: 9px; }
+#geraeteHintergrund .melden-titel::before {
+  content: "";
+  flex: 0 0 26px;
+  height: 26px;
+  border-radius: 8px;
+  background-color: var(--akzent-flaeche);
+  background-image: none;
+}
+#geraeteHintergrund .melden-titel::after {
+  content: "";
+  position: absolute;
+}
+#faecherBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%205.5A2.5%202.5%200%200%201%206.5%203H20v15H6.5A2.5%202.5%200%200%200%204%2020.5z%22/%3E%3Cpath%20d%3D%22M4%2020.5A2.5%202.5%200%200%200%206.5%2023H20%22/%3E%3C/svg%3E"); }
+#uniplanBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2.5%209.5L12%205l9.5%204.5L12%2014z%22/%3E%3Cpath%20d%3D%22M6.5%2011.5v4.5c3%202.2%208%202.2%2011%200v-4.5M21.5%209.5v5%22/%3E%3C/svg%3E"); }
+#aenderungenBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22/%3E%3Cpath%20d%3D%22M12%207.5v5.5M12%2016.3v.2%22/%3E%3C/svg%3E"); }
+#abgleichBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M20%2011a8%208%200%200%200-14.3-4.9L3.5%208.5%22/%3E%3Cpath%20d%3D%22M3.5%203.5v5h5M4%2013a8%208%200%200%200%2014.3%204.9l2.2-2.4%22/%3E%3Cpath%20d%3D%22M20.5%2020.5v-5h-5%22/%3E%3C/svg%3E"); }
+#themaBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%224%22/%3E%3Cpath%20d%3D%22M12%202.5v2M12%2019.5v2M4.2%204.2l1.4%201.4M18.4%2018.4l1.4%201.4M2.5%2012h2M19.5%2012h2M4.2%2019.8l1.4-1.4M18.4%205.6l1.4-1.4%22/%3E%3C/svg%3E"); }
+#meldenBereich { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%208a6%206%200%200%201%2012%200c0%207%203%209%203%209H3s3-2%203-9%22/%3E%3Cpath%20d%3D%22M10.3%2021a1.9%201.9%200%200%200%203.4%200%22/%3E%3C/svg%3E"); }
+#erinnerungsdienst { --abschnitt-symbol: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2213%22%20r%3D%228%22/%3E%3Cpath%20d%3D%22M12%209v4l2.5%202.5M5%203L2%206M19%203l3%203%22/%3E%3C/svg%3E"); }
+#geraeteHintergrund [id] > .melden-titel,
+#geraeteHintergrund [id] .melden-kasten > .melden-titel { position: relative; }
+#geraeteHintergrund [id] > .melden-titel::after,
+#geraeteHintergrund [id] .melden-kasten > .melden-titel::after {
+  left: 5px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  background: var(--akzent);
+  -webkit-mask: var(--abschnitt-symbol) center / contain no-repeat;
+  mask: var(--abschnitt-symbol) center / contain no-repeat;
+}
+
+/* --- Training: Zahlenkacheln wie die Karten ------------------------------ */
+
+#seiteTraining .start-zahl {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .05);
+  cursor: default;
+}
+#seiteTraining .start-zahl:hover { background: var(--flaeche); }
+#seiteTraining .start-zahl-wert { color: var(--notiz-rand); }
+#seiteTraining .training-alle { border-radius: 14px; }
