@@ -15,30 +15,33 @@ etwas ändert.
 | **Training** | Trainings, Gewicht und Bestleistungen aus Gymbro (nur auf Friedrichs Geräten) |
 | **Notizen** | das Notizbuch: freie Notizen, verknüpft mit Terminen und Modulen |
 | **To-dos** | deine Notizen zum Abhaken, dazu Hinweise aus dem HWR-Plan |
-| **Änderungen** | was sich am Stundenplan geändert hat |
 
-An „To-dos" und „Änderungen" steht eine Zahl, sobald dort etwas Offenes
-liegt. Deshalb sieht man schon beim Öffnen, ob überhaupt etwas ansteht.
+An „To-dos" steht eine Zahl, sobald dort etwas offen ist. Einen Reiter
+„Änderungen" gibt es nicht mehr: Neue Änderungen am Stundenplan meldet die
+Übersicht mit einem großen Hinweis, und jede lässt sich dort einzeln
+abhaken. Die ganze Liste steht im ⚙-Fenster unter **Änderungen am
+Stundenplan**.
 
 ## Die Übersicht
 
-Die App geht mit der Übersicht auf. Von oben nach unten:
+Die App geht mit der Übersicht auf. Sie zeigt nur, was gerade zählt, und
+lässt weg, was nichts sagt. Früher standen dort immer vier Zahlen, auch
+„0 neue Änderungen". Eine Null ist keine Information.
 
-- **Als Nächstes**: die Vorlesung, die gerade läuft oder als nächste kommt,
-  mit Raum und Kurznotiz, darunter was am selben Tag danach kommt.
+- **Als Nächstes**: die Vorlesung, die gerade läuft oder als nächste kommt.
   Antippen öffnet den Termin.
-- **Vier Zahlen**: Termine noch heute, Termine noch diese Woche, offene
-  To-dos (rot, sobald etwas überfällig ist) und neue Änderungen am Plan.
-  Jede Zahl führt in ihren Bereich.
-- **Heute**: der Tagesplan, Vergangenes blass, das Laufende mit Balken.
-  Ist heute nichts mehr, steht hier der nächste Tag mit Terminen, am
-  Freitagabend also der Montag.
-- **To-dos**: alles Überfällige, Heutige und Morgige, höchstens sechs.
-  Ist nichts davon da, die nächsten drei. Abhaken geht direkt hier,
-  Antippen öffnet das To-do zum Bearbeiten.
-- **Hinweise im Plan** (nur wenn es in den nächsten zwei Wochen welche
-  gibt), **Neu im Plan** (nur wenn es ungesehene Änderungen gibt) und die
-  drei obersten **Notizen**: markierte zuerst, dann die zuletzt geänderten.
+- **Überfällig**: ein schmaler roter Knopf, nur wenn ein To-do überfällig ist.
+- **Änderungen am Stundenplan**: ein großer Kasten, nur wenn es ungesehene
+  gibt, mit den ersten drei Änderungen darin. Jede hat einen Haken; wer sie
+  gesehen hat, hakt sie ab, und mit der letzten verschwindet der Kasten.
+  „Alle abhaken" erledigt alle auf einmal.
+- **Heute**: über die ganze Breite, nur was noch kommt, ein Termin pro
+  Zeile (Uhrzeit, Titel ohne Modulnummer, Raum). Eine Kurznotiz steht
+  darunter. Ist heute nichts mehr, steht hier der nächste Tag mit Terminen.
+- **To-dos** und **Training** nebeneinander. To-dos: höchstens drei, das
+  Dringendste zuerst; „Alle 13 ›" führt zum Rest.
+- **Notizen**: die zwei obersten, und **Hinweise im Plan** für die nächste
+  Woche, beide nur wenn es welche gibt.
 
 Die Übersicht rechnet nichts Eigenes aus. Sie nimmt dieselben Funktionen
 wie die Bereiche selbst, sonst stünde oben irgendwann „2 To-dos" und im
@@ -46,10 +49,7 @@ Reiter etwas anderes. Solange sie offen ist, zeichnet sie sich jede
 Minute neu, damit „Läuft gerade" nicht stehenbleibt.
 
 Welcher Reiter beim Öffnen kommt: der zuletzt benutzte, wenn das keine
-Viertelstunde her ist, sonst die Übersicht. Das iPhone beendet
-Home-Bildschirm-Apps gern im Hintergrund; wer gerade im Plan war, soll
-nach einem kurzen Wechsel in eine andere App nicht auf der Startseite
-landen.
+Viertelstunde her ist, sonst die Übersicht.
 
 ## Training aus Gymbro
 
@@ -76,12 +76,19 @@ Codes bekommen 403, für sie bleibt der Reiter unsichtbar. Krankmeldungen
 werden gar nicht erst abgeholt. `tests/test_training.py` prüft von außen,
 dass fremde Codes nichts bekommen und die Freigabeliste nicht lesbar ist.
 
-**Die Felder.** Dokumentiert sind bei Gymbro nur die Felder der Trainings
-(`arrivedAt`, `leftAt`, `trainingType`, `muscleGroups`, `rating`). Für
-Gewicht, Bestleistungen und Pläne probiert `gymbroFeld()` mehrere übliche
-Namen durch. Fehlt ein Feld, bleibt die Stelle leer. Einträge, die kein
+**Die Felder.** Geprüft am echten Export (24.09.2026): Trainings haben
+`arrivedAt`, `leftAt`, `gymId`, `trainingType`, `muscleGroups`, `rating`,
+`notes` und `partners` (Liste mit `name`), die Gyms kommen als eigene
+Liste `gyms` mit `id` und `label`, Gewicht als `date` und `weight`.
+Bestleistungen, Pläne und Ruhetage waren leer; für sie probiert
+`gymbroFeld()` mehrere übliche Namen durch. Fehlt ein Feld, bleibt die Stelle leer. Einträge, die kein
 Objekt sind oder kein gültiges Datum haben, fallen weg, statt die ganze
 Auswertung abstürzen zu lassen (das hat ein Test so gefunden).
+
+**Alle Trainings.** Oben im Reiter führt „Alle Trainings" zur ganzen
+Liste, nach Monaten, mit Gym, Muskelgruppen, Trainingspartnern und
+Notiz. Filtern lässt sie sich nach Art (Push, Pull, Beine, Laufen …) und
+nach Muskelgruppe, etwa um zu sehen, wann das letzte Beintraining war.
 
 Abgeholt wird beim Öffnen der Übersicht oder des Reiters, höchstens alle
 zehn Minuten, und über ↻ jederzeit. Der letzte Stand bleibt auf dem Gerät

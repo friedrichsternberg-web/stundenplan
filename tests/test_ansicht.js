@@ -135,6 +135,13 @@ const werkzeug = eval(
   "  trainingSichtbar: trainingSichtbar," +
   "  trainingStartKarte: trainingStartKarte," +
   "  trainingZeichnen: trainingZeichnen," +
+  "  trainingVerlaufZeichnen: trainingVerlaufZeichnen," +
+  "  trainingFilter: function (typ, muskel) { trainingFilterTyp = typ; trainingFilterMuskel = muskel; }," +
+  "  aenderungenGesehen: aenderungenAlsGesehenMerken," +
+  "  aenderungAbhaken: aenderungAbhaken," +
+  "  startAenderungen: startAenderungen," +
+  "  ungesehen: ungeseheneAenderungen," +
+  "  kurzerTitel: kurzerTitel," +
   "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }" +
   "})");
 
@@ -725,7 +732,7 @@ const viele = [];
 for (let i = 0; i < 9; i++) viele.push(frei("eigen-v" + i, "2026-09-24"));
 werkzeug.setzen({}, viele);
 todos = werkzeug.startTodos(JETZT);
-pruefe("hoechstens sechs Zeilen", todos.auswahl.length === 6);
+pruefe("hoechstens drei Zeilen", todos.auswahl.length === 3);
 pruefe("aber alle neun gezaehlt", todos.offen === 9 && todos.dringend === 9);
 
 // Erledigtes gehoert nicht auf die Startseite.
@@ -899,6 +906,117 @@ pruefe("mit Freigabe ist er da", werkzeug.trainingSichtbar() === true);
 pruefe("und die Karte auch", werkzeug.trainingStartKarte(TJETZT).indexOf("Training") >= 0);
 localStorage.removeItem("stundenplan.trainingZugang");
 werkzeug.trainingSetzen(null);
+
+
+/* ====================================================================== */
+abschnitt("13. Uebersicht schlank, Aenderungen als Hinweis, alle Trainings");
+
+pruefe("die Modulnummer faellt auf der Uebersicht weg",
+       werkzeug.kurzerTitel("4 - Management - MA- und UN-Führung") === "Management - MA- und UN-Führung");
+pruefe("ein Titel ohne Nummer bleibt, wie er ist",
+       werkzeug.kurzerTitel("WPF - Social Innovation") === "WPF - Social Innovation");
+
+/* Vorbei ist vorbei: auf der Uebersicht steht nur, was noch kommt. */
+const hHeute = (function () {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+       + "-" + String(d.getDate()).padStart(2, "0");
+})();
+STUNDENPLAN.termine = [
+  planTermin("t.frueh", hHeute + "T00:00", hHeute + "T00:01", "Fruehfach"),
+  planTermin("t.spaet", hHeute + "T23:58", hHeute + "T23:59", "Spaetfach"),
+];
+werkzeug.filterLeeren();
+werkzeug.setzen({}, []);
+STUNDENPLAN.aenderungen = [];
+werkzeug.startZeichnen();
+let u = document.getElementById("startInhalt").innerHTML;
+pruefe("was noch kommt, steht da", u.indexOf("Spaetfach") >= 0);
+pruefe("was vorbei ist, nicht", u.indexOf("Fruehfach") < 0);
+pruefe("ohne Aenderungen kein Hinweis", u.indexOf("start-geaendert") < 0);
+pruefe("und keine Null-Zahlen mehr", u.indexOf("neue Änderungen") < 0 && u.indexOf("start-zahl") < 0);
+
+/* Eine ungesehene Aenderung: grosser Hinweis mit dem Fach darin. */
+STUNDENPLAN.aenderungen = [{ erkanntAm: "2099-01-01T10:00", eintraege: [
+  { typ: "entfallen", termin: planTermin("t.weg", "2099-01-02T08:00", "2099-01-02T09:00", "Ausfallfach") },
+]}];
+werkzeug.startZeichnen();
+u = document.getElementById("startInhalt").innerHTML;
+pruefe("eine Aenderung macht den grossen Hinweis", u.indexOf("start-geaendert") >= 0);
+pruefe("mit dem Fach darin, nicht nur einer Zahl", u.indexOf("Ausfallfach") >= 0);
+pruefe("und einem Knopf zum Abhaken", u.indexOf("data-start-gesehen") >= 0);
+pruefe("jede Aenderung hat ihren eigenen Haken", u.indexOf("data-aenderung-haken") >= 0);
+werkzeug.aenderungenGesehen();
+werkzeug.startZeichnen();
+u = document.getElementById("startInhalt").innerHTML;
+pruefe("nach Gesehen ist der Hinweis weg", u.indexOf("start-geaendert") < 0);
+
+/* Einzeln abhaken: zwei Aenderungen, eine abgehakt - die andere bleibt,
+   und der Hinweis mit ihr. Erst mit der zweiten ist er weg. */
+localStorage.removeItem("stundenplan.zuletztGesehen");
+STUNDENPLAN.aenderungen = [{ erkanntAm: "2099-01-01T10:00", eintraege: [
+  { typ: "entfallen", termin: planTermin("t.a", "2099-01-02T08:00", "2099-01-02T09:00", "Fach Eins") },
+  { typ: "geaendert", termin: planTermin("t.b", "2099-01-03T08:00", "2099-01-03T09:00", "Fach Zwei"),
+    felder: [{ feld: "Raum", vorher: "A 1", nachher: "B 2" }] },
+]}];
+let offen = werkzeug.startAenderungen();
+pruefe("zwei offene Aenderungen", offen.length === 2 && werkzeug.ungesehen() === 2);
+werkzeug.aenderungAbhaken(offen[0].schluessel);
+offen = werkzeug.startAenderungen();
+pruefe("nach einem Haken bleibt genau die andere",
+       offen.length === 1 && offen[0].termin.titel === "Fach Zwei");
+werkzeug.startZeichnen();
+u = document.getElementById("startInhalt").innerHTML;
+pruefe("der Hinweis steht noch, ohne die abgehakte",
+       u.indexOf("Fach Zwei") >= 0 && u.indexOf("Fach Eins") < 0);
+werkzeug.aenderungAbhaken(offen[0].schluessel);
+werkzeug.startZeichnen();
+u = document.getElementById("startInhalt").innerHTML;
+pruefe("mit dem letzten Haken ist der Hinweis weg", u.indexOf("start-geaendert") < 0);
+
+/* Eine neue Erkennung desselben Termins ist eine neue Aenderung - der
+   alte Haken darf sie nicht verschlucken. */
+STUNDENPLAN.aenderungen.unshift({ erkanntAm: "2099-02-01T10:00", eintraege: [
+  { typ: "entfallen", termin: planTermin("t.b", "2099-01-03T08:00", "2099-01-03T09:00", "Fach Zwei") },
+]});
+pruefe("eine spaetere Aenderung am selben Termin ist wieder offen", werkzeug.ungesehen() === 1);
+
+STUNDENPLAN.aenderungen = [];
+localStorage.removeItem("stundenplan.zuletztGesehen");
+localStorage.removeItem("stundenplan.aenderungenAbgehakt");
+STUNDENPLAN.termine = [];
+
+/* Alle Trainings: jedes Training steht da, der Filter greift. */
+const verlaufDaten = {
+  gyms: [{ id: "dns_potsdam", label: "DNS Potsdam" }],
+  sessions: [
+    { id: "a", arrivedAt: "2026-08-27T16:00:00.000Z", leftAt: "2026-08-27T17:30:00.000Z",
+      trainingType: "legs", muscleGroups: ["quads", "calves"], gymId: "dns_potsdam",
+      partners: [{ name: "Linus", userId: "x" }], notes: "Kniebeuge schwer" },
+    { id: "b", arrivedAt: "2026-09-20T16:00:00.000Z", trainingType: "push",
+      muscleGroups: ["chest"], gymId: "dns_potsdam", partners: [], notes: null },
+    { id: "c", arrivedAt: "2026-05-22T20:00:00.000Z", trainingType: "run", muscleGroups: ["run"] },
+  ],
+};
+werkzeug.trainingFilter("", "");
+let v = werkzeug.trainingVerlaufZeichnen(verlaufDaten, TJETZT);
+pruefe("alle drei Trainings stehen in der Liste, auch das vom Mai",
+       v.indexOf("3 von 3") >= 0 && v.indexOf("Mai 2026") >= 0);
+pruefe("das Gym mit Namen statt Kennung", v.indexOf("DNS Potsdam") >= 0 && v.indexOf("dns_potsdam\"") < 0);
+pruefe("mit Trainingspartner und Notiz", v.indexOf("mit Linus") >= 0 && v.indexOf("Kniebeuge schwer") >= 0);
+pruefe("run heisst Laufen", v.indexOf("Laufen") >= 0);
+werkzeug.trainingFilter("legs", "");
+v = werkzeug.trainingVerlaufZeichnen(verlaufDaten, TJETZT);
+pruefe("Filter Beine: nur das Beintraining", v.indexOf("1 von 3") >= 0 && v.indexOf("August 2026") >= 0
+       && v.indexOf("September 2026") < 0);
+werkzeug.trainingFilter("", "chest");
+v = werkzeug.trainingVerlaufZeichnen(verlaufDaten, TJETZT);
+pruefe("Filter Brust: nur das Push-Training", v.indexOf("1 von 3") >= 0 && v.indexOf("September 2026") >= 0);
+werkzeug.trainingFilter("legs", "chest");
+v = werkzeug.trainingVerlaufZeichnen(verlaufDaten, TJETZT);
+pruefe("nichts passt: ein Satz statt Leere", v.indexOf("Kein Training passt") >= 0);
+pruefe("keine kaputten Werte", v.indexOf("undefined") < 0 && v.indexOf("NaN") < 0);
+werkzeug.trainingFilter("", "");
 
 
 /* ====================================================================== */

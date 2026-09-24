@@ -98,9 +98,6 @@
   <button type="button" data-seite="todos" role="tab" aria-selected="false">
     To-dos <span class="reiter-zahl" id="todoZahl" hidden></span>
   </button>
-  <button type="button" data-seite="aenderungen" role="tab" aria-selected="false">
-    Änderungen <span class="reiter-zahl" id="aenderungsZahl" hidden></span>
-  </button>
 </nav>
 
 <main>
@@ -173,14 +170,6 @@
     <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
     <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
     <div id="todoInhalt"></div>
-  </section>
-
-  <!-- ================= Bereich 4: Änderungen ================= -->
-  <section id="seiteAenderungen" hidden>
-    <p class="bereich-hinweis">
-      Was sich seit dem ersten Abruf am Stundenplan geändert hat.
-    </p>
-    <div id="verlauf"></div>
   </section>
 
 </main>
@@ -312,6 +301,10 @@
          steht hier, weil man ihn einmal im Semester braucht und nicht
          jeden Tag. Siehe faecherBereichZeichnen() in app.js. -->
     <div id="faecherBereich"></div>
+    <!-- Die Änderungen am Stundenplan. Früher ein eigener Reiter; neue
+         Änderungen meldet jetzt die Übersicht mit einem großen Hinweis,
+         die ganze Liste steht hier. Siehe aenderungenBereichZeichnen(). -->
+    <div id="aenderungenBereich"></div>
     <h3 class="melden-titel">Geräte abgleichen</h3>
     <div id="geraeteInhalt"></div>
     <!-- Hell oder dunkel. Steht im selben Fenster, weil es dieselbe Sorte
@@ -346,6 +339,21 @@
       <button type="button" class="knopf-schlicht" id="filterKeine">Alle abwählen</button>
     </div>
     <div class="filter-liste" id="filterListe"></div>
+  </div>
+</div>
+
+<!-- Die ganze Liste der Änderungen. Liegt wie die Fächerauswahl hinter
+     dem Einstellungsfenster in der Datei und damit darüber. -->
+<div class="filter-hintergrund" id="verlaufHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Änderungen am Stundenplan</h2>
+      <button type="button" class="knopf-schlicht" id="verlaufSchliessen">Fertig</button>
+    </div>
+    <p class="filter-hinweis">
+      Was sich seit dem ersten Abruf am Plan geändert hat, das Neueste oben.
+    </p>
+    <div id="verlauf"></div>
   </div>
 </div>
 

@@ -2476,3 +2476,132 @@ a.knopf-schlicht {
 
 /* Wie bei den Karten der Übersicht: keine Linie über der ersten Zeile. */
 .start-karte-kopf + .training-reihe { border-top: 0; }
+
+
+/* --- Übersicht, schlanker (24.09.2026) ------------------------------------ */
+
+/* Heute geht über die ganze Breite, darunter To-dos und Training
+   nebeneinander. */
+.start-karte-breit { grid-column: 1 / -1; }
+
+/* Ein Termin, eine Zeile: Uhrzeit, Titel, rechts der Raum. */
+.start-termin { padding: 7px 0; align-items: baseline; }
+.start-termin-zeit { flex-basis: 40px; font-size: 13px; }
+.start-termin-zeile { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.start-termin-zeile .start-termin-titel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.start-termin-zeile .start-termin-ort { flex-shrink: 0; }
+.start-termin-notiz { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Was Aufmerksamkeit braucht, als schmale Knöpfe über den Karten. */
+.start-achtung { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.start-achtung-knopf {
+  background: var(--wichtig-flaeche);
+  color: var(--wichtig);
+  border: 1px solid var(--wichtig);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Der große Hinweis, wenn sich der Stundenplan geändert hat. */
+.start-geaendert {
+  background: var(--flaeche);
+  border: 2px solid var(--geaendert);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  padding: 14px 16px 12px;
+  margin-bottom: 14px;
+}
+.start-geaendert h2 { font-size: 17px; margin: 0 0 6px; color: var(--geaendert); }
+.start-geaendert-zeile {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--linie);
+}
+.start-geaendert h2 + .start-geaendert-zeile { border-top: 0; }
+.start-geaendert-zeile .todo-haken { margin-top: 2px; }
+.start-geaendert-zeile .verlauf-eintrag { flex: 1; min-width: 0; padding: 0; border: 0; }
+.start-geaendert-knoepfe { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+#aenderungenBereich { margin-bottom: 22px; }
+
+/* --- Alle Trainings ------------------------------------------------------ */
+
+.training-alle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--schrift);
+  text-align: left;
+  cursor: pointer;
+}
+.training-alle:hover { background: var(--flaeche-gedaempft); }
+.training-alle-pfeil { font-size: 22px; color: var(--akzent); }
+
+.training-filterleiste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.training-filter {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--schrift);
+  cursor: pointer;
+}
+.training-filter-aktiv {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-schrift);
+}
+
+.training-muskelwahl {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--linie);
+  background: var(--flaeche);
+  color: var(--schrift);
+}
+
+.training-monat { margin-bottom: 14px; }
+
+.training-eintrag {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linie);
+  font-size: 14px;
+}
+.start-karte-kopf + .training-eintrag { border-top: 0; }
+.training-eintrag-tag { flex: 0 0 78px; display: flex; flex-direction: column; }
+.training-eintrag-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.training-notiz { font-size: 13px; color: var(--notiz-rand); white-space: pre-wrap; overflow-wrap: anywhere; }
