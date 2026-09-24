@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "a330fdd8";
+const GEBAUTE_VERSION = "85cb531f";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -583,73 +583,56 @@ function kalenderwoche(datum) {
   return Math.ceil(((tag - jahresanfang) / 86400000 + 1) / 7);
 }
 
-/* Welcher Tag in die Karte "Heute" gehört.
+/* Alles, was heute noch ansteht, für die Karte "Heute": die Termine, die
+   noch nicht vorbei sind, die ganztägigen Einträge und die To-dos, die
+   heute fällig oder schon überfällig sind.
 
-   Normalerweise heute. Ist heute aber nichts mehr – Vorlesungen vorbei,
-   oder Wochenende –, zeigt sie den nächsten Tag, an dem etwas ist. Um
-   18 Uhr interessiert der Vormittag nicht mehr, der nächste Morgen schon.
-   Gesucht wird zwei Wochen weit; danach ist ohnehin Semesterende oder
-   Ferien, und dann steht dort einfach "Nichts in Sicht". */
-function starttagWaehlen(jetzt) {
+   Eine Kurznotiz an einem heutigen Termin steht bereits beim Termin (✎).
+   Als To-do darunter stünde sie doppelt, deshalb fehlt sie dort – außer
+   ihr Termin ist schon vorbei, dann wäre sie sonst ganz weg. */
+function heuteSammeln(jetzt) {
   const heute = tagesSchluessel(jetzt);
-  const termine = alleAngezeigtenTermine();
+  const termineHeute = alleAngezeigtenTermine().filter(t => tagesSchluessel(t.start) === heute);
+  const kommend = termineHeute.filter(t => alsDatum(t.ende) > jetzt);
+  const beimTermin = new Set(kommend.map(t => t.id));
 
-  const heuteTermine = termine.filter(t => tagesSchluessel(t.start) === heute);
-  const nochHeute = heuteTermine.filter(t => alsDatum(t.ende) > jetzt);
-  const ganztagsHeute = ganztagsTermineFuerTag(heute);
-  if (nochHeute.length > 0 || ganztagsHeute.length > 0) {
-    return { schluessel: heute, termine: heuteTermine, ganztags: ganztagsHeute,
-             istHeute: true };
-  }
+  const gruppen = nachZeitgruppen(aufgabenSammeln().filter(a => !a.erledigt), jetzt);
+  const todos = gruppen.ueberfaellig.map(e => ({ eintrag: e, ueberfaellig: true }))
+    .concat(gruppen.heute.map(e => ({ eintrag: e, ueberfaellig: false })))
+    .filter(x => !(x.eintrag.art === "notiz" && beimTermin.has(x.eintrag.kennung)));
 
-  for (let versatz = 1; versatz <= 14; versatz++) {
-    const schluessel = tagesSchluessel(tageDazu(jetzt, versatz));
-    const anDiesemTag = termine.filter(t => tagesSchluessel(t.start) === schluessel);
-    const ganztags = ganztagsTermineFuerTag(schluessel);
-    if (anDiesemTag.length > 0 || ganztags.length > 0) {
-      return { schluessel: schluessel, termine: anDiesemTag, ganztags: ganztags,
-               istHeute: false, heuteVorbei: heuteTermine.length > 0 };
-    }
-  }
-  return null;
+  return {
+    termine: kommend,
+    vorbei: termineHeute.length - kommend.length,
+    ganztags: ganztagsTermineFuerTag(heute),
+    todos: todos,
+  };
 }
 
-/* Die offenen To-dos, die auf die Startseite gehören.
-
-   Zuerst was drängt: überfällig, heute, morgen, höchstens drei davon –
-   der Rest steckt in der Zahl am Knopf "Alle". Ist es weniger als drei,
-   wird mit dem Nächsten aufgefüllt, was kommt – eine Karte mit
-   "nichts dringend" und sonst nichts sagt weniger als "nichts dringend,
-   als Nächstes kommt X am Montag". Die Reihenfolge ist die der Zeitgruppen,
-   innerhalb einer Gruppe die aus aufgabenSammeln(): Wichtiges zuerst.
+/* Die vier nächsten offenen To-dos, in der Reihenfolge der Zeitgruppen:
+   Überfälliges zuerst, dann heute, morgen und so weiter. Innerhalb einer
+   Gruppe gilt die Reihenfolge aus aufgabenSammeln(), Wichtiges vorn.
 
    Einträge ohne Termin im Plan fehlen hier. Sie haben kein Datum, also
-   auch keine Dringlichkeit; im Reiter "To-dos" stehen sie weiter. */
-const START_TODOS_DRINGEND = ["ueberfaellig", "heute", "morgen"];
-const START_TODOS_MINDESTENS = 3;
-const START_TODOS_HOECHSTENS = 3;
+   auch keinen Platz in "als Nächstes"; im Reiter "To-dos" stehen sie. */
+const START_TODOS_REIHENFOLGE = ["ueberfaellig", "heute", "morgen", "woche", "naechste", "spaeter"];
+const START_TODOS_ANZAHL = 4;
 
 function startTodos(jetzt) {
   const offen = aufgabenSammeln().filter(a => !a.erledigt);
   const gruppen = nachZeitgruppen(offen, jetzt);
 
-  const dringend = [];
-  for (const name of START_TODOS_DRINGEND) {
-    for (const eintrag of gruppen[name]) dringend.push({ eintrag, gruppe: name });
-  }
-
-  const auswahl = dringend.slice(0, START_TODOS_HOECHSTENS);
-  for (const name of ["woche", "naechste", "spaeter"]) {
+  const auswahl = [];
+  for (const name of START_TODOS_REIHENFOLGE) {
     for (const eintrag of gruppen[name]) {
-      if (auswahl.length >= START_TODOS_MINDESTENS) break;
-      auswahl.push({ eintrag, gruppe: name });
+      if (auswahl.length < START_TODOS_ANZAHL) auswahl.push({ eintrag, gruppe: name });
     }
   }
 
   return {
     auswahl: auswahl,
     offen: offen.length,
-    dringend: dringend.length,
+    dringend: gruppen.ueberfaellig.length + gruppen.heute.length + gruppen.morgen.length,
     ueberfaellig: gruppen.ueberfaellig.length,
   };
 }
@@ -713,6 +696,22 @@ function kurzerTitel(titel) {
   return String(titel || "").replace(/^\d+\s*-\s*/, "");
 }
 
+/* Kleine Symbole für die Köpfe der Karten. Als SVG direkt im Text, damit
+   sie keine eigene Datei brauchen und die Schriftfarbe übernehmen. */
+const SYMBOLE = {
+  heute: '<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+  todos: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.2l2.8 2.8L16 9.5"/>',
+  training: '<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/>',
+  notizen: '<path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  hinweis: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.3v.2"/>',
+};
+
+function symbol(name) {
+  return `<svg class="symbol" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round">${SYMBOLE[name] || ""}</svg>`;
+}
+
 function startZeichnen() {
   const bereich = document.getElementById("startInhalt");
   if (!bereich) return;
@@ -728,16 +727,6 @@ function startZeichnen() {
   const todos = startTodos(jetzt);
   const aenderungen = startAenderungen();
   const stuecke = [];
-
-  /* Oben steht nur, was Aufmerksamkeit braucht – und nur, wenn es das
-     gibt. Früher standen hier immer vier Zahlen, auch "0 neue
-     Änderungen". Eine Null ist keine Information, sie ist Rauschen. */
-  const achtung = [];
-  if (todos.ueberfaellig > 0) {
-    achtung.push(`<button type="button" class="start-achtung-knopf" data-start-seite="todos">
-      ${todos.ueberfaellig} ${todos.ueberfaellig === 1 ? "To-do" : "To-dos"} überfällig ›</button>`);
-  }
-  if (achtung.length) stuecke.push(`<div class="start-achtung">${achtung.join("")}</div>`);
 
   /* Hat sich der Stundenplan geändert, ist das das Wichtigste auf der
      Seite: ein Raum, der wechselt, eine Vorlesung, die ausfällt. Deshalb
@@ -766,79 +755,74 @@ function startZeichnen() {
   }
 
   const karten = [];
+  const trainingKarteStart = trainingStartKarte(jetzt);
 
-  // --- Heute (oder der nächste Tag mit Terminen) -----------------------
-  /* Nur was noch kommt. Das Vergangene steht im Plan; hier würde es nur
-     den Blick auf das Kommende verstellen. Eine Zeile je Termin: Zeit,
-     Titel, Raum. Eine Kurznotiz darf eine zweite Zeile haben – sie ist
-     genau das, was man sonst vergisst. */
-  const tag = starttagWaehlen(jetzt);
-  if (!tag) {
-    karten.push(startKarte("Heute", "plan", "Plan",
-      `<p class="start-leer">Die nächsten zwei Wochen sind frei.</p>`, "", true));
-  } else {
-    const titel = tag.istHeute ? "Heute" : tagLesbar(tag.schluessel);
-    const vorspann = !tag.istHeute
-      ? `<p class="start-leer">${tag.heuteVorbei
-           ? "Für heute ist alles vorbei." : "Heute steht nichts an."}</p>`
-      : "";
-    const ganztags = tag.ganztags.map(t => `
-      <button type="button" class="start-ganztags" data-termin="${sicher(t.id)}">
-        ${t.wichtig ? "★ " : ""}${sicher(t.titel)}
-      </button>`).join("");
-    const kommend = tag.termine.filter(t => alsDatum(t.ende) > jetzt);
-    const zeilen = kommend.map(t => {
-      const laeuft = alsDatum(t.start) <= jetzt;
-      const klassen = "start-termin" + (laeuft ? " start-termin-jetzt" : "")
-                    + (t.eigen ? " start-termin-eigen" : "");
-      const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
-      return `
-        <button type="button" class="${klassen}" data-termin="${sicher(t.id)}">
-          <span class="start-termin-zeit">${uhrzeit(t.start)}</span>
-          <span class="start-termin-text">
-            <span class="start-termin-zeile">
-              <span class="start-termin-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${
-                sicher(kurzerTitel(t.titel))}</span>
-              ${t.raum ? `<span class="start-termin-ort">${sicher(t.raum.replace(/^CL:\s*/, ""))}</span>` : ""}
-            </span>
-            ${notiz ? `<span class="start-termin-notiz">✎ ${sicher(notiz)}</span>` : ""}
-          </span>
-        </button>`;
-    }).join("");
-    karten.push(startKarte(titel, "plan", "Plan",
-      vorspann + (ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : "") + zeilen,
-      "", true));
-  }
-
-  // --- To-dos ------------------------------------------------------------
+  // --- Die vier nächsten To-dos -------------------------------------------
   const gruppenTitel = {};
   for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
-  let todoInhalt;
-  if (todos.offen === 0) {
-    todoInhalt = `<p class="start-leer">Nichts offen.</p>`;
-  } else {
-    todoInhalt = todos.auswahl.map(({ eintrag, gruppe }) => {
-      const wann = gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
-        ? gruppenTitel[gruppe]
-        : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10));
-      return `
-        <div class="start-todo${gruppe === "ueberfaellig" ? " start-todo-ueberfaellig" : ""}">
-          <button type="button" class="todo-haken" data-todo-haken="${sicher(eintrag.kennung)}"
-                  aria-label="Als erledigt abhaken"></button>
-          <button type="button" class="start-todo-text" data-start-todo="${sicher(eintrag.kennung)}">
-            <span class="start-todo-titel">${eintrag.wichtig ? "★ " : ""}${sicher(eintrag.text)}</span>
-            <span class="start-todo-wann">${sicher(wann)}${eintrag.erinnerung ? " · 🔔" : ""}</span>
-          </button>
-        </div>`;
-    }).join("");
-  }
-  karten.push(startKarte("To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle", todoInhalt));
+  const todoInhalt = todos.offen === 0
+    ? `<p class="start-leer">Nichts offen.</p>`
+    : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
+        gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+          ? gruppenTitel[gruppe]
+          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
+        gruppe === "ueberfaellig")).join("");
+  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
+    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
+                  breit: !trainingKarteStart }));
 
-  // --- Training aus Gymbro (nur auf Friedrichs Geräten) ------------------
-  const trainingKarteStart = trainingStartKarte(jetzt);
+  // --- Training, oben rechts ----------------------------------------------
   if (trainingKarteStart) karten.push(trainingKarteStart);
 
-  // --- Notizen: nur die zwei obersten, markierte zuerst ------------------
+  // --- Heute: Termine, Ganztägiges, fällige To-dos ------------------------
+  const h = heuteSammeln(jetzt);
+  const anzahlText = [
+    h.termine.length ? h.termine.length + (h.termine.length === 1 ? " Termin" : " Termine") : "",
+    h.todos.length ? h.todos.length + (h.todos.length === 1 ? " To-do" : " To-dos") : "",
+  ].filter(Boolean).join(" · ");
+
+  const ganztags = h.ganztags.map(t => `
+    <button type="button" class="start-ganztags" data-termin="${sicher(t.id)}">
+      ${t.wichtig ? "★ " : ""}${sicher(t.titel)}
+    </button>`).join("");
+
+  /* Eine Zeitleiste: links die Uhrzeit in fester Breite, daneben ein Punkt
+     auf einer senkrechten Linie, rechts Titel und Raum. Die feste Breite
+     ist der Grund, warum die Uhrzeiten jetzt genau untereinander stehen –
+     vorher schob der Balken am laufenden Termin sie zur Seite. */
+  const termine = h.termine.map(t => {
+    const laeuft = alsDatum(t.start) <= jetzt;
+    const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
+    return `
+      <button type="button" class="heute-termin${laeuft ? " heute-jetzt" : ""}${
+                t.eigen ? " heute-eigen" : ""}" data-termin="${sicher(t.id)}">
+        <span class="heute-zeit">${uhrzeit(t.start)}<span>${uhrzeit(t.ende)}</span></span>
+        <span class="heute-punkt" aria-hidden="true"></span>
+        <span class="heute-text">
+          <span class="heute-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${
+            sicher(kurzerTitel(t.titel))}${laeuft ? ` <span class="heute-marke">läuft</span>` : ""}</span>
+          <span class="heute-ort">${sicher([t.raum ? t.raum.replace(/^CL:\s*/, "") : "",
+                                             t.eigen ? "eigener Termin" : ""].filter(Boolean).join(" · "))}</span>
+          ${notiz ? `<span class="heute-notiz">✎ ${sicher(notiz)}</span>` : ""}
+        </span>
+      </button>`;
+  }).join("");
+
+  const heuteTodos = h.todos.map(x => startTodoZeile(x.eintrag,
+    x.ueberfaellig ? "Überfällig" : (x.eintrag.art === "notiz" && x.eintrag.termin
+      ? "zu " + kurzerTitel(x.eintrag.termin.titel) : "Heute fällig"),
+    x.ueberfaellig)).join("");
+
+  const leer = !termine && !heuteTodos && !ganztags;
+  karten.push(startKarte("Heute", "plan", "Plan", `
+    ${ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : ""}
+    ${termine ? `<div class="heute-leiste">${termine}</div>`
+      : `<p class="start-leer">${h.vorbei ? "Für heute keine Termine mehr." : "Heute keine Termine."}</p>`}
+    ${heuteTodos ? `<div class="heute-abschnitt">To-dos für heute</div>${heuteTodos}` : ""}
+    ${leer ? "" : ""}`,
+    { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
+
+  // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
   if (notizbuch.length) {
     karten.push(startKarte("Notizen", "zettel", "Alle " + zettel.length,
@@ -847,40 +831,60 @@ function startZeichnen() {
           <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
           ${zettelVorschau(z)
             ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
-        </button>`).join("")));
+        </button>`).join(""),
+      { symbol: "notizen", farbe: "gelb", klasse: "start-karte-notizen" }));
   }
 
   // --- Hinweise aus dem HWR-Plan, nächste 7 Tage, nur wenn es welche gibt -
   const grenze = tagesSchluessel(tageDazu(jetzt, 7));
   const hinweise = hinweiseSammeln()
-    .filter(h => !istVorbei(h.start) && h.start.slice(0, 10) <= grenze)
+    .filter(x => !istVorbei(x.start) && x.start.slice(0, 10) <= grenze)
     .slice(0, 2);
   if (hinweise.length > 0) {
     karten.push(startKarte("Hinweise im Plan", "todos", "Alle",
-      hinweise.map(h => `
+      hinweise.map(x => `
         <div class="start-hinweis">
-          <span class="start-hinweis-text">${sicher(h.anmerkung)}</span>
-          <span class="start-todo-wann">${sicher(tagLesbar(h.start.slice(0, 10)) + " · " + kurzerTitel(h.titel))}</span>
-        </div>`).join("")));
+          <span class="start-hinweis-text">${sicher(x.anmerkung)}</span>
+          <span class="start-todo-wann">${sicher(tagLesbar(x.start.slice(0, 10)) + " · " + kurzerTitel(x.titel))}</span>
+        </div>`).join(""),
+      { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise" }));
   }
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");
 }
 
-/* Eine Karte der Übersicht: Überschrift, rechts ein Weg in den ganzen
-   Bereich, darunter der Inhalt. */
-function startKarte(titel, ziel, zielText, inhalt, knopf, breit) {
+/* Eine To-do-Zeile, wie sie in "Nächste To-dos" und in "Heute" steht. */
+function startTodoZeile(eintrag, wann, ueberfaellig) {
   return `
-    <section class="start-karte${breit ? " start-karte-breit" : ""}">
+    <div class="start-todo${ueberfaellig ? " start-todo-ueberfaellig" : ""}">
+      <button type="button" class="todo-haken" data-todo-haken="${sicher(eintrag.kennung)}"
+              aria-label="Als erledigt abhaken"></button>
+      <button type="button" class="start-todo-text" data-start-todo="${sicher(eintrag.kennung)}">
+        <span class="start-todo-titel">${eintrag.wichtig ? "★ " : ""}${sicher(eintrag.text)}</span>
+        <span class="start-todo-wann">${sicher(wann)}${eintrag.erinnerung ? " · 🔔" : ""}</span>
+      </button>
+    </div>`;
+}
+
+/* Eine Karte der Übersicht: Kopf mit Symbol und Überschrift, rechts ein
+   Weg in den ganzen Bereich, darunter der Inhalt. Die Farbe des Symbols
+   unterscheidet die Karten auf einen Blick, auch ohne zu lesen.
+
+   optionen: { symbol, farbe, breit, klasse, unterzeile } */
+function startKarte(titel, ziel, zielText, inhalt, optionen) {
+  const o = optionen || {};
+  return `
+    <section class="start-karte${o.breit ? " start-karte-breit" : ""}${o.klasse ? " " + o.klasse : ""}">
       <div class="start-karte-kopf">
-        <h2>${sicher(titel)}</h2>
-        <div class="start-karte-knoepfe">
-          ${knopf || ""}
-          <button type="button" class="start-weiter" data-start-seite="${ziel}">${sicher(zielText)} ›</button>
+        ${o.symbol ? `<span class="start-symbol start-symbol-${o.farbe || "blau"}">${symbol(o.symbol)}</span>` : ""}
+        <div class="start-karte-titel">
+          <h2>${sicher(titel)}</h2>
+          ${o.unterzeile ? `<span class="start-unterzeile">${sicher(o.unterzeile)}</span>` : ""}
         </div>
+        <button type="button" class="start-weiter" data-start-seite="${ziel}">${sicher(zielText)} ›</button>
       </div>
-      ${inhalt}
+      <div class="start-karte-inhalt">${inhalt}</div>
     </section>`;
 }
 
@@ -3730,6 +3734,31 @@ function trainingAuswerten(daten, jetzt) {
   const dauerSchnitt = dauern.length
     ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : null;
 
+  /* Der Trend: Trainings pro Woche in den letzten vier abgeschlossenen
+     Wochen gegen die vier davor. Die laufende Woche zählt nicht mit – am
+     Montag stünde sonst jede Woche "weniger". Unter einer Viertel-Einheit
+     pro Woche Unterschied heißt es "gleich", sonst schwankt die Aussage
+     mit jedem einzelnen Training hin und her. */
+  const proWoche = versatz => {
+    const von = tageDazu(montag, -7 * versatz);
+    const bis = tageDazu(von, 7);
+    return alle.filter(s => s.start >= von && s.start < bis).length;
+  };
+  const schnitt = (von, bis) => {
+    let summe = 0;
+    for (let i = von; i <= bis; i++) summe += proWoche(i);
+    return summe / (bis - von + 1);
+  };
+  const trendJetzt = schnitt(1, 4);
+  const trendVorher = schnitt(5, 8);
+  const trend = {
+    jetzt: trendJetzt,
+    vorher: trendVorher,
+    richtung: trendJetzt === 0 && trendVorher === 0 ? "keine"
+      : Math.abs(trendJetzt - trendVorher) < 0.25 ? "gleich"
+      : trendJetzt > trendVorher ? "hoch" : "runter",
+  };
+
   const gewicht = gymbroGewichte(daten);
   const aktuell = gewicht.length ? gewicht[gewicht.length - 1] : null;
   // Vergleich mit dem letzten Wert, der mindestens 30 Tage älter ist.
@@ -3743,7 +3772,7 @@ function trainingAuswerten(daten, jetzt) {
     anzahl: alle.length,
     letzte: alle[0] || null,
     erstes: alle[alle.length - 1] || null,
-    dieseWoche, diesenMonat, wochen, serie, muskeln, dauerSchnitt,
+    dieseWoche, diesenMonat, wochen, serie, muskeln, dauerSchnitt, trend,
     gewicht: gewicht.filter(w => w.datum >= tageDazu(jetzt, -90)),
     gewichtAktuell: aktuell,
     gewichtVorher: vorher,
@@ -3996,8 +4025,9 @@ function trainingVerlaufZeichnen(daten, jetzt) {
     ${gefiltert.length === 0 ? `<p class="leer-text">Kein Training passt zu diesem Filter.</p>` : ""}
     ${monate.map(m => `
       <section class="start-karte training-monat">
-        <div class="start-karte-kopf"><h2>${sicher(m.name)}</h2>
+        <div class="start-karte-kopf"><div class="start-karte-titel"><h2>${sicher(m.name)}</h2></div>
           <span class="training-leise">${m.liste.length} ${m.liste.length === 1 ? "Training" : "Trainings"}</span></div>
+        <div class="start-karte-inhalt">
         ${m.liste.map(s => `
           <div class="training-eintrag">
             <div class="training-eintrag-tag">
@@ -4015,30 +4045,56 @@ function trainingVerlaufZeichnen(daten, jetzt) {
               ${s.notiz ? `<div class="training-notiz">${sicher(s.notiz)}</div>` : ""}
             </div>
           </div>`).join("")}
+        </div>
       </section>`).join("")}`;
 }
 
 function trainingKarte(titel, inhalt) {
   return `
     <section class="start-karte">
-      <div class="start-karte-kopf"><h2>${sicher(titel)}</h2></div>
-      ${inhalt}
+      <div class="start-karte-kopf"><div class="start-karte-titel"><h2>${sicher(titel)}</h2></div></div>
+      <div class="start-karte-inhalt">${inhalt}</div>
     </section>`;
 }
 
-/* Die kleine Karte auf der Übersicht. Leer, solange es nichts zu zeigen
-   gibt – auf fremden Dashboards also immer. */
+/* Die Karte auf der Übersicht: wie viele Trainings diese Woche, und wohin
+   der Trend geht. Mehr nicht – der Rest steht im Reiter. Leer, solange es
+   nichts zu zeigen gibt, auf fremden Dashboards also immer. */
+const TREND_TEXT = {
+  hoch: ["↗", "Mehr als im Monat davor"],
+  gleich: ["→", "So regelmäßig wie im Monat davor"],
+  runter: ["↘", "Weniger als im Monat davor"],
+  keine: ["", "In den letzten zwei Monaten kein Training"],
+};
+
+function zahlLesbar(wert) {
+  return String(Math.round(wert * 10) / 10).replace(".", ",");
+}
+
 function trainingStartKarte(jetzt) {
   if (!trainingSichtbar() || !training) return "";
   const a = trainingAuswerten(training.daten, jetzt);
-  const inhalt = a.letzte
-    ? `<div class="training-zeile"><strong>Zuletzt ${sicher(tageHer(a.letzte.start, jetzt))}</strong>${
-         einheitBeschreiben(a.letzte) ? " · " + sicher(einheitBeschreiben(a.letzte)) : ""}</div>
-       <div class="training-leise">${a.dieseWoche} diese Woche · ${a.serie} ${
-         a.serie === 1 ? "Woche" : "Wochen"} in Folge${
-         a.gewichtAktuell ? " · " + sicher(kgLesbar(a.gewichtAktuell.wert)) : ""}</div>`
-    : `<p class="start-leer">Noch kein Training eingetragen.</p>`;
-  return startKarte("Training", "training", "Mehr", inhalt);
+  const hoechste = Math.max(1, ...a.wochen.map(w => w.anzahl));
+  const [pfeil, satz] = TREND_TEXT[a.trend.richtung];
+  const inhalt = `
+    <div class="tw-oben">
+      <div class="tw-zahl">${a.dieseWoche}</div>
+      <div class="tw-zahl-text">${a.dieseWoche === 1 ? "Training" : "Trainings"}<br>diese Woche</div>
+      <div class="tw-balken" role="img"
+           aria-label="Trainings pro Woche, die letzten acht Wochen: ${a.wochen.map(w => w.anzahl).join(", ")}">
+        ${a.wochen.map((w, i) => `
+          <span class="tw-saeule${i === a.wochen.length - 1 ? " tw-saeule-jetzt" : ""}"
+                style="height:${Math.max(6, Math.round(w.anzahl / hoechste * 100))}%"
+                title="KW ${kalenderwoche(w.montag)}: ${w.anzahl}"></span>`).join("")}
+      </div>
+    </div>
+    <div class="tw-trend tw-trend-${a.trend.richtung}">
+      ${pfeil ? `<span class="tw-pfeil">${pfeil}</span>` : ""}
+      <span>${sicher(satz)}${a.trend.richtung === "keine" ? "" : `<span class="tw-schnitt">Ø ${
+        zahlLesbar(a.trend.jetzt)} statt ${zahlLesbar(a.trend.vorher)} pro Woche</span>`}</span>
+    </div>`;
+  return startKarte("Training", "training", "Mehr", inhalt,
+                    { symbol: "training", farbe: "lila", klasse: "start-karte-training" });
 }
 
 

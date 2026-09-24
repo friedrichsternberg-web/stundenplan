@@ -34,6 +34,10 @@
      von den violetten Notizen und vom blauen Akzent. */
   --wichtig: #d4453d;
   --wichtig-flaeche: #fdeceb;
+  /* Helle Hintergründe für die Symbole in den Kartenköpfen der Übersicht. */
+  --akzent-flaeche: #e7eefd;
+  --neu-flaeche: #e3f4ea;
+  --geaendert-flaeche: #fcf1dd;
 }
 
 /* Die dunklen Farben. Es bleiben dieselben Variablennamen, deshalb muss
@@ -70,6 +74,9 @@
     --notiz-flaeche-hell: #2f2b42;
     --wichtig: #f0706e;
     --wichtig-flaeche: #352424;
+    --akzent-flaeche: #1f2a44;
+    --neu-flaeche: #1b3025;
+    --geaendert-flaeche: #33291a;
 }
 
 * { box-sizing: border-box; }
@@ -263,26 +270,48 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   align-items: start;
 }
 
+/* Jede Karte hat einen abgesetzten Kopf (Symbol, Titel, Weiter-Knopf) und
+   darunter den Inhalt. Die Linie zwischen beiden und der etwas größere
+   Radius trennen die Karten deutlicher voneinander als vorher, wo alles
+   in einer Fläche zusammenlief. */
 .start-karte {
   background: var(--flaeche);
   border: 1px solid var(--linie);
-  border-radius: var(--rundung);
-  box-shadow: var(--schatten);
-  padding: 12px 14px 10px;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .05);
   min-width: 0;
+  overflow: hidden;
 }
 
 .start-karte-kopf {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--linie);
 }
 
-.start-karte-kopf h2 { font-size: 16px; font-weight: 700; margin: 0; }
+.start-karte-titel { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.start-karte-kopf h2 { font-size: 15px; font-weight: 700; margin: 0; }
+.start-unterzeile { font-size: 12px; color: var(--schrift-leise); }
 
-.start-karte-knoepfe { display: flex; align-items: center; gap: 6px; }
+.start-karte-inhalt { padding: 8px 14px 12px; }
+
+/* Das Symbol im Kopf: ein kleines farbiges Quadrat. */
+.start-symbol {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.start-symbol .symbol { width: 17px; height: 17px; }
+.start-symbol-blau { background: var(--akzent-flaeche); color: var(--akzent); }
+.start-symbol-gruen { background: var(--neu-flaeche); color: var(--neu); }
+.start-symbol-lila { background: var(--notiz-flaeche); color: var(--notiz-rand); }
+.start-symbol-gelb { background: var(--geaendert-flaeche); color: var(--geaendert); }
 
 .knopf-schlicht.start-klein { padding: 4px 10px; font-size: 13px; }
 
@@ -307,49 +336,6 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   color: var(--schrift-leise);
   margin: 6px 0 2px;
 }
-
-/* Eine Zeile im Tagesplan. Knöpfe statt Textzeilen, weil sie das
-   Terminfenster öffnen - so sind sie auch mit der Tastatur erreichbar. */
-.start-termin {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--linie);
-  padding: 8px 0;
-  text-align: left;
-  font-family: inherit;
-  color: var(--schrift);
-  cursor: pointer;
-}
-
-
-.start-termin-zeit {
-  flex: 0 0 42px;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--schrift-leise);
-  font-variant-numeric: tabular-nums;
-}
-
-.start-termin-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.start-termin-titel { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.start-termin-ort { font-size: 12px; color: var(--schrift-leise); }
-.start-termin-hinweis { font-size: 12px; font-weight: 600; color: var(--geaendert); }
-.start-termin-notiz { font-size: 12px; color: var(--notiz-rand); overflow-wrap: anywhere; }
-
-/* Vorbei: noch da, damit man den Tag im Ganzen sieht, aber blass. */
-.start-termin-vorbei { opacity: .45; }
-
-/* Läuft gerade: ein Balken links, wie ein Lesezeichen. */
-.start-termin-jetzt {
-  box-shadow: inset 3px 0 0 var(--akzent);
-  padding-left: 9px;
-}
-.start-termin-jetzt .start-termin-zeit { color: var(--akzent); font-weight: 600; }
-
-.start-termin-eigen .start-termin-titel { color: var(--neu); }
 
 .start-ganztags-reihe { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
 
@@ -442,9 +428,10 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 /* Die Trennlinie steht zwischen zwei Zeilen, nicht über der ersten.
    :first-of-type hilft hier nicht: davor stehen die Überschrift und
    manchmal ein Satz, und die zählen mit oder eben nicht, je nach Sorte. */
-.start-karte-kopf + *,
+.start-karte-inhalt > :first-child,
 .start-leer + *,
-.start-ganztags-reihe + * { border-top: 0; }
+.start-ganztags-reihe + *,
+.heute-abschnitt + * { border-top: 0; }
 
 @media (max-width: 700px) {
   .start-raster { grid-template-columns: minmax(0, 1fr); }
@@ -2475,7 +2462,7 @@ a.knopf-schlicht {
 }
 
 /* Wie bei den Karten der Übersicht: keine Linie über der ersten Zeile. */
-.start-karte-kopf + .training-reihe { border-top: 0; }
+.start-karte-inhalt > .training-reihe:first-child { border-top: 0; }
 
 
 /* --- Übersicht, schlanker (24.09.2026) ------------------------------------ */
@@ -2483,34 +2470,6 @@ a.knopf-schlicht {
 /* Heute geht über die ganze Breite, darunter To-dos und Training
    nebeneinander. */
 .start-karte-breit { grid-column: 1 / -1; }
-
-/* Ein Termin, eine Zeile: Uhrzeit, Titel, rechts der Raum. */
-.start-termin { padding: 7px 0; align-items: baseline; }
-.start-termin-zeit { flex-basis: 40px; font-size: 13px; }
-.start-termin-zeile { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.start-termin-zeile .start-termin-titel {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.start-termin-zeile .start-termin-ort { flex-shrink: 0; }
-.start-termin-notiz { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Was Aufmerksamkeit braucht, als schmale Knöpfe über den Karten. */
-.start-achtung { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.start-achtung-knopf {
-  background: var(--wichtig-flaeche);
-  color: var(--wichtig);
-  border: 1px solid var(--wichtig);
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
 
 /* Der große Hinweis, wenn sich der Stundenplan geändert hat. */
 .start-geaendert {
@@ -2601,7 +2560,148 @@ a.knopf-schlicht {
   border-top: 1px solid var(--linie);
   font-size: 14px;
 }
-.start-karte-kopf + .training-eintrag { border-top: 0; }
+.start-karte-inhalt > .training-eintrag:first-child { border-top: 0; }
 .training-eintrag-tag { flex: 0 0 78px; display: flex; flex-direction: column; }
 .training-eintrag-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .training-notiz { font-size: 13px; color: var(--notiz-rand); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+
+/* --- Übersicht, Anordnung und Widgets (24.09.2026, zweite Runde) --------- */
+
+/* Oben To-dos und Training nebeneinander, darunter Heute über die ganze
+   Breite. Auf dem Handy untereinander – und dort Heute zuerst: wer
+   unterwegs aufs Handy schaut, will wissen, was jetzt kommt. */
+.start-raster { gap: 16px; }
+.start-karte-heute { grid-column: 1 / -1; }
+
+@media (max-width: 700px) {
+  .start-karte-heute { order: -1; }
+}
+
+/* Die Zeitleiste in "Heute". Drei Spalten mit fester Breite links, damit
+   jede Uhrzeit genau unter der vorigen steht. */
+.heute-leiste { position: relative; margin: 4px 0 2px; }
+
+.heute-termin {
+  display: grid;
+  grid-template-columns: 46px 18px minmax(0, 1fr);
+  align-items: start;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 7px 0;
+  font-family: inherit;
+  color: var(--schrift);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+
+.heute-zeit {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: right;
+  padding-right: 2px;
+}
+.heute-zeit span { display: block; font-size: 12px; font-weight: 400; color: var(--schrift-leise); }
+
+/* Der Punkt sitzt auf einer durchgehenden senkrechten Linie. */
+.heute-punkt { position: relative; align-self: stretch; }
+.heute-punkt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  bottom: -7px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--linie);
+}
+.heute-termin:first-child .heute-punkt::before { top: 8px; }
+.heute-termin:last-child .heute-punkt::before { bottom: auto; height: 12px; }
+.heute-punkt::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: var(--flaeche);
+  border: 2px solid var(--akzent);
+  box-sizing: border-box;
+}
+.heute-jetzt .heute-punkt::after { background: var(--akzent); box-shadow: 0 0 0 4px var(--akzent-flaeche); }
+.heute-eigen .heute-punkt::after { border-color: var(--neu); }
+.heute-jetzt .heute-zeit { color: var(--akzent); }
+
+.heute-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-left: 4px; }
+.heute-titel { font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.heute-ort { font-size: 12.5px; color: var(--schrift-leise); }
+.heute-notiz { font-size: 12.5px; color: var(--notiz-rand); overflow-wrap: anywhere; }
+
+.heute-marke {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  vertical-align: 1px;
+}
+
+.heute-abschnitt {
+  margin: 10px 0 2px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linie);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+
+/* Das Training-Widget: große Zahl, daneben acht kleine Balken, darunter
+   der Trend in einem Satz. */
+.tw-oben { display: flex; align-items: flex-end; gap: 10px; margin-top: 4px; }
+.tw-zahl { font-size: 38px; font-weight: 800; line-height: 1; color: var(--notiz-rand); }
+.tw-zahl-text { font-size: 12.5px; line-height: 1.3; color: var(--schrift-leise); padding-bottom: 2px; }
+
+.tw-balken {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 44px;
+}
+.tw-saeule {
+  flex: 0 1 12px;
+  min-width: 5px;
+  border-radius: 3px 3px 1px 1px;
+  background: var(--notiz-flaeche-hell);
+}
+.tw-saeule-jetzt { background: var(--notiz-rand); }
+
+.tw-trend {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--flaeche-gedaempft);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tw-pfeil { font-size: 17px; line-height: 1.15; }
+.tw-schnitt { display: block; font-size: 12px; font-weight: 400; color: var(--schrift-leise); }
+.tw-trend-hoch .tw-pfeil { color: var(--neu); }
+.tw-trend-runter .tw-pfeil { color: var(--wichtig); }
+.tw-trend-gleich .tw-pfeil { color: var(--akzent); }
