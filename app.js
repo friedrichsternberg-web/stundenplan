@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "0d951d63";
+const GEBAUTE_VERSION = "151587d8";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -564,7 +564,7 @@ const ZURUECK_ZUR_UEBERSICHT_NACH = 15 * 60 * 1000;
    und keine Viertelstunde her; sonst die Übersicht. Eine Zeit, die in der
    Zukunft liegt – Uhr des Geräts verstellt –, zählt nicht als frisch. */
 function startseiteWaehlen(gemerkteSeite, gemerktAm, jetzt) {
-  const bekannt = ["start", "plan", "zettel", "todos", "aenderungen"];
+  const bekannt = ["start", "plan", "training", "zettel", "todos", "aenderungen"];
   const her = jetzt - (Number(gemerktAm) || 0);
   if (bekannt.indexOf(gemerkteSeite) >= 0 && her >= 0 && her < ZURUECK_ZUR_UEBERSICHT_NACH) {
     return gemerkteSeite;
@@ -791,6 +791,10 @@ function startZeichnen() {
   }
   karten.push(startKarte("To-dos", "todos", "Alle",
     todoInhalt, `<button type="button" class="knopf-schlicht start-klein" data-start-todo-neu>+ To-do</button>`));
+
+  // --- Training aus Gymbro (nur auf Friedrichs Geräten) ------------------
+  const trainingKarteStart = trainingStartKarte(jetzt);
+  if (trainingKarteStart) karten.push(trainingKarteStart);
 
   // --- Hinweise aus dem HWR-Plan, nächste 14 Tage -----------------------
   const grenze = tagesSchluessel(tageDazu(jetzt, 14));
@@ -3326,6 +3330,570 @@ function eintragZeichnen(eintrag) {
 
 
 /* -------------------------------------------------------------------------
+   5a. Training
+
+   Die Daten kommen aus Gymbro, der Trainings-App von Friedrich und seinen
+   Freunden. Abgeholt werden sie von der Funktion "training" bei Supabase,
+   denn dort liegt der Gymbro-Schlüssel. In die Seite darf er nicht, die
+   ist öffentlich.
+
+   Die Funktion antwortet nur Friedrichs Gerätecode. Alle anderen – die
+   beiden Studierenden etwa – bekommen "nicht freigegeben", und für sie
+   bleibt der Reiter unsichtbar. Sie sollen keinen Bereich sehen, der für
+   sie nie etwas enthalten wird.
+
+   Die Felder heißen so, wie Gymbro sie liefert (englisch). Welche Namen
+   genau, ist nur für Trainings dokumentiert; für Gewicht, Bestleistungen
+   und Pläne probieren die Lesehilfen unten mehrere übliche Namen durch.
+   Fehlt ein Feld, bleibt die Stelle leer – sie darf nie "undefined" oder
+   "NaN" anzeigen.
+   ------------------------------------------------------------------------- */
+
+const SPEICHER_TRAINING = "stundenplan.training";
+const SPEICHER_TRAINING_ZUGANG = "stundenplan.trainingZugang";
+const TRAINING_URL = "/functions/v1/training";
+
+/* Wie oft von selbst nachgefragt wird. Ein Training dauert eine Stunde,
+   öfter als alle zehn Minuten ändert sich dort nichts Sehenswertes. */
+const TRAINING_FRISCH_MS = 10 * 60 * 1000;
+
+/* Wer einmal "nicht freigegeben" bekommen hat, fragt erst am nächsten Tag
+   wieder. So kostet ein fremdes Dashboard Gymbro keinen Aufruf pro Öffnen. */
+const TRAINING_NEIN_MERKEN_MS = 24 * 60 * 60 * 1000;
+
+// { abgerufenAm, daten } – der letzte gute Stand, auch ohne Netz lesbar.
+let training = null;
+// "", "laedt", "ok", "kein_schluessel", "schluessel_ungueltig", "fehler"
+let trainingZustand = "";
+let trainingFehlertext = "";
+let trainingLaeuft = false;
+
+function trainingLaden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_TRAINING);
+    const wert = roh ? JSON.parse(roh) : null;
+    return wert && typeof wert === "object" && wert.daten ? wert : null;
+  } catch (fehler) {
+    return null;
+  }
+}
+
+/* { antwort: "ja" | "nein", am: Zeitstempel } */
+function trainingZugang() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_TRAINING_ZUGANG);
+    const wert = roh ? JSON.parse(roh) : null;
+    return wert && typeof wert === "object" ? wert : { antwort: "", am: 0 };
+  } catch (fehler) {
+    return { antwort: "", am: 0 };
+  }
+}
+
+function trainingZugangMerken(antwort) {
+  try {
+    localStorage.setItem(SPEICHER_TRAINING_ZUGANG,
+                         JSON.stringify({ antwort: antwort, am: Date.now() }));
+  } catch (fehler) { /* dann wird eben beim nächsten Öffnen wieder gefragt */ }
+}
+
+/* Soll der Reiter zu sehen sein? Nur wenn die Funktion schon einmal "ja"
+   gesagt hat. Beim allerersten Öffnen ist er also kurz unsichtbar, bis
+   die Antwort da ist – das ist besser als ein Reiter, der bei anderen
+   erst auftaucht und dann wieder verschwindet. */
+function trainingSichtbar() {
+  return trainingZugang().antwort === "ja";
+}
+
+/* Fragt bei der Funktion nach. zwingen: auch wenn der Stand frisch ist
+   (der ↻-Knopf im Bereich). */
+function trainingAbholen(zwingen) {
+  if (trainingLaeuft) return;
+  if (typeof Abgleich === "undefined" || !Abgleich.code()) return;
+  if (typeof ABGLEICH_URL === "undefined" || typeof fetch !== "function") return;
+
+  const zugang = trainingZugang();
+  if (!zwingen && zugang.antwort === "nein"
+      && Date.now() - zugang.am < TRAINING_NEIN_MERKEN_MS) return;
+  if (!zwingen && training && trainingZustand === "ok"
+      && Date.now() - Date.parse(training.abgerufenAm) < TRAINING_FRISCH_MS) return;
+
+  trainingLaeuft = true;
+  if (trainingZustand !== "ok") trainingZustand = "laedt";
+  trainingZeichnen();
+
+  fetch(ABGLEICH_URL + TRAINING_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: Abgleich.code() }),
+  })
+    .then(a => a.json().then(inhalt => ({ status: a.status, inhalt })))
+    .then(({ status, inhalt }) => {
+      if (status === 403) {
+        trainingZugangMerken("nein");
+        trainingZustand = "";
+        return;
+      }
+      trainingZugangMerken("ja");
+      trainingZustand = inhalt.zustand === "ok" ? "ok" : (inhalt.zustand || "fehler");
+      trainingFehlertext = inhalt.text || (inhalt.status ? "Gymbro antwortet " + inhalt.status : "");
+      if (inhalt.zustand === "ok") {
+        training = { abgerufenAm: inhalt.abgerufenAm, daten: inhalt.daten || {} };
+        try { localStorage.setItem(SPEICHER_TRAINING, JSON.stringify(training)); }
+        catch (fehler) { /* dann eben nur bis zum Neuladen */ }
+      }
+    })
+    .catch(fehler => {
+      // Kein Netz: der alte Stand bleibt stehen, nur mit Hinweis.
+      trainingZustand = "fehler";
+      trainingFehlertext = "Keine Verbindung.";
+    })
+    .then(() => {
+      trainingLaeuft = false;
+      reiterSichtbarkeitSetzen();
+      trainingZeichnen();
+      startZeichnen();
+    });
+}
+
+function reiterSichtbarkeitSetzen() {
+  const knopf = document.querySelector('[data-seite="training"]');
+  if (knopf) knopf.hidden = !trainingSichtbar();
+  // Wer auf dem Reiter stand, als der Zugang entzogen wurde: zurück.
+  if (seite === "training" && !trainingSichtbar()) seiteSetzen("start");
+}
+
+
+/* --- Lesehilfen ------------------------------------------------------- */
+
+/* Das erste Feld aus der Liste, das es gibt. */
+function gymbroFeld(eintrag, namen) {
+  if (!eintrag || typeof eintrag !== "object") return undefined;
+  for (const name of namen) {
+    if (eintrag[name] !== undefined && eintrag[name] !== null && eintrag[name] !== "") {
+      return eintrag[name];
+    }
+  }
+  return undefined;
+}
+
+function gymbroZahl(wert) {
+  const n = typeof wert === "number" ? wert : parseFloat(String(wert || "").replace(",", "."));
+  return isFinite(n) ? n : null;
+}
+
+/* Datum aus Gymbro: entweder mit Uhrzeit in UTC ("…T17:30:00.000Z") oder
+   nur ein Tag ("2026-08-02"). Ein reiner Tag wird als Mittag gelesen –
+   um Mitternacht UTC wäre es in Berlin je nach Jahreszeit schon der
+   nächste Tag oder noch der vorige. */
+function gymbroDatum(wert) {
+  if (!wert) return null;
+  const text = String(wert);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(text + "T12:00:00") : new Date(text);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/* Die Liste eines Abschnitts, nur mit echten Einträgen. Ein null
+   mittendrin – kommt bei JSON aus fremder Hand vor – ließ sonst die ganze
+   Auswertung abstürzen, und der Bereich bliebe leer. */
+function gymbroListe(daten, name) {
+  const roh = daten && Array.isArray(daten[name]) ? daten[name] : [];
+  return roh.filter(e => e && typeof e === "object");
+}
+
+function gymbroEinheiten(daten) {
+  return gymbroListe(daten, "sessions")
+    .map(s => ({
+      start: gymbroDatum(gymbroFeld(s, ["arrivedAt", "startedAt", "start", "date"])),
+      ende: gymbroDatum(gymbroFeld(s, ["leftAt", "endedAt", "end"])),
+      typ: gymbroFeld(s, ["trainingType", "type"]) || "",
+      muskeln: Array.isArray(s.muscleGroups) ? s.muscleGroups.map(String) : [],
+      bewertung: gymbroZahl(gymbroFeld(s, ["rating"])),
+      gym: gymbroFeld(s, ["gymName", "gymId", "gym"]) || "",
+    }))
+    .filter(s => s.start)
+    .sort((a, b) => b.start - a.start);
+}
+
+function gymbroGewichte(daten) {
+  return gymbroListe(daten, "weights")
+    .map(w => ({
+      datum: gymbroDatum(gymbroFeld(w, ["date", "measuredAt", "recordedAt", "createdAt"])),
+      wert: gymbroZahl(gymbroFeld(w, ["weight", "weightKg", "kg", "value"])),
+    }))
+    .filter(w => w.datum && w.wert !== null)
+    .sort((a, b) => a.datum - b.datum);
+}
+
+function gymbroBestleistungen(daten) {
+  return gymbroListe(daten, "prs")
+    .map(p => ({
+      uebung: gymbroFeld(p, ["exercise", "exerciseName", "name", "lift", "title"]) || "",
+      wert: gymbroZahl(gymbroFeld(p, ["weight", "weightKg", "kg", "value"])),
+      wdh: gymbroZahl(gymbroFeld(p, ["reps", "repetitions"])),
+      datum: gymbroDatum(gymbroFeld(p, ["date", "achievedAt", "createdAt"])),
+    }))
+    .filter(p => p.uebung)
+    .sort((a, b) => (b.datum || 0) - (a.datum || 0));
+}
+
+function gymbroPlaene(daten) {
+  return gymbroListe(daten, "plans")
+    .map(p => ({
+      name: gymbroFeld(p, ["name", "title"]) || "",
+      aktiv: Boolean(gymbroFeld(p, ["active", "isActive", "current"])),
+      beschreibung: gymbroFeld(p, ["description", "notes"]) || "",
+    }))
+    .filter(p => p.name);
+}
+
+function gymbroAbsagen(daten) {
+  return gymbroListe(daten, "cancellations")
+    .map(c => ({
+      datum: gymbroDatum(gymbroFeld(c, ["date", "cancelledAt", "createdAt"])),
+      ruhetag: Boolean(c.isRestDay),
+      grund: gymbroFeld(c, ["reason", "note"]) || "",
+    }))
+    .filter(c => c.datum)
+    .sort((a, b) => b.datum - a.datum);
+}
+
+/* Gymbro schreibt englisch, das Dashboard spricht deutsch. Was hier
+   fehlt, erscheint so, wie es kommt – nur mit großem Anfangsbuchstaben. */
+const TRAINING_WOERTER = {
+  push: "Push", pull: "Pull", legs: "Beine", upper: "Oberkörper",
+  lower: "Unterkörper", fullbody: "Ganzkörper", full_body: "Ganzkörper",
+  cardio: "Cardio", arms: "Arme",
+  chest: "Brust", shoulders: "Schultern", back: "Rücken", biceps: "Bizeps",
+  triceps: "Trizeps", quads: "Quadrizeps", quadriceps: "Quadrizeps",
+  hamstrings: "Beinbeuger", glutes: "Po", calves: "Waden", abs: "Bauch",
+  core: "Rumpf", forearms: "Unterarme", traps: "Nacken", lats: "Latissimus",
+  bench_press: "Bankdrücken", squat: "Kniebeuge", deadlift: "Kreuzheben",
+  overhead_press: "Schulterdrücken", pull_up: "Klimmzug", pullup: "Klimmzug",
+  row: "Rudern", barbell_row: "Langhantelrudern", dip: "Dips", dips: "Dips",
+  leg_press: "Beinpresse", hip_thrust: "Hip Thrust", lat_pulldown: "Latziehen",
+};
+
+function trainingWort(wort) {
+  const text = String(wort || "");
+  const schluessel = text.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const uebersetzt = TRAINING_WOERTER[schluessel];
+  if (uebersetzt) return uebersetzt;
+  // "incline_bench" → "Incline bench"
+  const lesbar = text.replace(/_/g, " ");
+  return lesbar.charAt(0).toUpperCase() + lesbar.slice(1);
+}
+
+/* Ein Datum in die Schreibweise des Stundenplans, "2026-09-24T17:30",
+   in Ortszeit. Dann gehen zeitpunktLesbar() und Co. auch für Gymbro. */
+function alsZeitangabe(datum) {
+  return tagesSchluessel(datum) + "T"
+       + String(datum.getHours()).padStart(2, "0") + ":"
+       + String(datum.getMinutes()).padStart(2, "0");
+}
+
+function kgLesbar(wert) {
+  if (wert === null || wert === undefined) return "";
+  return String(Math.round(wert * 10) / 10).replace(".", ",") + " kg";
+}
+
+/* "vor 3 Tagen", nach Kalendertagen gezählt: ein Training gestern Abend
+   ist heute Morgen "gestern", nicht "vor 12 Stunden". */
+function tageHer(datum, jetzt) {
+  const tage = Math.round((alsDatum(tagesSchluessel(jetzt) + "T12:00")
+                          - alsDatum(tagesSchluessel(datum) + "T12:00")) / 86400000);
+  if (tage <= 0) return "heute";
+  if (tage === 1) return "gestern";
+  return "vor " + tage + " Tagen";
+}
+
+
+/* --- Auswerten -------------------------------------------------------- */
+
+/* Alles, was die Anzeige braucht, an einer Stelle ausgerechnet. Getrennt
+   vom Zeichnen, damit die Tests es mit festem Datum prüfen können. */
+function trainingAuswerten(daten, jetzt) {
+  const alle = gymbroEinheiten(daten);
+  const montag = montagDerWoche(jetzt);
+  const dieseWoche = alle.filter(s => s.start >= montag).length;
+  const monatsanfang = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
+  const diesenMonat = alle.filter(s => s.start >= monatsanfang).length;
+
+  /* Die letzten acht Wochen, älteste zuerst, für das Balkenbild. */
+  const wochen = [];
+  for (let i = 7; i >= 0; i--) {
+    const von = tageDazu(montag, -7 * i);
+    const bis = tageDazu(von, 7);
+    wochen.push({ montag: von, anzahl: alle.filter(s => s.start >= von && s.start < bis).length });
+  }
+
+  /* Serie: Wochen in Folge mit mindestens einem Training. Die laufende
+     Woche zählt mit, wenn schon trainiert wurde; wenn nicht, bricht sie
+     die Serie noch nicht – sie ist ja nicht vorbei. */
+  let serie = 0;
+  let pruefMontag = dieseWoche > 0 ? montag : tageDazu(montag, -7);
+  for (;;) {
+    const bis = tageDazu(pruefMontag, 7);
+    if (!alle.some(s => s.start >= pruefMontag && s.start < bis)) break;
+    serie++;
+    pruefMontag = tageDazu(pruefMontag, -7);
+    if (serie > 520) break;
+  }
+
+  /* Wann welche Muskelgruppe zuletzt dran war. Am längsten her zuerst –
+     das ist die Frage vor dem nächsten Training. */
+  const zuletzt = new Map();
+  for (const s of alle) {
+    for (const m of s.muskeln) {
+      if (!zuletzt.has(m)) zuletzt.set(m, s.start);
+    }
+  }
+  const muskeln = [...zuletzt.entries()]
+    .map(([name, datum]) => ({ name, datum }))
+    .sort((a, b) => a.datum - b.datum);
+
+  /* Dauer: nur, wo beides da ist und es plausibel ist (unter 6 Stunden;
+     wer vergisst, sich auszuchecken, soll den Schnitt nicht verderben). */
+  const vor30 = tageDazu(jetzt, -30);
+  const dauern = alle
+    .filter(s => s.start >= vor30 && s.ende && s.ende > s.start)
+    .map(s => (s.ende - s.start) / 60000)
+    .filter(min => min < 360);
+  const dauerSchnitt = dauern.length
+    ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : null;
+
+  const gewicht = gymbroGewichte(daten);
+  const aktuell = gewicht.length ? gewicht[gewicht.length - 1] : null;
+  // Vergleich mit dem letzten Wert, der mindestens 30 Tage älter ist.
+  let vorher = null;
+  if (aktuell) {
+    const grenze = tageDazu(aktuell.datum, -30);
+    for (const w of gewicht) if (w.datum <= grenze) vorher = w;
+  }
+
+  return {
+    anzahl: alle.length,
+    letzte: alle[0] || null,
+    dieseWoche, diesenMonat, wochen, serie, muskeln, dauerSchnitt,
+    gewicht: gewicht.filter(w => w.datum >= tageDazu(jetzt, -90)),
+    gewichtAktuell: aktuell,
+    gewichtVorher: vorher,
+    bestleistungen: gymbroBestleistungen(daten).slice(0, 5),
+    plaene: gymbroPlaene(daten),
+    absagenMonat: gymbroAbsagen(daten).filter(c => c.datum >= monatsanfang),
+  };
+}
+
+
+/* --- Zeichnen --------------------------------------------------------- */
+
+/* Eine kleine Linie für den Gewichtsverlauf, ohne Bibliothek: ein SVG mit
+   einem einzigen Pfad. Die Höhe spannt sich zwischen kleinstem und
+   größtem Wert, sonst sähe ein Kilo Unterschied aus wie gar keiner. */
+function gewichtsLinie(punkte) {
+  if (punkte.length < 2) return "";
+  const breite = 300, hoehe = 60, rand = 4;
+  const zeiten = punkte.map(p => p.datum.getTime());
+  const werte = punkte.map(p => p.wert);
+  const tMin = Math.min(...zeiten), tMax = Math.max(...zeiten);
+  const wMin = Math.min(...werte), wMax = Math.max(...werte);
+  const x = t => rand + (tMax === tMin ? 0 : (t - tMin) / (tMax - tMin)) * (breite - 2 * rand);
+  const y = w => rand + (wMax === wMin ? 0.5 : 1 - (w - wMin) / (wMax - wMin)) * (hoehe - 2 * rand);
+  const pfad = punkte.map((p, i) =>
+    (i ? "L" : "M") + x(zeiten[i]).toFixed(1) + " " + y(werte[i]).toFixed(1)).join(" ");
+  return `
+    <svg class="training-linie" viewBox="0 0 ${breite} ${hoehe}" preserveAspectRatio="none"
+         role="img" aria-label="Gewichtsverlauf der letzten 90 Tage">
+      <path d="${pfad}" fill="none" stroke="currentColor" stroke-width="2"
+            vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+}
+
+function einheitBeschreiben(s) {
+  const teile = [];
+  if (s.typ) teile.push(trainingWort(s.typ));
+  if (s.ende && s.ende > s.start && (s.ende - s.start) < 6 * 3600000) {
+    teile.push(Math.round((s.ende - s.start) / 60000) + " Min.");
+  }
+  if (s.bewertung !== null) teile.push("★ " + s.bewertung + "/10");
+  return teile.join(" · ");
+}
+
+/* Was statt der Daten dasteht, solange es keine gibt. Die Texte sagen,
+   was zu tun ist – ein leerer Bereich sähe aus wie "keine Trainings". */
+function trainingHinweis() {
+  if (trainingZustand === "kein_schluessel") {
+    return `<p class="training-hinweis">
+      Der Gymbro-Schlüssel ist noch nicht eingetragen. In Supabase unter
+      <strong>Edge Functions → Secrets</strong> ein Secret
+      <code>GYMBRO_TOKEN</code> anlegen, als Wert den Schlüssel aus Gymbro.
+      Danach hier auf ↻ tippen.</p>`;
+  }
+  if (trainingZustand === "schluessel_ungueltig") {
+    return `<p class="training-hinweis">
+      Gymbro lehnt den Schlüssel ab – vermutlich widerrufen. In Gymbro einen
+      neuen anlegen und in Supabase das Secret <code>GYMBRO_TOKEN</code>
+      ersetzen.</p>`;
+  }
+  if (trainingZustand === "fehler" || trainingZustand === "gymbro_fehler"
+      || trainingZustand === "gymbro_nicht_erreichbar") {
+    return `<p class="training-hinweis">
+      Gymbro gerade nicht erreichbar${trainingFehlertext ? " (" + sicher(trainingFehlertext) + ")" : ""}.
+      ${training ? "Unten steht der letzte Stand." : ""}</p>`;
+  }
+  if (trainingZustand === "laedt" && !training) {
+    return `<p class="leer-text">Wird bei Gymbro abgeholt …</p>`;
+  }
+  return "";
+}
+
+function trainingZeichnen() {
+  const bereich = document.getElementById("trainingInhalt");
+  if (!bereich) return;
+  const jetzt = new Date();
+  const stuecke = [];
+
+  const abgerufen = training ? gymbroDatum(training.abgerufenAm) : null;
+  const stand = abgerufen ? "Stand " + zeitpunktLesbar(alsZeitangabe(abgerufen)) : "";
+  stuecke.push(`
+    <div class="training-kopf">
+      <span class="training-stand">${sicher(stand)}${trainingLaeuft ? " · wird aktualisiert …" : ""}</span>
+      <button type="button" class="knopf-schlicht start-klein" data-training-neu
+              ${trainingLaeuft ? "disabled" : ""}>↻ Aktualisieren</button>
+    </div>`);
+  stuecke.push(trainingHinweis());
+
+  if (!training) {
+    bereich.innerHTML = stuecke.join("");
+    return;
+  }
+
+  const a = trainingAuswerten(training.daten, jetzt);
+
+  if (a.anzahl === 0) {
+    stuecke.push(`<p class="leer-text">In Gymbro ist noch kein Training eingetragen.</p>`);
+  }
+
+  // --- Zahlen ---------------------------------------------------------
+  stuecke.push(`<div class="start-zahlen">
+    <div class="start-zahl"><span class="start-zahl-wert">${a.dieseWoche}</span>
+      <span class="start-zahl-name">diese Woche</span></div>
+    <div class="start-zahl"><span class="start-zahl-wert">${a.diesenMonat}</span>
+      <span class="start-zahl-name">diesen Monat</span></div>
+    <div class="start-zahl"><span class="start-zahl-wert">${a.serie}</span>
+      <span class="start-zahl-name">${a.serie === 1 ? "Woche" : "Wochen"} in Folge</span></div>
+    <div class="start-zahl"><span class="start-zahl-wert">${
+      a.dauerSchnitt === null ? "–" : a.dauerSchnitt}</span>
+      <span class="start-zahl-name">Min. im Schnitt (30 Tage)</span></div>
+  </div>`);
+
+  const karten = [];
+
+  // --- Letztes Training -----------------------------------------------
+  if (a.letzte) {
+    const s = a.letzte;
+    karten.push(trainingKarte("Letztes Training", `
+      <div class="training-gross">${sicher(tageHer(s.start, jetzt))}
+        <span class="training-leise">${sicher(zeitpunktLesbar(alsZeitangabe(s.start)))}</span></div>
+      <div class="training-zeile">${sicher(einheitBeschreiben(s))}</div>
+      ${s.muskeln.length ? `<div class="training-chips">${
+        s.muskeln.map(m => `<span class="training-chip">${sicher(trainingWort(m))}</span>`).join("")
+      }</div>` : ""}`));
+  }
+
+  // --- Acht Wochen als Balken ------------------------------------------
+  const hoechste = Math.max(1, ...a.wochen.map(w => w.anzahl));
+  karten.push(trainingKarte("Die letzten 8 Wochen", `
+    <div class="training-balken">${a.wochen.map((w, i) => `
+      <div class="training-balken-spalte" title="KW ${kalenderwoche(w.montag)}: ${w.anzahl}">
+        <span class="training-balken-zahl">${w.anzahl || ""}</span>
+        <span class="training-balken-saeule${i === a.wochen.length - 1 ? " training-balken-jetzt" : ""}"
+              style="height:${Math.round(w.anzahl / hoechste * 100)}%"></span>
+        <span class="training-balken-name">${kalenderwoche(w.montag)}</span>
+      </div>`).join("")}
+    </div>
+    <div class="training-leise training-balken-fuss">Trainings pro Kalenderwoche</div>`));
+
+  // --- Muskelgruppen ---------------------------------------------------
+  if (a.muskeln.length) {
+    karten.push(trainingKarte("Muskelgruppen zuletzt", a.muskeln.map(m => `
+      <div class="training-reihe">
+        <span>${sicher(trainingWort(m.name))}</span>
+        <span class="training-leise">${sicher(tageHer(m.datum, jetzt))}</span>
+      </div>`).join("")));
+  }
+
+  // --- Gewicht ---------------------------------------------------------
+  if (a.gewichtAktuell) {
+    const diff = a.gewichtVorher ? a.gewichtAktuell.wert - a.gewichtVorher.wert : null;
+    const diffText = diff === null ? ""
+      : (diff > 0 ? "+" : diff < 0 ? "−" : "±") + kgLesbar(Math.abs(diff))
+        + " seit " + datumKurz(a.gewichtVorher.datum);
+    karten.push(trainingKarte("Gewicht", `
+      <div class="training-gross">${sicher(kgLesbar(a.gewichtAktuell.wert))}
+        <span class="training-leise">${sicher(tageHer(a.gewichtAktuell.datum, jetzt))}</span></div>
+      ${diffText ? `<div class="training-zeile">${sicher(diffText)}</div>` : ""}
+      ${gewichtsLinie(a.gewicht)}`));
+  }
+
+  // --- Bestleistungen --------------------------------------------------
+  if (a.bestleistungen.length) {
+    karten.push(trainingKarte("Neueste Bestleistungen", a.bestleistungen.map(p => `
+      <div class="training-reihe">
+        <span>${sicher(trainingWort(p.uebung))}</span>
+        <span><strong>${sicher([kgLesbar(p.wert), p.wdh ? p.wdh + " Wdh." : ""]
+                                .filter(Boolean).join(" × "))}</strong>
+          ${p.datum ? `<span class="training-leise">${sicher(datumKurz(p.datum))}</span>` : ""}</span>
+      </div>`).join("")));
+  }
+
+  // --- Pläne und Absagen -----------------------------------------------
+  if (a.plaene.length) {
+    const sortiert = a.plaene.slice().sort((x, y) => Number(y.aktiv) - Number(x.aktiv));
+    karten.push(trainingKarte(sortiert.length === 1 ? "Plan" : "Pläne", sortiert.map(p => `
+      <div class="training-reihe training-reihe-oben">
+        <span><strong>${sicher(p.name)}</strong>${p.aktiv ? ` <span class="training-chip">aktiv</span>` : ""}
+          ${p.beschreibung ? `<span class="training-leise training-block">${sicher(p.beschreibung)}</span>` : ""}</span>
+      </div>`).join("")));
+  }
+  if (a.absagenMonat.length) {
+    const ruhe = a.absagenMonat.filter(c => c.ruhetag).length;
+    const abgesagt = a.absagenMonat.length - ruhe;
+    karten.push(trainingKarte("Pausen diesen Monat", `
+      <div class="training-zeile">${[
+        ruhe ? ruhe + (ruhe === 1 ? " Ruhetag" : " Ruhetage") : "",
+        abgesagt ? abgesagt + (abgesagt === 1 ? " Absage" : " Absagen") : "",
+      ].filter(Boolean).join(" · ")}</div>`));
+  }
+
+  stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
+  bereich.innerHTML = stuecke.join("");
+}
+
+function trainingKarte(titel, inhalt) {
+  return `
+    <section class="start-karte">
+      <div class="start-karte-kopf"><h2>${sicher(titel)}</h2></div>
+      ${inhalt}
+    </section>`;
+}
+
+/* Die kleine Karte auf der Übersicht. Leer, solange es nichts zu zeigen
+   gibt – auf fremden Dashboards also immer. */
+function trainingStartKarte(jetzt) {
+  if (!trainingSichtbar() || !training) return "";
+  const a = trainingAuswerten(training.daten, jetzt);
+  const inhalt = a.letzte
+    ? `<div class="training-zeile"><strong>Zuletzt ${sicher(tageHer(a.letzte.start, jetzt))}</strong>${
+         einheitBeschreiben(a.letzte) ? " · " + sicher(einheitBeschreiben(a.letzte)) : ""}</div>
+       <div class="training-leise">${a.dieseWoche} diese Woche · ${a.serie} ${
+         a.serie === 1 ? "Woche" : "Wochen"} in Folge${
+         a.gewichtAktuell ? " · " + sicher(kgLesbar(a.gewichtAktuell.wert)) : ""}</div>`
+    : `<p class="start-leer">Noch kein Training eingetragen.</p>`;
+  return startKarte("Training", "training", "Mehr", inhalt);
+}
+
+
+/* -------------------------------------------------------------------------
    5b. Der Bereich "Notizen"
 
    Das Notizbuch. Eine Liste von Notizen, ein Fenster zum Schreiben, ein
@@ -4791,6 +5359,7 @@ function geraeteVerbinden() {
 function allesZeichnen() {
   naechstenZeichnen();
   startZeichnen();
+  trainingZeichnen();
   wocheZeichnen();
   zettelZeichnen();
   todosZeichnen();
@@ -4812,6 +5381,7 @@ function seiteSetzen(neueSeite) {
   const bereiche = {
     start: "seiteStart",
     plan: "seitePlan",
+    training: "seiteTraining",
     zettel: "seiteZettel",
     todos: "seiteTodos",
     aenderungen: "seiteAenderungen",
@@ -4829,6 +5399,9 @@ function seiteSetzen(neueSeite) {
 
   // Wer die Änderungen ansieht, hat sie gesehen.
   if (seite === "aenderungen") aenderungenAlsGesehenMerken();
+
+  // Beim Öffnen nachfragen – trainingAbholen() lässt es, wenn der Stand frisch ist.
+  if (seite === "training" || seite === "start") trainingAbholen(false);
 
   allesZeichnen();
 }
@@ -5067,6 +5640,11 @@ function knoepfeVerbinden() {
   document.getElementById("tage").addEventListener("click", notizKlick);
   document.getElementById("todoInhalt").addEventListener("click", notizKlick);
   document.getElementById("seiteStart").addEventListener("click", startKlick);
+  document.getElementById("seiteTraining").addEventListener("click", ereignis => {
+    const ziel = ereignis.target && ereignis.target.closest
+      ? ereignis.target.closest("[data-training-neu]") : null;
+    if (ziel) trainingAbholen(true);
+  });
 
   /* Die Übersicht altert: "Läuft gerade" stimmt eine Stunde später nicht
      mehr. Einmal pro Minute neu zeichnen, aber nur, wenn man sie auch
@@ -5074,7 +5652,9 @@ function knoepfeVerbinden() {
      Vordergrund sorgt der Abgleich ohnehin für ein Neuzeichnen, und für
      den Fall ohne Abgleich hängt hier ein eigener Zuhörer. */
   function uebersichtAuffrischen() {
-    if (seite !== "start" || document.visibilityState === "hidden") return;
+    if (document.visibilityState === "hidden") return;
+    if (seite === "start" || seite === "training") trainingAbholen(false);
+    if (seite !== "start") return;
     naechstenZeichnen();
     startZeichnen();
   }
@@ -5286,6 +5866,8 @@ function starten() {
   eigeneTermine = eigeneTermineLaden();
   zettel = zettelLaden();
   abgewaehlteFaecher = filterLaden();
+  training = trainingLaden();
+  if (training) trainingZustand = "ok";
 
   /* Das Thema steht schon am <html>, gesetzt vom kurzen Skript im Kopf der
      index.html. Hier wird es nur noch in die Variable geholt, damit der
@@ -5319,6 +5901,7 @@ function starten() {
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
   // hier kein weiterer Zeichen-Aufruf.
   ansichtSetzen(ansicht);
+  reiterSichtbarkeitSetzen();
   seiteSetzen(seite);
 
   /* Und erst jetzt der Abgleich: er darf nicht loslaufen, bevor notizen,
@@ -5330,6 +5913,10 @@ function starten() {
     // Läuft nur, wenn der Abgleich hier tatsächlich etwas verändert hat.
     fertig: function () { allesZeichnen(); geraeteZeichnen(); },
   });
+
+  /* Trainingsdaten erst nach dem Abgleich-Start: ein Gerät, das gerade
+     per Link seinen Code bekommen hat, soll schon mit diesem fragen. */
+  trainingAbholen(false);
 }
 
 /* Lädt daten/plan.js nach und ruft danach starten() auf.

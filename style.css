@@ -2350,12 +2350,110 @@ a.knopf-schlicht {
 }
 
 
+/* --- Training ------------------------------------------------------------ */
+
+/* Der Reiter ist auf fremden Geräten versteckt. .reiter button setzt
+   display: flex, und das schlägt das hidden-Attribut - ohne diese Zeile
+   stünde "Training" auch bei den Studierenden in der Leiste. */
+.reiter button[hidden] { display: none; }
+
+.training-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.training-stand { font-size: 13px; color: var(--schrift-leise); }
+
+.training-hinweis {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-left: 3px solid var(--geaendert);
+  border-radius: var(--rundung);
+  padding: 10px 12px;
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+
+.training-gross { font-size: 20px; font-weight: 700; margin: 2px 0 4px; }
+.training-gross .training-leise { font-size: 13px; font-weight: 400; margin-left: 6px; }
+.training-zeile { font-size: 14px; margin-bottom: 4px; }
+.training-leise { font-size: 12px; color: var(--schrift-leise); }
+.training-block { display: block; margin-top: 2px; }
+
+.training-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.training-chip {
+  background: var(--flaeche-gedaempft);
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.training-reihe {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--linie);
+  font-size: 14px;
+}
+
+.training-reihe-oben { align-items: flex-start; }
+
+/* Acht Balken nebeneinander. Die Höhe setzt app.js in Prozent. */
+.training-balken {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  height: 110px;
+  margin-top: 4px;
+}
+
+.training-balken-spalte {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.training-balken-saeule {
+  display: block;
+  width: 100%;
+  max-width: 28px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--notiz-flaeche-hell);
+}
+
+.training-balken-jetzt { background: var(--akzent); }
+.training-balken-zahl { font-size: 11px; font-weight: 600; }
+.training-balken-name { font-size: 10px; color: var(--schrift-leise); }
+.training-balken-fuss { margin-top: 6px; }
+
+.training-linie {
+  display: block;
+  width: 100%;
+  height: 60px;
+  margin-top: 8px;
+  color: var(--akzent);
+}
+
+
 /* --- Reiter auf dem Handy ------------------------------------------------
 
    Steht am Ende, weil es die allgemeinen Regeln für .reiter weiter oben
    überschreiben muss: bei gleicher Schärfe gewinnt, was später kommt. */
 @media (max-width: 520px) {
-  /* Fünf Reiter auf 343 Bildpunkten. Gleich breit geht nicht mehr:
+  /* Fünf, mit Training sechs Reiter auf 343 Bildpunkten. Gleich breit geht nicht mehr:
      "Plan" braucht ein Drittel dessen, was "Änderungen" braucht. Also
      bekommt jeder so viel, wie sein Wort lang ist, und nichts bricht um.
      Die Zahl an "Notizen" fällt hier weg - sie zählt nur, wie viele es
@@ -2368,10 +2466,13 @@ a.knopf-schlicht {
   .reiter button {
     flex: 1 0 auto;
     padding: 10px 1px 9px;
-    font-size: 12.5px;
+    font-size: 12px;
     gap: 3px;
     white-space: nowrap;
   }
-  .reiter-zahl { min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; }
+  .reiter-zahl { min-width: 15px; padding: 0 3px; font-size: 10px; line-height: 15px; }
   #zettelZahl { display: none; }
 }
+
+/* Wie bei den Karten der Übersicht: keine Linie über der ersten Zeile. */
+.start-karte-kopf + .training-reihe { border-top: 0; }

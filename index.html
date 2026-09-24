@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=0d951d63">
+<link rel="stylesheet" href="style.css?v=151587d8">
 </head>
 <body>
 
@@ -86,6 +86,11 @@
   </button>
   <button type="button" data-seite="plan" role="tab" aria-selected="false">
     Plan
+  </button>
+  <!-- Nur auf Friedrichs Geräten sichtbar: app.js blendet ihn ein, sobald
+       die Funktion "training" bei Supabase den Code freigegeben hat. -->
+  <button type="button" data-seite="training" role="tab" aria-selected="false" hidden>
+    Training
   </button>
   <button type="button" data-seite="zettel" role="tab" aria-selected="false">
     Notizen <span class="reiter-zahl" id="zettelZahl" hidden></span>
@@ -139,6 +144,11 @@
     </div>
 
     <div class="tage" id="tage"></div>
+  </section>
+
+  <!-- ================= Training (aus Gymbro) ================= -->
+  <section id="seiteTraining" hidden>
+    <div id="trainingInhalt"></div>
   </section>
 
   <!-- ================= Bereich 2: Notizen ================= -->
@@ -342,12 +352,12 @@
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=0d951d63"></script>
-<script src="melden.js?v=0d951d63"></script>
+<script src="sync.js?v=151587d8"></script>
+<script src="melden.js?v=151587d8"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=0d951d63"></script>
+<script src="app.js?v=151587d8"></script>
 
 </body>
 </html>
