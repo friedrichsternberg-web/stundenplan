@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "151587d8";
+const GEBAUTE_VERSION = "a330fdd8";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -96,6 +96,11 @@ const SPEICHER_FILTER = "stundenplan.abgewaehlteFaecher.3";
 // Und unter diesem, welche Änderung du zuletzt gesehen hast. Damit kann das
 // Dashboard oben einen Hinweis zeigen, wenn seitdem etwas dazugekommen ist.
 const SPEICHER_GESEHEN = "stundenplan.zuletztGesehen";
+
+/* Einzeln abgehakte Änderungen, als Liste von Schlüsseln – siehe
+   aenderungSchluessel(). Ergänzt SPEICHER_GESEHEN: der sagt "alles bis
+   hier ist erledigt", diese Liste "genau diese eine auch". */
+const SPEICHER_ABGEHAKT = "stundenplan.aenderungenAbgehakt";
 
 // Und unter diesem, welche der beiden Ansichten du zuletzt benutzt hast.
 const SPEICHER_ANSICHT = "stundenplan.ansicht";
@@ -205,8 +210,9 @@ let ansicht = "liste";
    Nicht gespeichert – beim nächsten Öffnen steht wieder heute oben. */
 let vergangeneOffenFuer = "";
 
-// Welcher Bereich gerade offen ist: "plan", "zettel", "todos" oder
-// "aenderungen".
+// Welcher Bereich gerade offen ist: "start", "plan", "training", "zettel"
+// oder "todos". Die Änderungen sind kein Bereich mehr, sondern ein Fenster
+// aus den Einstellungen heraus.
 let seite = "start";
 
 // Das Notizbuch. Siehe SPEICHER_ZETTEL.
@@ -512,10 +518,8 @@ function naechstenZeichnen() {
 
   const zusatz = [treffer.raum, treffer.dozent].filter(Boolean).join(" · ");
 
-  /* Was am selben Tag danach kommt. Beim Rausgehen aus der Vorlesung ist
-     das die nächste Frage: gleich weiter, oder erst Mittag? */
-  const danach = termine.find(t => t.start >= treffer.ende
-                                  && tagesSchluessel(t.start) === tagesSchluessel(beginn));
+  /* Was danach kommt, steht nicht hier, sondern gleich darunter in der
+     Karte "Heute". Beides zugleich war doppelt. */
 
   bereich.innerHTML = `
     <div class="naechster-karte" data-termin="${sicher(treffer.id)}" role="button" tabindex="0">
@@ -528,10 +532,6 @@ function naechstenZeichnen() {
       ${notizText(treffer.id)
         ? `<div class="naechster-notiz">${
              istWichtig(treffer.id) ? "★" : "✎"} ${sicher(notizText(treffer.id))}</div>`
-        : ""}
-      ${danach
-        ? `<div class="naechster-danach">Danach ${sicher(uhrzeit(danach.start))}: ${
-             sicher(danach.titel)}${danach.raum ? " · " + sicher(danach.raum) : ""}</div>`
         : ""}
     </div>`;
 }
@@ -564,7 +564,7 @@ const ZURUECK_ZUR_UEBERSICHT_NACH = 15 * 60 * 1000;
    und keine Viertelstunde her; sonst die Übersicht. Eine Zeit, die in der
    Zukunft liegt – Uhr des Geräts verstellt –, zählt nicht als frisch. */
 function startseiteWaehlen(gemerkteSeite, gemerktAm, jetzt) {
-  const bekannt = ["start", "plan", "training", "zettel", "todos", "aenderungen"];
+  const bekannt = ["start", "plan", "training", "zettel", "todos"];
   const her = jetzt - (Number(gemerktAm) || 0);
   if (bekannt.indexOf(gemerkteSeite) >= 0 && her >= 0 && her < ZURUECK_ZUR_UEBERSICHT_NACH) {
     return gemerkteSeite;
@@ -616,8 +616,9 @@ function starttagWaehlen(jetzt) {
 
 /* Die offenen To-dos, die auf die Startseite gehören.
 
-   Zuerst alles, was drängt: überfällig, heute, morgen. Ist das weniger
-   als drei, wird mit dem Nächsten aufgefüllt, was kommt – eine Karte mit
+   Zuerst was drängt: überfällig, heute, morgen, höchstens drei davon –
+   der Rest steckt in der Zahl am Knopf "Alle". Ist es weniger als drei,
+   wird mit dem Nächsten aufgefüllt, was kommt – eine Karte mit
    "nichts dringend" und sonst nichts sagt weniger als "nichts dringend,
    als Nächstes kommt X am Montag". Die Reihenfolge ist die der Zeitgruppen,
    innerhalb einer Gruppe die aus aufgabenSammeln(): Wichtiges zuerst.
@@ -626,7 +627,7 @@ function starttagWaehlen(jetzt) {
    auch keine Dringlichkeit; im Reiter "To-dos" stehen sie weiter. */
 const START_TODOS_DRINGEND = ["ueberfaellig", "heute", "morgen"];
 const START_TODOS_MINDESTENS = 3;
-const START_TODOS_HOECHSTENS = 6;
+const START_TODOS_HOECHSTENS = 3;
 
 function startTodos(jetzt) {
   const offen = aufgabenSammeln().filter(a => !a.erledigt);
@@ -660,38 +661,56 @@ function startAenderungen() {
   let zuletztGesehen = "";
   try { zuletztGesehen = localStorage.getItem(SPEICHER_GESEHEN) || ""; }
   catch (fehler) { /* dann gilt alles als neu */ }
+  const abgehakt = new Set(aenderungenAbgehakt());
 
   const liste = [];
   for (const block of sichtbareBloecke()) {
     if (block.erkanntAm <= zuletztGesehen) continue;
-    for (const eintrag of block.eintraege) liste.push(eintrag);
+    for (const eintrag of block.eintraege) {
+      const schluessel = aenderungSchluessel(block.erkanntAm, eintrag);
+      if (!abgehakt.has(schluessel)) liste.push(Object.assign({ schluessel }, eintrag));
+    }
   }
   return liste;
 }
 
-/* Die kleinen Zahlen oben. Jede ist ein Knopf, der dorthin führt, wo die
-   Zahl herkommt. */
-function startZahlen(jetzt, todos, neueAenderungen) {
-  const termine = alleAngezeigtenTermine();
-  const heute = tagesSchluessel(jetzt);
-  const sonntag = tagesSchluessel(tageDazu(montagDerWoche(jetzt), 6));
+/* Woran eine einzelne Änderung wiederzuerkennen ist: wann sie erkannt
+   wurde, welche Art und welcher Termin. Die Termin-Kennung allein reicht
+   nicht – derselbe Termin kann erst verschoben werden und später
+   ausfallen, das sind zwei Änderungen, die man getrennt abhakt. */
+function aenderungSchluessel(erkanntAm, eintrag) {
+  const termin = eintrag.termin || {};
+  return [erkanntAm, eintrag.typ, termin.id, termin.start].join("|");
+}
 
-  const nochHeute = termine.filter(
-    t => tagesSchluessel(t.start) === heute && alsDatum(t.ende) > jetzt).length;
-  const nochDieseWoche = termine.filter(
-    t => tagesSchluessel(t.start) <= sonntag && alsDatum(t.ende) > jetzt).length;
+function aenderungenAbgehakt() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SPEICHER_ABGEHAKT) || "[]");
+    return Array.isArray(roh) ? roh.map(String) : [];
+  } catch (fehler) {
+    return [];
+  }
+}
 
-  return [
-    { wert: nochHeute, name: nochHeute === 1 ? "Termin noch heute" : "Termine noch heute",
-      ziel: "plan" },
-    { wert: nochDieseWoche, name: "noch diese Woche", ziel: "plan" },
-    { wert: todos.offen, name: todos.offen === 1 ? "To-do offen" : "To-dos offen",
-      ziel: "todos",
-      zusatz: todos.ueberfaellig ? todos.ueberfaellig + " überfällig" : "",
-      dringend: todos.ueberfaellig > 0 },
-    { wert: neueAenderungen, name: neueAenderungen === 1 ? "neue Änderung" : "neue Änderungen",
-      ziel: "aenderungen", dringend: neueAenderungen > 0 },
-  ];
+/* Hakt eine Änderung ab. Dabei fliegt aus der Liste, was es nicht mehr
+   gibt: abgleich.py hält nur einen begrenzten Verlauf, und ohne das
+   wüchse die Liste im Speicher mit jedem Semester weiter. */
+function aenderungAbhaken(schluessel) {
+  const vorhanden = new Set();
+  for (const block of sichtbareBloecke()) {
+    for (const eintrag of block.eintraege) vorhanden.add(aenderungSchluessel(block.erkanntAm, eintrag));
+  }
+  const liste = aenderungenAbgehakt().filter(k => vorhanden.has(k));
+  if (liste.indexOf(schluessel) < 0) liste.push(schluessel);
+  try { localStorage.setItem(SPEICHER_ABGEHAKT, JSON.stringify(liste)); }
+  catch (fehler) { /* dann bleibt sie bis zum Neuladen abgehakt */ }
+}
+
+/* Modulnamen tragen vorne ihre Nummer aus der Studienordnung: "4 -
+   Management - MA- und UN-Führung". Auf der Übersicht ist das nur Länge,
+   im Plan bleibt sie stehen. */
+function kurzerTitel(titel) {
+  return String(titel || "").replace(/^\d+\s*-\s*/, "");
 }
 
 function startZeichnen() {
@@ -710,55 +729,85 @@ function startZeichnen() {
   const aenderungen = startAenderungen();
   const stuecke = [];
 
-  // --- Die Zahlen -----------------------------------------------------
-  stuecke.push(`<div class="start-zahlen">${
-    startZahlen(jetzt, todos, aenderungen.length).map(zahl => `
-      <button type="button" class="start-zahl${zahl.dringend ? " start-zahl-dringend" : ""}"
-              data-start-seite="${zahl.ziel}">
-        <span class="start-zahl-wert">${zahl.wert}</span>
-        <span class="start-zahl-name">${sicher(zahl.name)}</span>
-        ${zahl.zusatz ? `<span class="start-zahl-zusatz">${sicher(zahl.zusatz)}</span>` : ""}
-      </button>`).join("")
-  }</div>`);
+  /* Oben steht nur, was Aufmerksamkeit braucht – und nur, wenn es das
+     gibt. Früher standen hier immer vier Zahlen, auch "0 neue
+     Änderungen". Eine Null ist keine Information, sie ist Rauschen. */
+  const achtung = [];
+  if (todos.ueberfaellig > 0) {
+    achtung.push(`<button type="button" class="start-achtung-knopf" data-start-seite="todos">
+      ${todos.ueberfaellig} ${todos.ueberfaellig === 1 ? "To-do" : "To-dos"} überfällig ›</button>`);
+  }
+  if (achtung.length) stuecke.push(`<div class="start-achtung">${achtung.join("")}</div>`);
+
+  /* Hat sich der Stundenplan geändert, ist das das Wichtigste auf der
+     Seite: ein Raum, der wechselt, eine Vorlesung, die ausfällt. Deshalb
+     ein großer Kasten ganz oben, mit den Änderungen selbst darin, nicht
+     nur einer Zahl. Jede Änderung hat einen Haken; abgehakte verschwinden,
+     und mit der letzten verschwindet der Kasten. */
+  if (aenderungen.length > 0) {
+    stuecke.push(`
+      <section class="start-geaendert">
+        <h2>${aenderungen.length === 1
+          ? "Eine Änderung am Stundenplan" : aenderungen.length + " Änderungen am Stundenplan"}</h2>
+        ${aenderungen.slice(0, 3).map(e => `
+          <div class="start-geaendert-zeile">
+            <button type="button" class="todo-haken" data-aenderung-haken="${sicher(e.schluessel)}"
+                    aria-label="Gesehen, abhaken"></button>
+            ${eintragZeichnen(e)}
+          </div>`).join("")}
+        ${aenderungen.length > 3
+          ? `<p class="start-mehr">und ${aenderungen.length - 3} weitere</p>` : ""}
+        <div class="start-geaendert-knoepfe">
+          <button type="button" class="knopf-schlicht" data-start-gesehen>${
+            aenderungen.length === 1 ? "Abhaken" : "Alle abhaken"}</button>
+          <button type="button" class="knopf-schlicht" data-start-verlauf>Alle Änderungen</button>
+        </div>
+      </section>`);
+  }
 
   const karten = [];
 
   // --- Heute (oder der nächste Tag mit Terminen) -----------------------
+  /* Nur was noch kommt. Das Vergangene steht im Plan; hier würde es nur
+     den Blick auf das Kommende verstellen. Eine Zeile je Termin: Zeit,
+     Titel, Raum. Eine Kurznotiz darf eine zweite Zeile haben – sie ist
+     genau das, was man sonst vergisst. */
   const tag = starttagWaehlen(jetzt);
   if (!tag) {
     karten.push(startKarte("Heute", "plan", "Plan",
-      `<p class="start-leer">Nichts in Sicht – die nächsten zwei Wochen sind frei.</p>`));
+      `<p class="start-leer">Die nächsten zwei Wochen sind frei.</p>`, "", true));
   } else {
     const titel = tag.istHeute ? "Heute" : tagLesbar(tag.schluessel);
     const vorspann = !tag.istHeute
       ? `<p class="start-leer">${tag.heuteVorbei
-           ? "Für heute ist alles vorbei." : "Heute steht nichts an."} Als Nächstes:</p>`
+           ? "Für heute ist alles vorbei." : "Heute steht nichts an."}</p>`
       : "";
     const ganztags = tag.ganztags.map(t => `
       <button type="button" class="start-ganztags" data-termin="${sicher(t.id)}">
         ${t.wichtig ? "★ " : ""}${sicher(t.titel)}
       </button>`).join("");
-    const zeilen = tag.termine.map(t => {
-      const vorbei = alsDatum(t.ende) <= jetzt;
-      const laeuft = !vorbei && alsDatum(t.start) <= jetzt;
-      const klassen = "start-termin" + (vorbei ? " start-termin-vorbei" : "")
-                    + (laeuft ? " start-termin-jetzt" : "")
+    const kommend = tag.termine.filter(t => alsDatum(t.ende) > jetzt);
+    const zeilen = kommend.map(t => {
+      const laeuft = alsDatum(t.start) <= jetzt;
+      const klassen = "start-termin" + (laeuft ? " start-termin-jetzt" : "")
                     + (t.eigen ? " start-termin-eigen" : "");
-      const notiz = notizText(t.id);
+      const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
       return `
         <button type="button" class="${klassen}" data-termin="${sicher(t.id)}">
-          <span class="start-termin-zeit">${uhrzeit(t.start)}<br>${uhrzeit(t.ende)}</span>
+          <span class="start-termin-zeit">${uhrzeit(t.start)}</span>
           <span class="start-termin-text">
-            <span class="start-termin-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${sicher(t.titel)}</span>
-            ${t.raum ? `<span class="start-termin-ort">${sicher(t.raum)}</span>` : ""}
-            ${t.anmerkung && !t.eigen
-              ? `<span class="start-termin-hinweis">${sicher(t.anmerkung)}</span>` : ""}
+            <span class="start-termin-zeile">
+              <span class="start-termin-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${
+                sicher(kurzerTitel(t.titel))}</span>
+              ${t.raum ? `<span class="start-termin-ort">${sicher(t.raum.replace(/^CL:\s*/, ""))}</span>` : ""}
+            </span>
             ${notiz ? `<span class="start-termin-notiz">✎ ${sicher(notiz)}</span>` : ""}
           </span>
         </button>`;
     }).join("");
     karten.push(startKarte(titel, "plan", "Plan",
-      vorspann + (ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : "") + zeilen));
+      vorspann + (ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : "") + zeilen,
+      "", true));
   }
 
   // --- To-dos ------------------------------------------------------------
@@ -766,78 +815,54 @@ function startZeichnen() {
   for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
   let todoInhalt;
   if (todos.offen === 0) {
-    todoInhalt = `<p class="start-leer">Nichts offen. Alles abgehakt.</p>`;
+    todoInhalt = `<p class="start-leer">Nichts offen.</p>`;
   } else {
-    todoInhalt = (todos.dringend === 0
-      ? `<p class="start-leer">Nichts Dringendes. Als Nächstes:</p>` : "")
-      + todos.auswahl.map(({ eintrag, gruppe }) => {
-        const wann = gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
-          ? gruppenTitel[gruppe]
-          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10));
-        const fach = eintrag.art === "notiz" && eintrag.termin ? " · " + eintrag.termin.titel : "";
-        return `
-          <div class="start-todo${gruppe === "ueberfaellig" ? " start-todo-ueberfaellig" : ""}">
-            <button type="button" class="todo-haken" data-todo-haken="${sicher(eintrag.kennung)}"
-                    aria-label="Als erledigt abhaken"></button>
-            <button type="button" class="start-todo-text" data-start-todo="${sicher(eintrag.kennung)}">
-              <span class="start-todo-titel">${eintrag.wichtig ? "★ " : ""}${sicher(eintrag.text)}</span>
-              <span class="start-todo-wann">${sicher(wann + fach)}${
-                eintrag.erinnerung ? " · 🔔" : ""}</span>
-            </button>
-          </div>`;
-      }).join("")
-      + (todos.offen > todos.auswahl.length
-          ? `<p class="start-mehr">und ${todos.offen - todos.auswahl.length} weitere</p>` : "");
+    todoInhalt = todos.auswahl.map(({ eintrag, gruppe }) => {
+      const wann = gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+        ? gruppenTitel[gruppe]
+        : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10));
+      return `
+        <div class="start-todo${gruppe === "ueberfaellig" ? " start-todo-ueberfaellig" : ""}">
+          <button type="button" class="todo-haken" data-todo-haken="${sicher(eintrag.kennung)}"
+                  aria-label="Als erledigt abhaken"></button>
+          <button type="button" class="start-todo-text" data-start-todo="${sicher(eintrag.kennung)}">
+            <span class="start-todo-titel">${eintrag.wichtig ? "★ " : ""}${sicher(eintrag.text)}</span>
+            <span class="start-todo-wann">${sicher(wann)}${eintrag.erinnerung ? " · 🔔" : ""}</span>
+          </button>
+        </div>`;
+    }).join("");
   }
-  karten.push(startKarte("To-dos", "todos", "Alle",
-    todoInhalt, `<button type="button" class="knopf-schlicht start-klein" data-start-todo-neu>+ To-do</button>`));
+  karten.push(startKarte("To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle", todoInhalt));
 
   // --- Training aus Gymbro (nur auf Friedrichs Geräten) ------------------
   const trainingKarteStart = trainingStartKarte(jetzt);
   if (trainingKarteStart) karten.push(trainingKarteStart);
 
-  // --- Hinweise aus dem HWR-Plan, nächste 14 Tage -----------------------
-  const grenze = tagesSchluessel(tageDazu(jetzt, 14));
+  // --- Notizen: nur die zwei obersten, markierte zuerst ------------------
+  const notizbuch = zettelSortiert().slice(0, 2);
+  if (notizbuch.length) {
+    karten.push(startKarte("Notizen", "zettel", "Alle " + zettel.length,
+      notizbuch.map(z => `
+        <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
+          <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
+          ${zettelVorschau(z)
+            ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
+        </button>`).join("")));
+  }
+
+  // --- Hinweise aus dem HWR-Plan, nächste 7 Tage, nur wenn es welche gibt -
+  const grenze = tagesSchluessel(tageDazu(jetzt, 7));
   const hinweise = hinweiseSammeln()
     .filter(h => !istVorbei(h.start) && h.start.slice(0, 10) <= grenze)
-    .slice(0, 3);
+    .slice(0, 2);
   if (hinweise.length > 0) {
     karten.push(startKarte("Hinweise im Plan", "todos", "Alle",
       hinweise.map(h => `
         <div class="start-hinweis">
           <span class="start-hinweis-text">${sicher(h.anmerkung)}</span>
-          <span class="start-todo-wann">${sicher(tagLesbar(h.start.slice(0, 10)) + " · " + h.titel)}</span>
+          <span class="start-todo-wann">${sicher(tagLesbar(h.start.slice(0, 10)) + " · " + kurzerTitel(h.titel))}</span>
         </div>`).join("")));
   }
-
-  // --- Neue Änderungen am Plan ------------------------------------------
-  if (aenderungen.length > 0) {
-    const beschriftung = { neu: "neu", entfallen: "entfällt", geaendert: "geändert" };
-    karten.push(startKarte("Neu im Plan", "aenderungen", "Alle",
-      aenderungen.slice(0, 3).map(e => `
-        <div class="start-aenderung">
-          <span class="marke marke-${e.typ}">${beschriftung[e.typ]}</span>
-          <span>
-            <strong>${sicher(e.termin.titel)}</strong>
-            <span class="start-todo-wann">${sicher(zeitpunktLesbar(e.termin.start))}</span>
-          </span>
-        </div>`).join("")
-      + (aenderungen.length > 3
-          ? `<p class="start-mehr">und ${aenderungen.length - 3} weitere</p>` : "")));
-  }
-
-  // --- Notizen: markierte zuerst, dann die zuletzt bearbeiteten ----------
-  const notizbuch = zettelSortiert().slice(0, 3);
-  karten.push(startKarte("Notizen", "zettel", "Alle",
-    notizbuch.length === 0
-      ? `<p class="start-leer">Noch keine Notizen.</p>`
-      : notizbuch.map(z => `
-          <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
-            <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
-            ${zettelVorschau(z)
-              ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
-          </button>`).join(""),
-    `<button type="button" class="knopf-schlicht start-klein" data-start-notiz-neu>+ Notiz</button>`));
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");
@@ -845,9 +870,9 @@ function startZeichnen() {
 
 /* Eine Karte der Übersicht: Überschrift, rechts ein Weg in den ganzen
    Bereich, darunter der Inhalt. */
-function startKarte(titel, ziel, zielText, inhalt, knopf) {
+function startKarte(titel, ziel, zielText, inhalt, knopf, breit) {
   return `
-    <section class="start-karte">
+    <section class="start-karte${breit ? " start-karte-breit" : ""}">
       <div class="start-karte-kopf">
         <h2>${sicher(titel)}</h2>
         <div class="start-karte-knoepfe">
@@ -865,7 +890,8 @@ function startKarte(titel, ziel, zielText, inhalt, knopf) {
 function startKlick(ereignis) {
   const ziel = ereignis.target && ereignis.target.closest
     ? ereignis.target.closest("[data-start-seite],[data-start-todo],"
-                              + "[data-start-todo-neu],[data-start-notiz-neu]")
+                              + "[data-start-gesehen],[data-start-verlauf],"
+                              + "[data-aenderung-haken]")
     : null;
   if (!ziel) { notizKlick(ereignis); return; }
 
@@ -890,14 +916,20 @@ function startKlick(ereignis) {
     return;
   }
 
-  if (ziel.hasAttribute("data-start-todo-neu")) {
-    offeneNotiz = "neu:" + tagesSchluessel(new Date());
-    seiteSetzen("todos");
-    notizfeldAktivieren();
+  const haken = ziel.getAttribute("data-aenderung-haken");
+  if (haken) {
+    aenderungAbhaken(haken);
+    allesZeichnen();
     return;
   }
 
-  if (ziel.hasAttribute("data-start-notiz-neu")) zettelFensterZeigen("");
+  if (ziel.hasAttribute("data-start-gesehen")) {
+    aenderungenAlsGesehenMerken();
+    allesZeichnen();
+    return;
+  }
+
+  if (ziel.hasAttribute("data-start-verlauf")) verlaufFensterZeigen();
 }
 
 
@@ -3237,26 +3269,21 @@ function sichtbareBloecke() {
     .filter(block => block.eintraege.length > 0);
 }
 
-/* Wie viele Änderungen du noch nicht gesehen hast. Die Zahl steht am Reiter
-   "Änderungen"; ein Besuch dieses Bereichs setzt sie zurück. */
+/* Wie viele Änderungen du noch nicht gesehen hast. Solange es welche
+   gibt, steht auf der Übersicht ein großer Hinweis. "Gesehen" dort oder
+   ein Blick in die Liste setzt die Zahl zurück. */
 function ungeseheneAenderungen() {
-  const bloecke = sichtbareBloecke();
-  if (bloecke.length === 0) return 0;
-
-  let zuletztGesehen = "";
-  try { zuletztGesehen = localStorage.getItem(SPEICHER_GESEHEN) || ""; }
-  catch (fehler) { /* egal */ }
-
-  return bloecke
-    .filter(block => block.erkanntAm > zuletztGesehen)
-    .reduce((summe, block) => summe + block.eintraege.length, 0);
+  return startAenderungen().length;
 }
 
 function aenderungenAlsGesehenMerken() {
   const bloecke = sichtbareBloecke();
   if (bloecke.length === 0) return;
-  try { localStorage.setItem(SPEICHER_GESEHEN, bloecke[0].erkanntAm); }
-  catch (fehler) { /* egal */ }
+  try {
+    localStorage.setItem(SPEICHER_GESEHEN, bloecke[0].erkanntAm);
+    // Alles bis hier gilt jetzt als erledigt, einzelne Haken braucht es nicht mehr.
+    localStorage.removeItem(SPEICHER_ABGEHAKT);
+  } catch (fehler) { /* egal */ }
 }
 
 /* Setzt die kleinen Zahlen an den Reitern. Sie sind der Grund, warum man den
@@ -3267,7 +3294,6 @@ function reiterZahlenSetzen() {
   const offeneFreie = aufgaben.filter(a => !a.erledigt).length;
   zahlSetzen("todoZahl", offeneNotizen + offeneFreie);
   zahlSetzen("zettelZahl", zettel.length);
-  zahlSetzen("aenderungsZahl", ungeseheneAenderungen());
 }
 
 function zahlSetzen(elementKennung, anzahl) {
@@ -3275,6 +3301,29 @@ function zahlSetzen(elementKennung, anzahl) {
   if (!element) return;
   element.textContent = String(anzahl);
   element.hidden = anzahl === 0;
+}
+
+/* Die ganze Liste als Fenster. Öffnen hakt nichts ab – abgehakt wird
+   bewusst, auf der Übersicht. */
+function verlaufFensterZeigen() {
+  const fenster = document.getElementById("verlaufHintergrund");
+  if (!fenster) return;
+  verlaufZeichnen();
+  fenster.hidden = false;
+}
+
+/* Der Abschnitt in den Einstellungen. */
+function aenderungenBereichZeichnen() {
+  const bereich = document.getElementById("aenderungenBereich");
+  if (!bereich) return;
+  const anzahl = sichtbareBloecke().reduce((summe, b) => summe + b.eintraege.length, 0);
+  bereich.innerHTML = `
+    <h3 class="melden-titel">Änderungen am Stundenplan</h3>
+    <p class="filter-hinweis">${anzahl === 0
+      ? "Seit dem ersten Abruf hat sich nichts geändert."
+      : anzahl + (anzahl === 1 ? " Änderung" : " Änderungen")
+        + " seit dem ersten Abruf. Neue meldet die Übersicht mit einem Hinweis."}</p>
+    ${anzahl ? `<button type="button" class="knopf-schlicht" id="verlaufOeffnen">Änderungen anzeigen</button>` : ""}`;
 }
 
 function verlaufZeichnen() {
@@ -3367,6 +3416,12 @@ let training = null;
 let trainingZustand = "";
 let trainingFehlertext = "";
 let trainingLaeuft = false;
+
+/* Die Liste aller Trainings ist eine eigene Ansicht im Reiter. Offen
+   bleibt sie, bis man zurücktippt – auch über ein Neuzeichnen hinweg. */
+let trainingVerlaufOffen = false;
+let trainingFilterTyp = "";
+let trainingFilterMuskel = "";
 
 function trainingLaden() {
   try {
@@ -3501,8 +3556,21 @@ function gymbroListe(daten, name) {
 }
 
 function gymbroEinheiten(daten) {
+  /* Gymbro schickt die Gyms als eigene Liste mit Namen; am Training steht
+     nur die Kennung ("dns_potsdam"). Hier wird nachgeschlagen, damit
+     "DNS Potsdam" dasteht. */
+  const gymNamen = {};
+  for (const g of gymbroListe(daten, "gyms")) {
+    if (g.id) gymNamen[g.id] = g.label || g.id;
+  }
   return gymbroListe(daten, "sessions")
     .map(s => ({
+      kennung: String(s.id || s.externalId || ""),
+      notiz: typeof s.notes === "string" ? s.notes : "",
+      partner: Array.isArray(s.partners)
+        ? s.partners.map(p => (p && typeof p === "object" ? p.name : p)).filter(Boolean).map(String)
+        : [],
+      gymName: gymNamen[s.gymId] || s.customGym || "",
       start: gymbroDatum(gymbroFeld(s, ["arrivedAt", "startedAt", "start", "date"])),
       ende: gymbroDatum(gymbroFeld(s, ["leftAt", "endedAt", "end"])),
       typ: gymbroFeld(s, ["trainingType", "type"]) || "",
@@ -3560,7 +3628,8 @@ function gymbroAbsagen(daten) {
 /* Gymbro schreibt englisch, das Dashboard spricht deutsch. Was hier
    fehlt, erscheint so, wie es kommt – nur mit großem Anfangsbuchstaben. */
 const TRAINING_WOERTER = {
-  push: "Push", pull: "Pull", legs: "Beine", upper: "Oberkörper",
+  push: "Push", pull: "Pull", legs: "Beine", run: "Laufen",
+  lower_back: "Unterer Rücken", upper: "Oberkörper",
   lower: "Unterkörper", fullbody: "Ganzkörper", full_body: "Ganzkörper",
   cardio: "Cardio", arms: "Arme",
   chest: "Brust", shoulders: "Schultern", back: "Rücken", biceps: "Bizeps",
@@ -3673,6 +3742,7 @@ function trainingAuswerten(daten, jetzt) {
   return {
     anzahl: alle.length,
     letzte: alle[0] || null,
+    erstes: alle[alle.length - 1] || null,
     dieseWoche, diesenMonat, wochen, serie, muskeln, dauerSchnitt,
     gewicht: gewicht.filter(w => w.datum >= tageDazu(jetzt, -90)),
     gewichtAktuell: aktuell,
@@ -3767,7 +3837,22 @@ function trainingZeichnen() {
     return;
   }
 
+  if (trainingVerlaufOffen) {
+    bereich.innerHTML = trainingVerlaufZeichnen(training.daten, jetzt);
+    return;
+  }
+
   const a = trainingAuswerten(training.daten, jetzt);
+
+  if (a.anzahl > 0) {
+    const erstes = a.erstes.start;
+    stuecke.push(`<button type="button" class="training-alle" data-training-verlauf>
+      <span><strong>Alle Trainings</strong>
+        <span class="training-leise training-block">${a.anzahl} seit ${
+          sicher(datumKurz(erstes) + erstes.getFullYear())}</span></span>
+      <span class="training-alle-pfeil">›</span>
+    </button>`);
+  }
 
   if (a.anzahl === 0) {
     stuecke.push(`<p class="leer-text">In Gymbro ist noch kein Training eingetragen.</p>`);
@@ -3795,6 +3880,7 @@ function trainingZeichnen() {
       <div class="training-gross">${sicher(tageHer(s.start, jetzt))}
         <span class="training-leise">${sicher(zeitpunktLesbar(alsZeitangabe(s.start)))}</span></div>
       <div class="training-zeile">${sicher(einheitBeschreiben(s))}</div>
+      ${s.gymName ? `<div class="training-leise">${sicher(s.gymName)}</div>` : ""}
       ${s.muskeln.length ? `<div class="training-chips">${
         s.muskeln.map(m => `<span class="training-chip">${sicher(trainingWort(m))}</span>`).join("")
       }</div>` : ""}`));
@@ -3867,6 +3953,69 @@ function trainingZeichnen() {
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");
+}
+
+/* Alle Trainings, die Gymbro kennt, nach Monaten. Oben zwei Filter: die
+   Art (Push, Beine …) als Knöpfe, weil es davon wenige gibt, und die
+   Muskelgruppe als Auswahl, weil es davon viele gibt. */
+function trainingVerlaufZeichnen(daten, jetzt) {
+  const alle = gymbroEinheiten(daten);
+  const typen = [...new Set(alle.map(s => s.typ).filter(Boolean))].sort();
+  const muskeln = [...new Set([].concat(...alle.map(s => s.muskeln)))]
+    .sort((x, y) => trainingWort(x).localeCompare(trainingWort(y), "de"));
+
+  const gefiltert = alle.filter(s =>
+    (!trainingFilterTyp || s.typ === trainingFilterTyp)
+    && (!trainingFilterMuskel || s.muskeln.indexOf(trainingFilterMuskel) >= 0));
+
+  const monate = [];
+  for (const s of gefiltert) {
+    const name = s.start.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+    if (!monate.length || monate[monate.length - 1].name !== name) monate.push({ name, liste: [] });
+    monate[monate.length - 1].liste.push(s);
+  }
+
+  const knopf = (wert, text) => `
+    <button type="button" class="training-filter${trainingFilterTyp === wert ? " training-filter-aktiv" : ""}"
+            data-training-typ="${sicher(wert)}">${sicher(text)}</button>`;
+
+  return `
+    <div class="training-kopf">
+      <button type="button" class="knopf-schlicht start-klein" data-training-verlauf>‹ Zurück</button>
+      <span class="training-stand">${gefiltert.length} von ${alle.length} Trainings</span>
+    </div>
+    <div class="training-filterleiste">
+      ${knopf("", "Alle")}
+      ${typen.map(t => knopf(t, trainingWort(t))).join("")}
+      <select id="trainingMuskel" class="training-muskelwahl" aria-label="Muskelgruppe">
+        <option value="">Alle Muskelgruppen</option>
+        ${muskeln.map(m => `<option value="${sicher(m)}"${
+          m === trainingFilterMuskel ? " selected" : ""}>${sicher(trainingWort(m))}</option>`).join("")}
+      </select>
+    </div>
+    ${gefiltert.length === 0 ? `<p class="leer-text">Kein Training passt zu diesem Filter.</p>` : ""}
+    ${monate.map(m => `
+      <section class="start-karte training-monat">
+        <div class="start-karte-kopf"><h2>${sicher(m.name)}</h2>
+          <span class="training-leise">${m.liste.length} ${m.liste.length === 1 ? "Training" : "Trainings"}</span></div>
+        ${m.liste.map(s => `
+          <div class="training-eintrag">
+            <div class="training-eintrag-tag">
+              <strong>${sicher(WOCHENTAGE[s.start.getDay()].slice(0, 2) + " " + datumKurz(s.start))}</strong>
+              <span class="training-leise">${sicher(tageHer(s.start, jetzt))}</span>
+            </div>
+            <div class="training-eintrag-text">
+              <div><strong>${sicher(s.typ ? trainingWort(s.typ) : "Training")}</strong>${
+                einheitBeschreiben(Object.assign({}, s, { typ: "" }))
+                  ? " · " + sicher(einheitBeschreiben(Object.assign({}, s, { typ: "" }))) : ""}${
+                s.gymName ? `<span class="training-leise"> · ${sicher(s.gymName)}</span>` : ""}</div>
+              ${s.muskeln.length ? `<div class="training-leise">${
+                sicher(s.muskeln.map(trainingWort).join(", "))}</div>` : ""}
+              ${s.partner.length ? `<div class="training-leise">mit ${sicher(s.partner.join(", "))}</div>` : ""}
+              ${s.notiz ? `<div class="training-notiz">${sicher(s.notiz)}</div>` : ""}
+            </div>
+          </div>`).join("")}
+      </section>`).join("")}`;
 }
 
 function trainingKarte(titel, inhalt) {
@@ -5197,6 +5346,7 @@ function geraeteVerbinden() {
 
   function oeffnen() {
     faecherBereichZeichnen();
+    aenderungenBereichZeichnen();
     geraeteZeichnen();
     meldenZeichnen();
     erinnerungsdienstZeichnen();
@@ -5384,7 +5534,6 @@ function seiteSetzen(neueSeite) {
     training: "seiteTraining",
     zettel: "seiteZettel",
     todos: "seiteTodos",
-    aenderungen: "seiteAenderungen",
   };
   for (const name of Object.keys(bereiche)) {
     const bereich = document.getElementById(bereiche[name]);
@@ -5396,9 +5545,6 @@ function seiteSetzen(neueSeite) {
     knopf.classList.toggle("reiter-aktiv", aktiv);
     knopf.setAttribute("aria-selected", aktiv ? "true" : "false");
   }
-
-  // Wer die Änderungen ansieht, hat sie gesehen.
-  if (seite === "aenderungen") aenderungenAlsGesehenMerken();
 
   // Beim Öffnen nachfragen – trainingAbholen() lässt es, wenn der Stand frisch ist.
   if (seite === "training" || seite === "start") trainingAbholen(false);
@@ -5640,10 +5786,26 @@ function knoepfeVerbinden() {
   document.getElementById("tage").addEventListener("click", notizKlick);
   document.getElementById("todoInhalt").addEventListener("click", notizKlick);
   document.getElementById("seiteStart").addEventListener("click", startKlick);
-  document.getElementById("seiteTraining").addEventListener("click", ereignis => {
+  const trainingBereich = document.getElementById("seiteTraining");
+  trainingBereich.addEventListener("click", ereignis => {
     const ziel = ereignis.target && ereignis.target.closest
-      ? ereignis.target.closest("[data-training-neu]") : null;
-    if (ziel) trainingAbholen(true);
+      ? ereignis.target.closest("[data-training-neu],[data-training-verlauf],[data-training-typ]")
+      : null;
+    if (!ziel) return;
+    if (ziel.hasAttribute("data-training-neu")) { trainingAbholen(true); return; }
+    if (ziel.hasAttribute("data-training-verlauf")) {
+      trainingVerlaufOffen = !trainingVerlaufOffen;
+      trainingZeichnen();
+      window.scrollTo(0, 0);
+      return;
+    }
+    trainingFilterTyp = ziel.getAttribute("data-training-typ") || "";
+    trainingZeichnen();
+  });
+  trainingBereich.addEventListener("change", ereignis => {
+    if (!ereignis.target || ereignis.target.id !== "trainingMuskel") return;
+    trainingFilterMuskel = ereignis.target.value;
+    trainingZeichnen();
   });
 
   /* Die Übersicht altert: "Läuft gerade" stimmt eine Stunde später nicht
@@ -5748,6 +5910,17 @@ function knoepfeVerbinden() {
   });
 
   document.getElementById("filterSchliessen").addEventListener("click", fensterSchliessen);
+
+  const verlaufFenster = document.getElementById("verlaufHintergrund");
+  document.getElementById("aenderungenBereich").addEventListener("click", ereignis => {
+    if (ereignis.target && ereignis.target.id === "verlaufOeffnen") verlaufFensterZeigen();
+  });
+  document.getElementById("verlaufSchliessen").addEventListener("click", () => {
+    verlaufFenster.hidden = true;
+  });
+  verlaufFenster.addEventListener("click", ereignis => {
+    if (ereignis.target === verlaufFenster) verlaufFenster.hidden = true;
+  });
 
   // Ein Klick neben das Fenster schließt es ebenfalls.
   fenster.addEventListener("click", ereignis => {

@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=151587d8">
+<link rel="stylesheet" href="style.css?v=a330fdd8">
 </head>
 <body>
 
@@ -97,9 +97,6 @@
   </button>
   <button type="button" data-seite="todos" role="tab" aria-selected="false">
     To-dos <span class="reiter-zahl" id="todoZahl" hidden></span>
-  </button>
-  <button type="button" data-seite="aenderungen" role="tab" aria-selected="false">
-    Änderungen <span class="reiter-zahl" id="aenderungsZahl" hidden></span>
   </button>
 </nav>
 
@@ -173,14 +170,6 @@
     <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
     <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
     <div id="todoInhalt"></div>
-  </section>
-
-  <!-- ================= Bereich 4: Änderungen ================= -->
-  <section id="seiteAenderungen" hidden>
-    <p class="bereich-hinweis">
-      Was sich seit dem ersten Abruf am Stundenplan geändert hat.
-    </p>
-    <div id="verlauf"></div>
   </section>
 
 </main>
@@ -312,6 +301,10 @@
          steht hier, weil man ihn einmal im Semester braucht und nicht
          jeden Tag. Siehe faecherBereichZeichnen() in app.js. -->
     <div id="faecherBereich"></div>
+    <!-- Die Änderungen am Stundenplan. Früher ein eigener Reiter; neue
+         Änderungen meldet jetzt die Übersicht mit einem großen Hinweis,
+         die ganze Liste steht hier. Siehe aenderungenBereichZeichnen(). -->
+    <div id="aenderungenBereich"></div>
     <h3 class="melden-titel">Geräte abgleichen</h3>
     <div id="geraeteInhalt"></div>
     <!-- Hell oder dunkel. Steht im selben Fenster, weil es dieselbe Sorte
@@ -349,15 +342,30 @@
   </div>
 </div>
 
+<!-- Die ganze Liste der Änderungen. Liegt wie die Fächerauswahl hinter
+     dem Einstellungsfenster in der Datei und damit darüber. -->
+<div class="filter-hintergrund" id="verlaufHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Änderungen am Stundenplan</h2>
+      <button type="button" class="knopf-schlicht" id="verlaufSchliessen">Fertig</button>
+    </div>
+    <p class="filter-hinweis">
+      Was sich seit dem ersten Abruf am Plan geändert hat, das Neueste oben.
+    </p>
+    <div id="verlauf"></div>
+  </div>
+</div>
+
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=151587d8"></script>
-<script src="melden.js?v=151587d8"></script>
+<script src="sync.js?v=a330fdd8"></script>
+<script src="melden.js?v=a330fdd8"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=151587d8"></script>
+<script src="app.js?v=a330fdd8"></script>
 
 </body>
 </html>
