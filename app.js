@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "13761e18";
+const GEBAUTE_VERSION = "0d951d63";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -207,7 +207,7 @@ let vergangeneOffenFuer = "";
 
 // Welcher Bereich gerade offen ist: "plan", "zettel", "todos" oder
 // "aenderungen".
-let seite = "plan";
+let seite = "start";
 
 // Das Notizbuch. Siehe SPEICHER_ZETTEL.
 let zettel = [];
@@ -449,6 +449,27 @@ function filterZeichnen() {
 }
 
 
+/* Der Abschnitt "Fächer" in den Einstellungen: wie viele belegt sind, und
+   der Knopf zur Auswahl. Die Auswahl selbst ist das alte Filterfenster,
+   das sich dann über die Einstellungen legt. */
+function faecherBereichZeichnen() {
+  const bereich = document.getElementById("faecherBereich");
+  if (!bereich) return;
+  const faecher = alleFaecher();
+  const belegt = faecher.filter(f => !abgewaehlteFaecher.has(f.titel)).length;
+  bereich.innerHTML = `
+    <h3 class="melden-titel">Fächer</h3>
+    <p class="filter-hinweis">
+      ${belegt === faecher.length
+        ? `Alle ${faecher.length} Fächer stehen in deinem Plan.`
+        : `${belegt} von ${faecher.length} Fächern stehen in deinem Plan.
+           Die übrigen hast du abgewählt, meist Wahlpflichtfächer, die du
+           nicht belegst.`}
+    </p>
+    <button type="button" class="knopf-schlicht" id="faecherOeffnen">Fächer auswählen</button>`;
+}
+
+
 /* -------------------------------------------------------------------------
    3. "Als Nächstes"
 
@@ -491,8 +512,13 @@ function naechstenZeichnen() {
 
   const zusatz = [treffer.raum, treffer.dozent].filter(Boolean).join(" · ");
 
+  /* Was am selben Tag danach kommt. Beim Rausgehen aus der Vorlesung ist
+     das die nächste Frage: gleich weiter, oder erst Mittag? */
+  const danach = termine.find(t => t.start >= treffer.ende
+                                  && tagesSchluessel(t.start) === tagesSchluessel(beginn));
+
   bereich.innerHTML = `
-    <div class="naechster-karte">
+    <div class="naechster-karte" data-termin="${sicher(treffer.id)}" role="button" tabindex="0">
       <div class="naechster-marke">${sicher(marke)}</div>
       <div class="naechster-titel">${sicher(treffer.titel)}</div>
       <div class="naechster-zeile">${sicher(zusatz || "Raum noch offen")}</div>
@@ -503,7 +529,371 @@ function naechstenZeichnen() {
         ? `<div class="naechster-notiz">${
              istWichtig(treffer.id) ? "★" : "✎"} ${sicher(notizText(treffer.id))}</div>`
         : ""}
+      ${danach
+        ? `<div class="naechster-danach">Danach ${sicher(uhrzeit(danach.start))}: ${
+             sicher(danach.titel)}${danach.raum ? " · " + sicher(danach.raum) : ""}</div>`
+        : ""}
     </div>`;
+}
+
+
+/* -------------------------------------------------------------------------
+   3b. Die Übersicht
+
+   Die Startseite. Sie beantwortet beim Öffnen die Fragen, für die man
+   sonst durch drei Reiter tippt: Wo muss ich hin? Was ist heute noch?
+   Was ist fällig? Hat sich am Plan etwas geändert?
+
+   Alles hier gibt es auch anderswo – die Übersicht rechnet nichts Neues
+   aus, sie nimmt nur aus jedem Bereich die obersten Einträge. Deshalb
+   benutzt sie dieselben Funktionen wie die Bereiche selbst
+   (alleAngezeigtenTermine, aufgabenSammeln, zeitgruppeVon …): würde sie
+   eigene Regeln haben, stünde hier irgendwann "2 To-dos fällig" und im
+   Reiter "To-dos" etwas anderes.
+   ------------------------------------------------------------------------- */
+
+/* Kommt man nach längerer Pause zurück, beginnt die App wieder hier – auch
+   wenn man zuletzt im Plan war. Innerhalb dieser Frist bleibt der Reiter,
+   in dem man war: das iPhone beendet eine Home-Bildschirm-App gern im
+   Hintergrund, und wer gerade eine Notiz nachschlagen wollte, soll nicht
+   auf der Startseite landen. */
+const SPEICHER_SEITE_ZEIT = "stundenplan.seiteZeit";
+const ZURUECK_ZUR_UEBERSICHT_NACH = 15 * 60 * 1000;
+
+/* Mit welchem Reiter die App aufgeht. Der gemerkte, wenn er bekannt ist
+   und keine Viertelstunde her; sonst die Übersicht. Eine Zeit, die in der
+   Zukunft liegt – Uhr des Geräts verstellt –, zählt nicht als frisch. */
+function startseiteWaehlen(gemerkteSeite, gemerktAm, jetzt) {
+  const bekannt = ["start", "plan", "zettel", "todos", "aenderungen"];
+  const her = jetzt - (Number(gemerktAm) || 0);
+  if (bekannt.indexOf(gemerkteSeite) >= 0 && her >= 0 && her < ZURUECK_ZUR_UEBERSICHT_NACH) {
+    return gemerkteSeite;
+  }
+  return "start";
+}
+
+/* Die Kalenderwoche nach ISO 8601, so wie sie in deutschen Kalendern steht:
+   Woche 1 ist die mit dem ersten Donnerstag des Jahres. Deshalb wird zum
+   Donnerstag derselben Woche gesprungen und von dort aus gezählt. */
+function kalenderwoche(datum) {
+  const tag = new Date(Date.UTC(datum.getFullYear(), datum.getMonth(), datum.getDate()));
+  const wochentag = tag.getUTCDay() || 7;
+  tag.setUTCDate(tag.getUTCDate() + 4 - wochentag);
+  const jahresanfang = new Date(Date.UTC(tag.getUTCFullYear(), 0, 1));
+  return Math.ceil(((tag - jahresanfang) / 86400000 + 1) / 7);
+}
+
+/* Welcher Tag in die Karte "Heute" gehört.
+
+   Normalerweise heute. Ist heute aber nichts mehr – Vorlesungen vorbei,
+   oder Wochenende –, zeigt sie den nächsten Tag, an dem etwas ist. Um
+   18 Uhr interessiert der Vormittag nicht mehr, der nächste Morgen schon.
+   Gesucht wird zwei Wochen weit; danach ist ohnehin Semesterende oder
+   Ferien, und dann steht dort einfach "Nichts in Sicht". */
+function starttagWaehlen(jetzt) {
+  const heute = tagesSchluessel(jetzt);
+  const termine = alleAngezeigtenTermine();
+
+  const heuteTermine = termine.filter(t => tagesSchluessel(t.start) === heute);
+  const nochHeute = heuteTermine.filter(t => alsDatum(t.ende) > jetzt);
+  const ganztagsHeute = ganztagsTermineFuerTag(heute);
+  if (nochHeute.length > 0 || ganztagsHeute.length > 0) {
+    return { schluessel: heute, termine: heuteTermine, ganztags: ganztagsHeute,
+             istHeute: true };
+  }
+
+  for (let versatz = 1; versatz <= 14; versatz++) {
+    const schluessel = tagesSchluessel(tageDazu(jetzt, versatz));
+    const anDiesemTag = termine.filter(t => tagesSchluessel(t.start) === schluessel);
+    const ganztags = ganztagsTermineFuerTag(schluessel);
+    if (anDiesemTag.length > 0 || ganztags.length > 0) {
+      return { schluessel: schluessel, termine: anDiesemTag, ganztags: ganztags,
+               istHeute: false, heuteVorbei: heuteTermine.length > 0 };
+    }
+  }
+  return null;
+}
+
+/* Die offenen To-dos, die auf die Startseite gehören.
+
+   Zuerst alles, was drängt: überfällig, heute, morgen. Ist das weniger
+   als drei, wird mit dem Nächsten aufgefüllt, was kommt – eine Karte mit
+   "nichts dringend" und sonst nichts sagt weniger als "nichts dringend,
+   als Nächstes kommt X am Montag". Die Reihenfolge ist die der Zeitgruppen,
+   innerhalb einer Gruppe die aus aufgabenSammeln(): Wichtiges zuerst.
+
+   Einträge ohne Termin im Plan fehlen hier. Sie haben kein Datum, also
+   auch keine Dringlichkeit; im Reiter "To-dos" stehen sie weiter. */
+const START_TODOS_DRINGEND = ["ueberfaellig", "heute", "morgen"];
+const START_TODOS_MINDESTENS = 3;
+const START_TODOS_HOECHSTENS = 6;
+
+function startTodos(jetzt) {
+  const offen = aufgabenSammeln().filter(a => !a.erledigt);
+  const gruppen = nachZeitgruppen(offen, jetzt);
+
+  const dringend = [];
+  for (const name of START_TODOS_DRINGEND) {
+    for (const eintrag of gruppen[name]) dringend.push({ eintrag, gruppe: name });
+  }
+
+  const auswahl = dringend.slice(0, START_TODOS_HOECHSTENS);
+  for (const name of ["woche", "naechste", "spaeter"]) {
+    for (const eintrag of gruppen[name]) {
+      if (auswahl.length >= START_TODOS_MINDESTENS) break;
+      auswahl.push({ eintrag, gruppe: name });
+    }
+  }
+
+  return {
+    auswahl: auswahl,
+    offen: offen.length,
+    dringend: dringend.length,
+    ueberfaellig: gruppen.ueberfaellig.length,
+  };
+}
+
+/* Die Änderungen am Plan, die du noch nicht gesehen hast – als flache
+   Liste, neueste Erkennung zuerst. Dieselbe Regel wie die Zahl am Reiter,
+   sonst stünde oben "3" und hier etwas anderes. */
+function startAenderungen() {
+  let zuletztGesehen = "";
+  try { zuletztGesehen = localStorage.getItem(SPEICHER_GESEHEN) || ""; }
+  catch (fehler) { /* dann gilt alles als neu */ }
+
+  const liste = [];
+  for (const block of sichtbareBloecke()) {
+    if (block.erkanntAm <= zuletztGesehen) continue;
+    for (const eintrag of block.eintraege) liste.push(eintrag);
+  }
+  return liste;
+}
+
+/* Die kleinen Zahlen oben. Jede ist ein Knopf, der dorthin führt, wo die
+   Zahl herkommt. */
+function startZahlen(jetzt, todos, neueAenderungen) {
+  const termine = alleAngezeigtenTermine();
+  const heute = tagesSchluessel(jetzt);
+  const sonntag = tagesSchluessel(tageDazu(montagDerWoche(jetzt), 6));
+
+  const nochHeute = termine.filter(
+    t => tagesSchluessel(t.start) === heute && alsDatum(t.ende) > jetzt).length;
+  const nochDieseWoche = termine.filter(
+    t => tagesSchluessel(t.start) <= sonntag && alsDatum(t.ende) > jetzt).length;
+
+  return [
+    { wert: nochHeute, name: nochHeute === 1 ? "Termin noch heute" : "Termine noch heute",
+      ziel: "plan" },
+    { wert: nochDieseWoche, name: "noch diese Woche", ziel: "plan" },
+    { wert: todos.offen, name: todos.offen === 1 ? "To-do offen" : "To-dos offen",
+      ziel: "todos",
+      zusatz: todos.ueberfaellig ? todos.ueberfaellig + " überfällig" : "",
+      dringend: todos.ueberfaellig > 0 },
+    { wert: neueAenderungen, name: neueAenderungen === 1 ? "neue Änderung" : "neue Änderungen",
+      ziel: "aenderungen", dringend: neueAenderungen > 0 },
+  ];
+}
+
+function startZeichnen() {
+  const bereich = document.getElementById("startInhalt");
+  if (!bereich) return;
+  const jetzt = new Date();
+
+  const datumsZeile = document.getElementById("startDatum");
+  if (datumsZeile) {
+    datumsZeile.textContent = WOCHENTAGE[jetzt.getDay()] + ", "
+      + jetzt.toLocaleDateString("de-DE", { day: "numeric", month: "long" })
+      + " · KW " + kalenderwoche(jetzt);
+  }
+
+  const todos = startTodos(jetzt);
+  const aenderungen = startAenderungen();
+  const stuecke = [];
+
+  // --- Die Zahlen -----------------------------------------------------
+  stuecke.push(`<div class="start-zahlen">${
+    startZahlen(jetzt, todos, aenderungen.length).map(zahl => `
+      <button type="button" class="start-zahl${zahl.dringend ? " start-zahl-dringend" : ""}"
+              data-start-seite="${zahl.ziel}">
+        <span class="start-zahl-wert">${zahl.wert}</span>
+        <span class="start-zahl-name">${sicher(zahl.name)}</span>
+        ${zahl.zusatz ? `<span class="start-zahl-zusatz">${sicher(zahl.zusatz)}</span>` : ""}
+      </button>`).join("")
+  }</div>`);
+
+  const karten = [];
+
+  // --- Heute (oder der nächste Tag mit Terminen) -----------------------
+  const tag = starttagWaehlen(jetzt);
+  if (!tag) {
+    karten.push(startKarte("Heute", "plan", "Plan",
+      `<p class="start-leer">Nichts in Sicht – die nächsten zwei Wochen sind frei.</p>`));
+  } else {
+    const titel = tag.istHeute ? "Heute" : tagLesbar(tag.schluessel);
+    const vorspann = !tag.istHeute
+      ? `<p class="start-leer">${tag.heuteVorbei
+           ? "Für heute ist alles vorbei." : "Heute steht nichts an."} Als Nächstes:</p>`
+      : "";
+    const ganztags = tag.ganztags.map(t => `
+      <button type="button" class="start-ganztags" data-termin="${sicher(t.id)}">
+        ${t.wichtig ? "★ " : ""}${sicher(t.titel)}
+      </button>`).join("");
+    const zeilen = tag.termine.map(t => {
+      const vorbei = alsDatum(t.ende) <= jetzt;
+      const laeuft = !vorbei && alsDatum(t.start) <= jetzt;
+      const klassen = "start-termin" + (vorbei ? " start-termin-vorbei" : "")
+                    + (laeuft ? " start-termin-jetzt" : "")
+                    + (t.eigen ? " start-termin-eigen" : "");
+      const notiz = notizText(t.id);
+      return `
+        <button type="button" class="${klassen}" data-termin="${sicher(t.id)}">
+          <span class="start-termin-zeit">${uhrzeit(t.start)}<br>${uhrzeit(t.ende)}</span>
+          <span class="start-termin-text">
+            <span class="start-termin-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${sicher(t.titel)}</span>
+            ${t.raum ? `<span class="start-termin-ort">${sicher(t.raum)}</span>` : ""}
+            ${t.anmerkung && !t.eigen
+              ? `<span class="start-termin-hinweis">${sicher(t.anmerkung)}</span>` : ""}
+            ${notiz ? `<span class="start-termin-notiz">✎ ${sicher(notiz)}</span>` : ""}
+          </span>
+        </button>`;
+    }).join("");
+    karten.push(startKarte(titel, "plan", "Plan",
+      vorspann + (ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : "") + zeilen));
+  }
+
+  // --- To-dos ------------------------------------------------------------
+  const gruppenTitel = {};
+  for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
+  let todoInhalt;
+  if (todos.offen === 0) {
+    todoInhalt = `<p class="start-leer">Nichts offen. Alles abgehakt.</p>`;
+  } else {
+    todoInhalt = (todos.dringend === 0
+      ? `<p class="start-leer">Nichts Dringendes. Als Nächstes:</p>` : "")
+      + todos.auswahl.map(({ eintrag, gruppe }) => {
+        const wann = gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+          ? gruppenTitel[gruppe]
+          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10));
+        const fach = eintrag.art === "notiz" && eintrag.termin ? " · " + eintrag.termin.titel : "";
+        return `
+          <div class="start-todo${gruppe === "ueberfaellig" ? " start-todo-ueberfaellig" : ""}">
+            <button type="button" class="todo-haken" data-todo-haken="${sicher(eintrag.kennung)}"
+                    aria-label="Als erledigt abhaken"></button>
+            <button type="button" class="start-todo-text" data-start-todo="${sicher(eintrag.kennung)}">
+              <span class="start-todo-titel">${eintrag.wichtig ? "★ " : ""}${sicher(eintrag.text)}</span>
+              <span class="start-todo-wann">${sicher(wann + fach)}${
+                eintrag.erinnerung ? " · 🔔" : ""}</span>
+            </button>
+          </div>`;
+      }).join("")
+      + (todos.offen > todos.auswahl.length
+          ? `<p class="start-mehr">und ${todos.offen - todos.auswahl.length} weitere</p>` : "");
+  }
+  karten.push(startKarte("To-dos", "todos", "Alle",
+    todoInhalt, `<button type="button" class="knopf-schlicht start-klein" data-start-todo-neu>+ To-do</button>`));
+
+  // --- Hinweise aus dem HWR-Plan, nächste 14 Tage -----------------------
+  const grenze = tagesSchluessel(tageDazu(jetzt, 14));
+  const hinweise = hinweiseSammeln()
+    .filter(h => !istVorbei(h.start) && h.start.slice(0, 10) <= grenze)
+    .slice(0, 3);
+  if (hinweise.length > 0) {
+    karten.push(startKarte("Hinweise im Plan", "todos", "Alle",
+      hinweise.map(h => `
+        <div class="start-hinweis">
+          <span class="start-hinweis-text">${sicher(h.anmerkung)}</span>
+          <span class="start-todo-wann">${sicher(tagLesbar(h.start.slice(0, 10)) + " · " + h.titel)}</span>
+        </div>`).join("")));
+  }
+
+  // --- Neue Änderungen am Plan ------------------------------------------
+  if (aenderungen.length > 0) {
+    const beschriftung = { neu: "neu", entfallen: "entfällt", geaendert: "geändert" };
+    karten.push(startKarte("Neu im Plan", "aenderungen", "Alle",
+      aenderungen.slice(0, 3).map(e => `
+        <div class="start-aenderung">
+          <span class="marke marke-${e.typ}">${beschriftung[e.typ]}</span>
+          <span>
+            <strong>${sicher(e.termin.titel)}</strong>
+            <span class="start-todo-wann">${sicher(zeitpunktLesbar(e.termin.start))}</span>
+          </span>
+        </div>`).join("")
+      + (aenderungen.length > 3
+          ? `<p class="start-mehr">und ${aenderungen.length - 3} weitere</p>` : "")));
+  }
+
+  // --- Notizen: markierte zuerst, dann die zuletzt bearbeiteten ----------
+  const notizbuch = zettelSortiert().slice(0, 3);
+  karten.push(startKarte("Notizen", "zettel", "Alle",
+    notizbuch.length === 0
+      ? `<p class="start-leer">Noch keine Notizen.</p>`
+      : notizbuch.map(z => `
+          <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
+            <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
+            ${zettelVorschau(z)
+              ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
+          </button>`).join(""),
+    `<button type="button" class="knopf-schlicht start-klein" data-start-notiz-neu>+ Notiz</button>`));
+
+  stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
+  bereich.innerHTML = stuecke.join("");
+}
+
+/* Eine Karte der Übersicht: Überschrift, rechts ein Weg in den ganzen
+   Bereich, darunter der Inhalt. */
+function startKarte(titel, ziel, zielText, inhalt, knopf) {
+  return `
+    <section class="start-karte">
+      <div class="start-karte-kopf">
+        <h2>${sicher(titel)}</h2>
+        <div class="start-karte-knoepfe">
+          ${knopf || ""}
+          <button type="button" class="start-weiter" data-start-seite="${ziel}">${sicher(zielText)} ›</button>
+        </div>
+      </div>
+      ${inhalt}
+    </section>`;
+}
+
+/* Die Knöpfe der Übersicht. Was es auch anderswo gibt – Termin antippen,
+   To-do abhaken, Notiz öffnen –, geht an notizKlick(), damit es sich
+   genau so verhält wie im Plan oder im To-do-Bereich. */
+function startKlick(ereignis) {
+  const ziel = ereignis.target && ereignis.target.closest
+    ? ereignis.target.closest("[data-start-seite],[data-start-todo],"
+                              + "[data-start-todo-neu],[data-start-notiz-neu]")
+    : null;
+  if (!ziel) { notizKlick(ereignis); return; }
+
+  const neueSeite = ziel.getAttribute("data-start-seite");
+  if (neueSeite) {
+    // In den Plan heißt: diese Woche, heute oben.
+    if (neueSeite === "plan") {
+      angezeigterMontag = montagDerWoche(new Date());
+      vergangeneOffenFuer = "";
+    }
+    seiteSetzen(neueSeite);
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  // Ein To-do antippen öffnet es dort, wo man es bearbeiten kann.
+  const todo = ziel.getAttribute("data-start-todo");
+  if (todo) {
+    offeneNotiz = todo;
+    seiteSetzen("todos");
+    notizfeldAktivieren();
+    return;
+  }
+
+  if (ziel.hasAttribute("data-start-todo-neu")) {
+    offeneNotiz = "neu:" + tagesSchluessel(new Date());
+    seiteSetzen("todos");
+    notizfeldAktivieren();
+    return;
+  }
+
+  if (ziel.hasAttribute("data-start-notiz-neu")) zettelFensterZeigen("");
 }
 
 
@@ -4238,6 +4628,7 @@ function geraeteVerbinden() {
   if (!fenster) return;
 
   function oeffnen() {
+    faecherBereichZeichnen();
     geraeteZeichnen();
     meldenZeichnen();
     erinnerungsdienstZeichnen();
@@ -4399,6 +4790,7 @@ function geraeteVerbinden() {
    immer, denn die stehen über allen Bereichen. */
 function allesZeichnen() {
   naechstenZeichnen();
+  startZeichnen();
   wocheZeichnen();
   zettelZeichnen();
   todosZeichnen();
@@ -4412,10 +4804,13 @@ function allesZeichnen() {
    Nachladen. */
 function seiteSetzen(neueSeite) {
   seite = neueSeite;
-  try { localStorage.setItem(SPEICHER_SEITE, seite); }
-  catch (fehler) { /* dann startet die App eben wieder beim Plan */ }
+  try {
+    localStorage.setItem(SPEICHER_SEITE, seite);
+    localStorage.setItem(SPEICHER_SEITE_ZEIT, String(Date.now()));
+  } catch (fehler) { /* dann startet die App eben wieder bei der Übersicht */ }
 
   const bereiche = {
+    start: "seiteStart",
     plan: "seitePlan",
     zettel: "seiteZettel",
     todos: "seiteTodos",
@@ -4671,6 +5066,20 @@ function knoepfeVerbinden() {
   // Er hängt an beiden Bereichen, in denen Notizen vorkommen.
   document.getElementById("tage").addEventListener("click", notizKlick);
   document.getElementById("todoInhalt").addEventListener("click", notizKlick);
+  document.getElementById("seiteStart").addEventListener("click", startKlick);
+
+  /* Die Übersicht altert: "Läuft gerade" stimmt eine Stunde später nicht
+     mehr. Einmal pro Minute neu zeichnen, aber nur, wenn man sie auch
+     sieht – im Hintergrund wäre das verschenkter Akku. Zurück im
+     Vordergrund sorgt der Abgleich ohnehin für ein Neuzeichnen, und für
+     den Fall ohne Abgleich hängt hier ein eigener Zuhörer. */
+  function uebersichtAuffrischen() {
+    if (seite !== "start" || document.visibilityState === "hidden") return;
+    naechstenZeichnen();
+    startZeichnen();
+  }
+  setInterval(uebersichtAuffrischen, 60 * 1000);
+  document.addEventListener("visibilitychange", uebersichtAuffrischen);
 
   for (const knopf of document.querySelectorAll("[data-seite]")) {
     knopf.addEventListener("click", () => {
@@ -4745,18 +5154,24 @@ function knoepfeVerbinden() {
 
   const fenster = document.getElementById("filterHintergrund");
 
-  document.getElementById("filterOeffnen").addEventListener("click", () => {
+  // Geöffnet wird die Fächerauswahl aus den Einstellungen, siehe
+  // faecherBereichZeichnen(). Beim Schließen dort die Zahl nachziehen.
+  function fensterSchliessen() {
+    fenster.hidden = true;
+    faecherBereichZeichnen();
+  }
+
+  document.getElementById("faecherBereich").addEventListener("click", ereignis => {
+    if (!ereignis.target || ereignis.target.id !== "faecherOeffnen") return;
     filterZeichnen();
     fenster.hidden = false;
   });
 
-  document.getElementById("filterSchliessen").addEventListener("click", () => {
-    fenster.hidden = true;
-  });
+  document.getElementById("filterSchliessen").addEventListener("click", fensterSchliessen);
 
   // Ein Klick neben das Fenster schließt es ebenfalls.
   fenster.addEventListener("click", ereignis => {
-    if (ereignis.target === fenster) fenster.hidden = true;
+    if (ereignis.target === fenster) fensterSchliessen();
   });
 
   /* Das Detailfenster eines Kalendertermins. Geöffnet wird es in
@@ -4888,12 +5303,12 @@ function starten() {
     const gemerkt = localStorage.getItem(SPEICHER_ANSICHT);
     if (gemerkt === "kalender" || gemerkt === "liste") ansicht = gemerkt;
 
-    const gemerkteSeite = localStorage.getItem(SPEICHER_SEITE);
-    if (gemerkteSeite === "plan" || gemerkteSeite === "zettel"
-        || gemerkteSeite === "todos" || gemerkteSeite === "aenderungen") {
-      seite = gemerkteSeite;
-    }
-  } catch (fehler) { /* dann bleibt es bei Liste und Plan */ }
+    /* Der zuletzt offene Reiter gilt nur, wenn das kurz her ist – siehe
+       ZURUECK_ZUR_UEBERSICHT_NACH. Fehlt die Zeit, stammt der Eintrag aus
+       der Fassung vor der Übersicht; auch dann geht es dort los. */
+    seite = startseiteWaehlen(localStorage.getItem(SPEICHER_SEITE),
+                              localStorage.getItem(SPEICHER_SEITE_ZEIT), Date.now());
+  } catch (fehler) { /* dann bleibt es bei Liste und Übersicht */ }
 
   kopfZeichnen();
   knoepfeVerbinden();
