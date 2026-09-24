@@ -67,7 +67,7 @@
     <!-- Geräteabgleich einrichten. Steht im Kopf und nicht in der
          Werkzeugleiste, weil es die ganze App betrifft und nicht nur den
          Plan. -->
-    <button type="button" class="knopf-schlicht" id="geraeteOeffnen" title="Geräte abgleichen">
+    <button type="button" class="knopf-schlicht" id="geraeteOeffnen" title="Einstellungen">
       ⚙
     </button>
     <!-- Erzwingt ein wirklich frisches Laden. Auf dem Home-Bildschirm gibt es
@@ -78,10 +78,13 @@
   </div>
 </header>
 
-<!-- Die Hauptnavigation. Jeder Knopf blendet einen der drei Bereiche ein.
+<!-- Die Hauptnavigation. Jeder Knopf blendet einen der Bereiche ein.
      Die Zahl an "To-dos" zeigt, wie viel offen ist. -->
 <nav class="reiter" role="tablist" aria-label="Bereiche">
-  <button type="button" data-seite="plan" role="tab" aria-selected="true">
+  <button type="button" data-seite="start" role="tab" aria-selected="true">
+    Übersicht
+  </button>
+  <button type="button" data-seite="plan" role="tab" aria-selected="false">
     Plan
   </button>
   <button type="button" data-seite="zettel" role="tab" aria-selected="false">
@@ -97,12 +100,22 @@
 
 <main>
 
-  <!-- ================= Bereich 1: Stundenplan ================= -->
-  <section id="seitePlan">
+  <!-- ================= Bereich 0: Übersicht ================= -->
+  <!-- Die Startseite. Hier steht nichts, was es nicht auch anderswo gibt -
+       nur das Wichtigste aus allen Bereichen auf einem Bildschirm. Gefüllt
+       von startZeichnen() in app.js. -->
+  <section id="seiteStart">
+    <div class="start-datum" id="startDatum"></div>
 
     <!-- Was als Nächstes ansteht. Das ist die Information, für die man
          normalerweise die Moodle-Seite aufmacht. -->
     <div class="naechster" id="naechsterBereich"></div>
+
+    <div id="startInhalt"></div>
+  </section>
+
+  <!-- ================= Bereich 1: Stundenplan ================= -->
+  <section id="seitePlan" hidden>
 
     <div class="wochen-leiste">
       <button type="button" class="knopf-pfeil" id="wocheZurueck" aria-label="Woche zurück">‹</button>
@@ -123,7 +136,6 @@
       <button type="button" class="knopf-schlicht knopf-betont" id="terminNeu">
         + Termin
       </button>
-      <button type="button" class="knopf-schlicht" id="filterOeffnen">Fächer</button>
     </div>
 
     <div class="tage" id="tage"></div>
@@ -162,25 +174,6 @@
   </section>
 
 </main>
-
-<!-- Der Filter liegt über der Seite und wird nur bei Bedarf gezeigt -->
-<div class="filter-hintergrund" id="filterHintergrund" hidden>
-  <div class="filter-fenster">
-    <div class="filter-kopf">
-      <h2>Welche Fächer besuchst du?</h2>
-      <button type="button" class="knopf-schlicht" id="filterSchliessen">Fertig</button>
-    </div>
-    <p class="filter-hinweis">
-      Der Plan enthält alle Wahlpflichtfächer des Semesters. Nimm die heraus,
-      die du nicht belegst – die Auswahl bleibt in diesem Browser gespeichert.
-    </p>
-    <div class="filter-knoepfe">
-      <button type="button" class="knopf-schlicht" id="filterAlle">Alle auswählen</button>
-      <button type="button" class="knopf-schlicht" id="filterKeine">Alle abwählen</button>
-    </div>
-    <div class="filter-liste" id="filterListe"></div>
-  </div>
-</div>
 
 <!-- Ein angetippter Kalendertermin. Im Raster ist der Platz begrenzt; hier
      steht alles, was dort nicht hineinpasst. Gefüllt von
@@ -302,9 +295,14 @@
 <div class="filter-hintergrund" id="geraeteHintergrund" hidden>
   <div class="filter-fenster">
     <div class="filter-kopf">
-      <h2>Geräte abgleichen</h2>
+      <h2>Einstellungen</h2>
       <button type="button" class="knopf-schlicht" id="geraeteSchliessen">Fertig</button>
     </div>
+    <!-- Welche Fächer im Plan stehen. Früher ein Knopf über dem Plan; er
+         steht hier, weil man ihn einmal im Semester braucht und nicht
+         jeden Tag. Siehe faecherBereichZeichnen() in app.js. -->
+    <div id="faecherBereich"></div>
+    <h3 class="melden-titel">Geräte abgleichen</h3>
     <div id="geraeteInhalt"></div>
     <!-- Hell oder dunkel. Steht im selben Fenster, weil es dieselbe Sorte
          Einstellung ist: gilt für die App, nicht für den Plan. -->
@@ -317,6 +315,27 @@
          meldet sich bei niemandem - es kaeme einfach nie eine Erinnerung.
          Siehe erinnerungsdienstZeichnen() in app.js. -->
     <div id="erinnerungsdienst"></div>
+  </div>
+</div>
+
+<!-- Die Fächerauswahl. Geöffnet wird sie aus den Einstellungen und liegt
+     dann über ihnen - deshalb steht sie in der Datei HINTER dem
+     Einstellungsfenster: bei gleichem Stapelwert gewinnt, was später kommt. -->
+<div class="filter-hintergrund" id="filterHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Welche Fächer besuchst du?</h2>
+      <button type="button" class="knopf-schlicht" id="filterSchliessen">Fertig</button>
+    </div>
+    <p class="filter-hinweis">
+      Der Plan enthält alle Wahlpflichtfächer des Semesters. Nimm die heraus,
+      die du nicht belegst – die Auswahl bleibt in diesem Browser gespeichert.
+    </p>
+    <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht" id="filterAlle">Alle auswählen</button>
+      <button type="button" class="knopf-schlicht" id="filterKeine">Alle abwählen</button>
+    </div>
+    <div class="filter-liste" id="filterListe"></div>
   </div>
 </div>
 

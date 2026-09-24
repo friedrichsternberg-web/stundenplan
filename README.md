@@ -6,17 +6,49 @@ Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Han
 eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
 etwas ändert.
 
-## Die vier Bereiche
+## Die fünf Bereiche
 
 | Reiter | zeigt |
 |---|---|
-| **Plan** | „Als Nächstes", die Woche als Liste oder Kalender |
+| **Übersicht** | die Startseite: das Wichtigste aus allen Bereichen auf einem Blick |
+| **Plan** | die Woche als Liste oder Kalender |
 | **Notizen** | das Notizbuch: freie Notizen, verknüpft mit Terminen und Modulen |
 | **To-dos** | deine Notizen zum Abhaken, dazu Hinweise aus dem HWR-Plan |
 | **Änderungen** | was sich am Stundenplan geändert hat |
 
 An „To-dos" und „Änderungen" steht eine Zahl, sobald dort etwas Offenes
 liegt. Deshalb sieht man schon beim Öffnen, ob überhaupt etwas ansteht.
+
+## Die Übersicht
+
+Die App geht mit der Übersicht auf. Von oben nach unten:
+
+- **Als Nächstes**: die Vorlesung, die gerade läuft oder als nächste kommt,
+  mit Raum und Kurznotiz, darunter was am selben Tag danach kommt.
+  Antippen öffnet den Termin.
+- **Vier Zahlen**: Termine noch heute, Termine noch diese Woche, offene
+  To-dos (rot, sobald etwas überfällig ist) und neue Änderungen am Plan.
+  Jede Zahl führt in ihren Bereich.
+- **Heute**: der Tagesplan, Vergangenes blass, das Laufende mit Balken.
+  Ist heute nichts mehr, steht hier der nächste Tag mit Terminen, am
+  Freitagabend also der Montag.
+- **To-dos**: alles Überfällige, Heutige und Morgige, höchstens sechs.
+  Ist nichts davon da, die nächsten drei. Abhaken geht direkt hier,
+  Antippen öffnet das To-do zum Bearbeiten.
+- **Hinweise im Plan** (nur wenn es in den nächsten zwei Wochen welche
+  gibt), **Neu im Plan** (nur wenn es ungesehene Änderungen gibt) und die
+  drei obersten **Notizen**: markierte zuerst, dann die zuletzt geänderten.
+
+Die Übersicht rechnet nichts Eigenes aus. Sie nimmt dieselben Funktionen
+wie die Bereiche selbst, sonst stünde oben irgendwann „2 To-dos" und im
+Reiter etwas anderes. Solange sie offen ist, zeichnet sie sich jede
+Minute neu, damit „Läuft gerade" nicht stehenbleibt.
+
+Welcher Reiter beim Öffnen kommt: der zuletzt benutzte, wenn das keine
+Viertelstunde her ist, sonst die Übersicht. Das iPhone beendet
+Home-Bildschirm-Apps gern im Hintergrund; wer gerade im Plan war, soll
+nach einem kurzen Wechsel in eine andere App nicht auf der Startseite
+landen.
 
 ## Wo das Projekt liegt — und warum nicht in „Dokumente"
 
@@ -965,8 +997,9 @@ python3 tests/test_postfach.py
 wichtig, dass am Rand des gleitenden Zeitfensters **kein** Fehlalarm
 entsteht. `test_abgleich.js` prüft das
 Zusammenführen zweier Stände — die Stelle, an der Daten verlorengehen
-könnten. `test_ansicht.js` prüft die Zeitfächer im To-do-Bereich und die
-Karte „Als Nächstes". `test_abgleich_ablage.py` prüft die echte Ablage:
+könnten. `test_ansicht.js` prüft die Zeitfächer im To-do-Bereich, die
+Karte „Als Nächstes" und die Übersicht: richtiger Tag in der Karte
+„Heute", kein dringendes To-do fehlt, nichts Kaputtes auf dem Bildschirm. `test_abgleich_ablage.py` prüft die echte Ablage:
 Berechtigungen, Sperre beim gleichzeitigen Schreiben, Abschottung der Räume
 gegeneinander. `test_melden.py` prüft die Benachrichtigungen – vor allem,
 dass die Push-Adressen mit dem öffentlichen Schlüssel **nicht** lesbar sind:
@@ -1087,6 +1120,9 @@ aufgezeichnet**: im Änderungsverlauf und im Protokoll, dort mit `(stumm)`
 gekennzeichnet. Es unterbleibt nur die Mitteilung.
 
 Der Filter im Dashboard überschreibt die Anzeige für diesen einen Browser.
+Er steht im ⚙-Fenster unter **Fächer** („9 von 21 Fächern stehen in
+deinem Plan", darunter **Fächer auswählen**). Früher war er ein Knopf über
+dem Plan, aber man braucht ihn einmal im Semester und nicht jeden Tag.
 Die Mitteilungen richten sich immer nach der Liste in `abgleich.py`.
 
 ## Grenzen

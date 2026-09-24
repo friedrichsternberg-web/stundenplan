@@ -206,6 +206,260 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 }
 
 
+/* --- Die Übersicht ------------------------------------------------------ */
+
+.start-datum {
+  font-size: 13px;
+  color: var(--schrift-leise);
+  margin: -4px 0 10px;
+}
+
+/* Die Karte "Als Nächstes" ist auf der Übersicht antippbar. */
+.naechster-karte[data-termin] { cursor: pointer; }
+
+.naechster-danach {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .28);
+  font-size: 13px;
+  opacity: .92;
+}
+
+/* Vier Zahlen nebeneinander, auf dem Handy zwei mal zwei. */
+.start-zahlen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.start-zahl {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--schrift);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.start-zahl:hover { background: var(--flaeche-gedaempft); }
+
+.start-zahl-wert { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.start-zahl-name { font-size: 12px; color: var(--schrift-leise); }
+.start-zahl-zusatz { font-size: 12px; font-weight: 600; color: var(--wichtig); }
+.start-zahl-dringend .start-zahl-wert { color: var(--wichtig); }
+
+/* Die Karten. Am Rechner zwei Spalten, auf dem Handy eine. */
+.start-raster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.start-karte {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  box-shadow: var(--schatten);
+  padding: 12px 14px 10px;
+  min-width: 0;
+}
+
+.start-karte-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.start-karte-kopf h2 { font-size: 16px; font-weight: 700; margin: 0; }
+
+.start-karte-knoepfe { display: flex; align-items: center; gap: 6px; }
+
+.knopf-schlicht.start-klein { padding: 4px 10px; font-size: 13px; }
+
+.start-weiter {
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--akzent);
+  cursor: pointer;
+}
+
+.start-leer {
+  font-size: 13px;
+  color: var(--schrift-leise);
+  margin: 2px 0 6px;
+}
+
+.start-mehr {
+  font-size: 12px;
+  color: var(--schrift-leise);
+  margin: 6px 0 2px;
+}
+
+/* Eine Zeile im Tagesplan. Knöpfe statt Textzeilen, weil sie das
+   Terminfenster öffnen - so sind sie auch mit der Tastatur erreichbar. */
+.start-termin {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--linie);
+  padding: 8px 0;
+  text-align: left;
+  font-family: inherit;
+  color: var(--schrift);
+  cursor: pointer;
+}
+
+
+.start-termin-zeit {
+  flex: 0 0 42px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--schrift-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+.start-termin-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.start-termin-titel { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.start-termin-ort { font-size: 12px; color: var(--schrift-leise); }
+.start-termin-hinweis { font-size: 12px; font-weight: 600; color: var(--geaendert); }
+.start-termin-notiz { font-size: 12px; color: var(--notiz-rand); overflow-wrap: anywhere; }
+
+/* Vorbei: noch da, damit man den Tag im Ganzen sieht, aber blass. */
+.start-termin-vorbei { opacity: .45; }
+
+/* Läuft gerade: ein Balken links, wie ein Lesezeichen. */
+.start-termin-jetzt {
+  box-shadow: inset 3px 0 0 var(--akzent);
+  padding-left: 9px;
+}
+.start-termin-jetzt .start-termin-zeit { color: var(--akzent); font-weight: 600; }
+
+.start-termin-eigen .start-termin-titel { color: var(--neu); }
+
+.start-ganztags-reihe { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+
+.start-ganztags {
+  background: var(--flaeche-gedaempft);
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--schrift);
+  cursor: pointer;
+}
+
+.start-todo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--linie);
+}
+
+.start-todo .todo-haken { margin-top: 1px; }
+
+.start-todo-text {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  color: var(--schrift);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.start-todo-titel { font-size: 14px; overflow-wrap: anywhere; }
+
+.start-todo-wann,
+.start-hinweis .start-todo-wann,
+.start-aenderung .start-todo-wann {
+  display: block;
+  font-size: 12px;
+  color: var(--schrift-leise);
+}
+
+.start-todo-ueberfaellig .start-todo-wann { color: var(--wichtig); font-weight: 600; }
+
+.start-hinweis,
+.start-aenderung {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--linie);
+  font-size: 14px;
+}
+
+.start-hinweis { flex-direction: column; gap: 2px; }
+.start-hinweis-text { font-weight: 600; color: var(--geaendert); }
+
+.start-zettel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--linie);
+  padding: 7px 0;
+  text-align: left;
+  font-family: inherit;
+  color: var(--schrift);
+  cursor: pointer;
+}
+
+.start-zettel-titel { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+
+.start-zettel-vorschau {
+  font-size: 12px;
+  color: var(--schrift-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Trennlinie steht zwischen zwei Zeilen, nicht über der ersten.
+   :first-of-type hilft hier nicht: davor stehen die Überschrift und
+   manchmal ein Satz, und die zählen mit oder eben nicht, je nach Sorte. */
+.start-karte-kopf + *,
+.start-leer + *,
+.start-ganztags-reihe + * { border-top: 0; }
+
+@media (max-width: 700px) {
+  .start-raster { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 520px) {
+  .start-zahlen { grid-template-columns: repeat(2, 1fr); }
+  .start-zahl { padding: 8px 10px; }
+  .start-zahl-wert { font-size: 21px; }
+
+}
+
+#faecherBereich { margin-bottom: 22px; }
+
+
 /* --- Hauptnavigation --------------------------------------------------- */
 
 .reiter {
@@ -1253,10 +1507,14 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
 /* --- Geräteabgleich ---------------------------------------------------- */
 
-/* Der Inhalt des Geräte-Fensters wechselt und kann laenger werden als der
-   Bildschirm - vor allem auf dem Handy, wo das Fenster von unten kommt.
-   Ohne das hier waere der untere Teil nicht erreichbar. */
-#geraeteInhalt { overflow-y: auto; }
+/* Das Einstellungsfenster ist oft laenger als der Bildschirm. Gescrollt
+   wird das ganze Fenster (siehe .filter-fenster), nicht die Abschnitte
+   einzeln. Frueher stand hier overflow-y: auto am Abgleich-Abschnitt -
+   und ein Kasten, der selbst scrollen darf, darf in einer Flex-Spalte
+   auch auf null Hoehe schrumpfen. Genau das passierte, als der Abschnitt
+   "Faecher" dazukam: die Ueberschrift "Geraete abgleichen" stand da, der
+   Inhalt darunter war weg. Deshalb schrumpft hier nichts. */
+#geraeteHintergrund .filter-fenster > * { flex-shrink: 0; }
 
 /* Wie es um den Abgleich steht. Eine Zeile, gefaerbt nach Lage. */
 .abgleich-stand {
@@ -2089,4 +2347,31 @@ a.knopf-schlicht {
 .vergangene-knopf:hover {
   border-style: solid;
   color: var(--schrift);
+}
+
+
+/* --- Reiter auf dem Handy ------------------------------------------------
+
+   Steht am Ende, weil es die allgemeinen Regeln für .reiter weiter oben
+   überschreiben muss: bei gleicher Schärfe gewinnt, was später kommt. */
+@media (max-width: 520px) {
+  /* Fünf Reiter auf 343 Bildpunkten. Gleich breit geht nicht mehr:
+     "Plan" braucht ein Drittel dessen, was "Änderungen" braucht. Also
+     bekommt jeder so viel, wie sein Wort lang ist, und nichts bricht um.
+     Die Zahl an "Notizen" fällt hier weg - sie zählt nur, wie viele es
+     gibt, und ist damit die einzige, die nichts Neues meldet. */
+  /* Und falls es trotzdem nicht reicht - eine dreistellige Zahl an
+     "Änderungen" etwa -, lässt sich die Leiste seitlich schieben, statt
+     die ganze Seite breiter zu machen. */
+  .reiter { gap: 0; overflow-x: auto; scrollbar-width: none; }
+  .reiter::-webkit-scrollbar { display: none; }
+  .reiter button {
+    flex: 1 0 auto;
+    padding: 10px 1px 9px;
+    font-size: 12.5px;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  .reiter-zahl { min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; }
+  #zettelZahl { display: none; }
 }

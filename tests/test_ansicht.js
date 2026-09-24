@@ -120,7 +120,16 @@ const werkzeug = eval(
   "  kalenderBauen: kalenderBauen," +
   "  aufgabenSammeln: aufgabenSammeln," +
   "  setzen: function (n, a) { notizen = n; aufgaben = a; grabsteine = {}; }," +
-  "  filterLeeren: function () { abgewaehlteFaecher = new Set(); }" +
+  "  filterLeeren: function () { abgewaehlteFaecher = new Set(); }," +
+  "  kalenderwoche: kalenderwoche," +
+  "  starttagWaehlen: starttagWaehlen," +
+  "  startTodos: startTodos," +
+  "  startZeichnen: startZeichnen," +
+  "  startseiteWaehlen: startseiteWaehlen," +
+  "  faecherBereichZeichnen: faecherBereichZeichnen," +
+  "  abwaehlen: function (titel) { abgewaehlteFaecher.add(titel); }," +
+  "  eigene: function (t) { eigeneTermine = t; }," +
+  "  notizbuch: function (z) { zettel = z; }" +
   "})");
 
 
@@ -619,6 +628,171 @@ pruefe("am freien Samstag steht ein Satz statt Leere",
        liste.indexOf("Rest dieser Woche") >= 0);
 pruefe("und der Knopf zaehlt alle fuenf Tage",
        liste.indexOf("5 vergangene Tage") >= 0);
+
+
+/* ====================================================================== */
+abschnitt("11. Die Uebersicht");
+
+/* Die Uebersicht rechnet nichts Neues aus, sie waehlt nur aus. Geprueft
+   wird deshalb vor allem die Auswahl: steht dort der richtige Tag, fehlt
+   kein dringendes To-do, und landet nichts Kaputtes auf dem Bildschirm. */
+
+// Kalenderwoche: der Donnerstag entscheidet ueber das Jahr.
+pruefe("24.09.2026 ist KW 39", werkzeug.kalenderwoche(new Date(2026, 8, 24)) === 39);
+pruefe("01.01.2026 (Donnerstag) ist KW 1", werkzeug.kalenderwoche(new Date(2026, 0, 1)) === 1);
+pruefe("03.01.2021 (Sonntag) gehoert noch zu KW 53",
+       werkzeug.kalenderwoche(new Date(2021, 0, 3)) === 53);
+pruefe("30.12.2024 (Montag) ist schon KW 1",
+       werkzeug.kalenderwoche(new Date(2024, 11, 30)) === 1);
+
+// Ein Donnerstag und ein Montag mit je einem Termin.
+function planTermin(id, start, ende, titel) {
+  return { id: id, start: start, ende: ende, art: "SU", titel: titel,
+           dozent: "", raum: "A 1", anmerkung: "", gruppe: "" };
+}
+STUNDENPLAN.termine = [
+  planTermin("t.do", "2026-09-24T10:00", "2026-09-24T12:00", "Donnerstagsfach"),
+  planTermin("t.mo", "2026-09-28T08:00", "2026-09-28T09:30", "Montagsfach"),
+];
+werkzeug.filterLeeren();
+werkzeug.eigene([]);
+werkzeug.setzen({}, []);
+
+let tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 9, 0));
+pruefe("morgens zeigt die Karte heute", tag && tag.istHeute && tag.schluessel === "2026-09-24");
+
+tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 11, 0));
+pruefe("waehrend der Vorlesung auch noch", tag && tag.istHeute);
+
+/* Nach Ende der letzten Vorlesung ist heute uninteressant. Freitag bis
+   Sonntag ist nichts - also springt die Karte ueber das Wochenende auf
+   Montag, statt "Morgen: nichts" zu zeigen. */
+tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 13, 0));
+pruefe("abends springt sie zum naechsten Tag MIT Terminen",
+       tag && !tag.istHeute && tag.schluessel === "2026-09-28");
+pruefe("und weiss, dass heute schon etwas war", tag && tag.heuteVorbei === true);
+
+// Ein ganztaegiger eigener Termin haelt den Tag offen, auch wenn sonst nichts ist.
+werkzeug.eigene([{ id: "termin-geb", titel: "Geburtstag", start: "2026-09-26",
+                   ende: "2026-09-26", ganztags: true, geaendert: 1 }]);
+tag = werkzeug.starttagWaehlen(new Date(2026, 8, 26, 9, 0));
+pruefe("ein Geburtstag am Samstag steht am Samstag in der Karte",
+       tag && tag.istHeute && tag.ganztags.length === 1);
+werkzeug.eigene([]);
+
+tag = werkzeug.starttagWaehlen(new Date(2026, 10, 1, 9, 0));
+pruefe("zwei Wochen ohne Termin: keine Karte statt einer falschen", tag === null);
+
+/* To-dos: alles Dringende steht da. Das ist die eine Stelle, an der die
+   Uebersicht etwas weglassen darf - aber nie etwas, das heute faellig ist. */
+const JETZT = new Date(2026, 8, 24, 9, 0);
+function frei(id, datum) {
+  return { id: id, text: "Aufgabe " + id, datum: datum, erledigt: false,
+           wichtig: false, geaendert: 1 };
+}
+werkzeug.setzen({}, [
+  frei("eigen-alt", "2026-09-20"),
+  frei("eigen-heute", "2026-09-24"),
+  frei("eigen-morgen", "2026-09-25"),
+  frei("eigen-spaeter", "2026-10-20"),
+  frei("eigen-naechste", "2026-09-29"),
+]);
+let todos = werkzeug.startTodos(JETZT);
+let kennungen = todos.auswahl.map(x => x.eintrag.kennung);
+pruefe("ueberfaellig, heute und morgen stehen alle da",
+       kennungen.indexOf("eigen-alt") >= 0 && kennungen.indexOf("eigen-heute") >= 0
+       && kennungen.indexOf("eigen-morgen") >= 0);
+pruefe("in dieser Reihenfolge", kennungen.slice(0, 3).join() === "eigen-alt,eigen-heute,eigen-morgen");
+pruefe("drei reichen - nichts wird aufgefuellt", kennungen.length === 3);
+pruefe("gezaehlt wird trotzdem alles", todos.offen === 5 && todos.dringend === 3
+       && todos.ueberfaellig === 1);
+
+// Nichts dringend: dann das Naechste, was kommt, in zeitlicher Folge.
+werkzeug.setzen({}, [frei("eigen-spaeter", "2026-10-20"), frei("eigen-naechste", "2026-09-29")]);
+todos = werkzeug.startTodos(JETZT);
+kennungen = todos.auswahl.map(x => x.eintrag.kennung);
+pruefe("ohne Dringendes wird aufgefuellt, das Naehere zuerst",
+       kennungen.join() === "eigen-naechste,eigen-spaeter" && todos.dringend === 0);
+
+// Viele dringende: hoechstens sechs, gezaehlt bleiben alle.
+const viele = [];
+for (let i = 0; i < 9; i++) viele.push(frei("eigen-v" + i, "2026-09-24"));
+werkzeug.setzen({}, viele);
+todos = werkzeug.startTodos(JETZT);
+pruefe("hoechstens sechs Zeilen", todos.auswahl.length === 6);
+pruefe("aber alle neun gezaehlt", todos.offen === 9 && todos.dringend === 9);
+
+// Erledigtes gehoert nicht auf die Startseite.
+werkzeug.setzen({}, [{ id: "eigen-fertig", text: "fertig", datum: "2026-09-24",
+                       erledigt: true, wichtig: false, geaendert: 1 }]);
+todos = werkzeug.startTodos(JETZT);
+pruefe("Erledigtes steht nicht da", todos.auswahl.length === 0 && todos.offen === 0);
+
+/* Was am Ende auf dem Bildschirm landet, ist Text. Dieselbe Sorge wie in
+   Abschnitt 7: ein Feld, das beim Umbau vergessen wird, erscheint als
+   "undefined" oder "[object Object]". Hier mit allem, was es gibt: HWR,
+   eigener Termin, Kurznotiz, To-do, Notiz aus dem Notizbuch. */
+const heuteText = (function () {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+       + "-" + String(d.getDate()).padStart(2, "0");
+})();
+STUNDENPLAN.termine = [planTermin("t.heute", heuteText + "T23:58", heuteText + "T23:59", "Spaetfach")];
+werkzeug.eigene([{ id: "termin-x", titel: "Eigener Termin", start: heuteText + "T23:57",
+                   ende: heuteText + "T23:59", ganztags: false, ort: "", notiz: "",
+                   geaendert: 1 }]);
+werkzeug.setzen({ "t.heute": { text: "Buch mitbringen", erledigt: false, wichtig: true, geaendert: 1 } },
+                [frei("eigen-h", heuteText)]);
+werkzeug.notizbuch([{ id: "zettel-1", text: "Klausur\n\nKapitel 3", verweise: [],
+                      wichtig: true, geaendert: 1 }]);
+werkzeug.startZeichnen();
+const start = document.getElementById("startInhalt").innerHTML;
+pruefe("der HWR-Termin steht in der Karte", start.indexOf("Spaetfach") >= 0);
+pruefe("der eigene auch", start.indexOf("Eigener Termin") >= 0);
+pruefe("mit der Kurznotiz", start.indexOf("Buch mitbringen") >= 0);
+pruefe("das To-do", start.indexOf("Aufgabe eigen-h") >= 0);
+pruefe("und die Notiz mit ihrer Ueberschrift", start.indexOf("Klausur") >= 0);
+pruefe("kein [object Object]", start.indexOf("[object Object]") < 0);
+pruefe("kein undefined", start.indexOf("undefined") < 0);
+pruefe("kein NaN", start.indexOf("NaN") < 0);
+pruefe("die Zahlen fuehren in ihre Bereiche",
+       start.indexOf('data-start-seite="todos"') >= 0
+       && start.indexOf('data-start-seite="plan"') >= 0);
+pruefe("die Datumszeile nennt die Woche",
+       /KW \d+/.test(document.getElementById("startDatum").textContent));
+werkzeug.notizbuch([]);
+werkzeug.eigene([]);
+werkzeug.setzen({}, []);
+
+/* Mit welchem Reiter die App aufgeht. */
+const MINUTE = 60 * 1000;
+const T = 1790000000000;
+pruefe("gerade eben im Plan: bleibt im Plan",
+       werkzeug.startseiteWaehlen("plan", String(T - 2 * MINUTE), T) === "plan");
+pruefe("vor einer Stunde im Plan: zurueck zur Uebersicht",
+       werkzeug.startseiteWaehlen("plan", String(T - 60 * MINUTE), T) === "start");
+pruefe("ohne Zeit (Fassung vor der Uebersicht): Uebersicht",
+       werkzeug.startseiteWaehlen("todos", null, T) === "start");
+pruefe("unbekannter Reiter: Uebersicht",
+       werkzeug.startseiteWaehlen("quatsch", String(T), T) === "start");
+pruefe("Zeit in der Zukunft zaehlt nicht als frisch",
+       werkzeug.startseiteWaehlen("plan", String(T + 60 * MINUTE), T) === "start");
+
+/* Die Faecher in den Einstellungen: die Zahl stimmt mit dem Filter. */
+STUNDENPLAN.termine = [planTermin("f1", "2026-09-24T08:00", "2026-09-24T09:00", "Fach A"),
+                       planTermin("f2", "2026-09-24T10:00", "2026-09-24T11:00", "Fach B"),
+                       planTermin("f3", "2026-09-24T12:00", "2026-09-24T13:00", "Fach C")];
+werkzeug.filterLeeren();
+werkzeug.faecherBereichZeichnen();
+pruefe("alle belegt", document.getElementById("faecherBereich").innerHTML.indexOf("Alle 3 Fächer") >= 0);
+werkzeug.abwaehlen("Fach B");
+werkzeug.faecherBereichZeichnen();
+pruefe("eins abgewaehlt: 2 von 3",
+       document.getElementById("faecherBereich").innerHTML.indexOf("2 von 3") >= 0);
+pruefe("mit dem Knopf zur Auswahl",
+       document.getElementById("faecherBereich").innerHTML.indexOf("faecherOeffnen") >= 0);
+werkzeug.filterLeeren();
+STUNDENPLAN.termine = [];
 
 
 /* ====================================================================== */
