@@ -24,29 +24,34 @@ Stundenplan**.
 
 ## Die Übersicht
 
-Die App geht mit der Übersicht auf. Sie zeigt nur, was gerade zählt, und
-lässt weg, was nichts sagt. Früher standen dort immer vier Zahlen, auch
-„0 neue Änderungen". Eine Null ist keine Information.
+Die App geht mit der Übersicht auf. Jede Karte hat einen abgesetzten Kopf
+mit farbigem Symbol, damit man sie ohne Lesen auseinanderhält.
 
-- **Als Nächstes**: die Vorlesung, die gerade läuft oder als nächste kommt.
-  Antippen öffnet den Termin.
-- **Überfällig**: ein schmaler roter Knopf, nur wenn ein To-do überfällig ist.
+- **Als Nächstes** (blau): die Vorlesung, die gerade läuft oder als
+  nächste kommt. Antippen öffnet den Termin.
 - **Änderungen am Stundenplan**: ein großer Kasten, nur wenn es ungesehene
-  gibt, mit den ersten drei Änderungen darin. Jede hat einen Haken; wer sie
-  gesehen hat, hakt sie ab, und mit der letzten verschwindet der Kasten.
-  „Alle abhaken" erledigt alle auf einmal.
-- **Heute**: über die ganze Breite, nur was noch kommt, ein Termin pro
-  Zeile (Uhrzeit, Titel ohne Modulnummer, Raum). Eine Kurznotiz steht
-  darunter. Ist heute nichts mehr, steht hier der nächste Tag mit Terminen.
-- **To-dos** und **Training** nebeneinander. To-dos: höchstens drei, das
-  Dringendste zuerst; „Alle 13 ›" führt zum Rest.
-- **Notizen**: die zwei obersten, und **Hinweise im Plan** für die nächste
-  Woche, beide nur wenn es welche gibt.
+  gibt. Jede Änderung hat einen Haken, mit der letzten verschwindet er.
+- **Nächste To-dos** | **Training**: nebeneinander, Training rechts.
+  To-dos zeigt die vier nächsten offenen, Überfälliges zuerst. Training
+  zeigt die Zahl dieser Woche, acht Wochen als kleine Balken und den
+  Trend: die letzten vier abgeschlossenen Wochen gegen die vier davor
+  („Mehr als im Monat davor, Ø 2,5 statt 1,8 pro Woche“). Die laufende
+  Woche zählt für den Trend nicht, sonst hieße es jeden Montag „weniger“.
+- **Heute** über die ganze Breite: eine Zeitleiste mit den Terminen, die
+  heute noch kommen (Uhrzeiten in fester Breite untereinander, der
+  laufende mit gefülltem Punkt und „läuft“), ganztägige Einträge, und
+  darunter die To-dos, die heute fällig oder überfällig sind. Eine
+  Kurznotiz an einem kommenden Termin steht beim Termin und nicht doppelt
+  als To-do.
+- **Notizen**: die zwei obersten. **Hinweise im Plan** für die nächste
+  Woche, nur wenn es welche gibt.
+
+Auf dem Handy stehen die Karten untereinander, dort kommt **Heute** zuerst.
 
 Die Übersicht rechnet nichts Eigenes aus. Sie nimmt dieselben Funktionen
 wie die Bereiche selbst, sonst stünde oben irgendwann „2 To-dos" und im
 Reiter etwas anderes. Solange sie offen ist, zeichnet sie sich jede
-Minute neu, damit „Läuft gerade" nicht stehenbleibt.
+Minute neu, damit „läuft“ nicht stehenbleibt.
 
 Welcher Reiter beim Öffnen kommt: der zuletzt benutzte, wenn das keine
 Viertelstunde her ist, sonst die Übersicht.

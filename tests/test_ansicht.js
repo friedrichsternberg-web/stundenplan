@@ -122,7 +122,7 @@ const werkzeug = eval(
   "  setzen: function (n, a) { notizen = n; aufgaben = a; grabsteine = {}; }," +
   "  filterLeeren: function () { abgewaehlteFaecher = new Set(); }," +
   "  kalenderwoche: kalenderwoche," +
-  "  starttagWaehlen: starttagWaehlen," +
+  "  heuteSammeln: heuteSammeln," +
   "  startTodos: startTodos," +
   "  startZeichnen: startZeichnen," +
   "  startseiteWaehlen: startseiteWaehlen," +
@@ -671,30 +671,42 @@ werkzeug.filterLeeren();
 werkzeug.eigene([]);
 werkzeug.setzen({}, []);
 
-let tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 9, 0));
-pruefe("morgens zeigt die Karte heute", tag && tag.istHeute && tag.schluessel === "2026-09-24");
+/* "Heute" zeigt, was heute noch kommt: Termine, die nicht vorbei sind,
+   Ganztaegiges, und To-dos, die heute faellig oder ueberfaellig sind. */
+let h = werkzeug.heuteSammeln(new Date(2026, 8, 24, 9, 0));
+pruefe("morgens steht der Donnerstagstermin in Heute",
+       h.termine.length === 1 && h.termine[0].id === "t.do" && h.vorbei === 0);
+h = werkzeug.heuteSammeln(new Date(2026, 8, 24, 11, 0));
+pruefe("waehrend der Vorlesung auch noch", h.termine.length === 1);
+h = werkzeug.heuteSammeln(new Date(2026, 8, 24, 13, 0));
+pruefe("danach ist er weg, und Heute weiss, dass einer vorbei ist",
+       h.termine.length === 0 && h.vorbei === 1);
+pruefe("der Montagstermin gehoert NICHT in Heute",
+       !h.termine.some(t => t.id === "t.mo"));
 
-tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 11, 0));
-pruefe("waehrend der Vorlesung auch noch", tag && tag.istHeute);
-
-/* Nach Ende der letzten Vorlesung ist heute uninteressant. Freitag bis
-   Sonntag ist nichts - also springt die Karte ueber das Wochenende auf
-   Montag, statt "Morgen: nichts" zu zeigen. */
-tag = werkzeug.starttagWaehlen(new Date(2026, 8, 24, 13, 0));
-pruefe("abends springt sie zum naechsten Tag MIT Terminen",
-       tag && !tag.istHeute && tag.schluessel === "2026-09-28");
-pruefe("und weiss, dass heute schon etwas war", tag && tag.heuteVorbei === true);
-
-// Ein ganztaegiger eigener Termin haelt den Tag offen, auch wenn sonst nichts ist.
 werkzeug.eigene([{ id: "termin-geb", titel: "Geburtstag", start: "2026-09-26",
                    ende: "2026-09-26", ganztags: true, geaendert: 1 }]);
-tag = werkzeug.starttagWaehlen(new Date(2026, 8, 26, 9, 0));
-pruefe("ein Geburtstag am Samstag steht am Samstag in der Karte",
-       tag && tag.istHeute && tag.ganztags.length === 1);
+h = werkzeug.heuteSammeln(new Date(2026, 8, 26, 9, 0));
+pruefe("ein Geburtstag am Samstag steht am Samstag in Heute", h.ganztags.length === 1);
 werkzeug.eigene([]);
 
-tag = werkzeug.starttagWaehlen(new Date(2026, 10, 1, 9, 0));
-pruefe("zwei Wochen ohne Termin: keine Karte statt einer falschen", tag === null);
+// To-dos in Heute: ueberfaellig und heute ja, morgen nein.
+werkzeug.setzen({ "t.do": { text: "Buch mit", erledigt: false, wichtig: false, geaendert: 1 } }, [
+  { id: "eigen-alt", text: "alt", datum: "2026-09-20", erledigt: false, wichtig: false, geaendert: 1 },
+  { id: "eigen-heute", text: "heute", datum: "2026-09-24", erledigt: false, wichtig: false, geaendert: 1 },
+  { id: "eigen-morgen", text: "morgen", datum: "2026-09-25", erledigt: false, wichtig: false, geaendert: 1 },
+]);
+h = werkzeug.heuteSammeln(new Date(2026, 8, 24, 9, 0));
+let hk = h.todos.map(x => x.eintrag.kennung);
+pruefe("ueberfaellig und heute stehen in Heute", hk.indexOf("eigen-alt") >= 0 && hk.indexOf("eigen-heute") >= 0);
+pruefe("das Ueberfaellige ist als solches markiert",
+       h.todos.filter(x => x.eintrag.kennung === "eigen-alt")[0].ueberfaellig === true);
+pruefe("morgen gehoert nicht in Heute", hk.indexOf("eigen-morgen") < 0);
+pruefe("die Kurznotiz am kommenden Termin steht nicht doppelt als To-do", hk.indexOf("t.do") < 0);
+h = werkzeug.heuteSammeln(new Date(2026, 8, 24, 13, 0));
+pruefe("ist ihr Termin vorbei, steht sie als To-do da (sonst waere sie weg)",
+       h.todos.some(x => x.eintrag.kennung === "t.do"));
+werkzeug.setzen({}, []);
 
 /* To-dos: alles Dringende steht da. Das ist die eine Stelle, an der die
    Uebersicht etwas weglassen darf - aber nie etwas, das heute faellig ist. */
@@ -716,7 +728,8 @@ pruefe("ueberfaellig, heute und morgen stehen alle da",
        kennungen.indexOf("eigen-alt") >= 0 && kennungen.indexOf("eigen-heute") >= 0
        && kennungen.indexOf("eigen-morgen") >= 0);
 pruefe("in dieser Reihenfolge", kennungen.slice(0, 3).join() === "eigen-alt,eigen-heute,eigen-morgen");
-pruefe("drei reichen - nichts wird aufgefuellt", kennungen.length === 3);
+pruefe("es sind die vier naechsten", kennungen.length === 4
+       && kennungen[3] === "eigen-naechste");
 pruefe("gezaehlt wird trotzdem alles", todos.offen === 5 && todos.dringend === 3
        && todos.ueberfaellig === 1);
 
@@ -732,7 +745,7 @@ const viele = [];
 for (let i = 0; i < 9; i++) viele.push(frei("eigen-v" + i, "2026-09-24"));
 werkzeug.setzen({}, viele);
 todos = werkzeug.startTodos(JETZT);
-pruefe("hoechstens drei Zeilen", todos.auswahl.length === 3);
+pruefe("hoechstens vier Zeilen", todos.auswahl.length === 4);
 pruefe("aber alle neun gezaehlt", todos.offen === 9 && todos.dringend === 9);
 
 // Erledigtes gehoert nicht auf die Startseite.
@@ -1017,6 +1030,32 @@ v = werkzeug.trainingVerlaufZeichnen(verlaufDaten, TJETZT);
 pruefe("nichts passt: ein Satz statt Leere", v.indexOf("Kein Training passt") >= 0);
 pruefe("keine kaputten Werte", v.indexOf("undefined") < 0 && v.indexOf("NaN") < 0);
 werkzeug.trainingFilter("", "");
+
+
+/* ====================================================================== */
+abschnitt("14. Trainingstrend fuer die Uebersicht");
+
+/* Bezug: Donnerstag, 24.09.2026. Die laufende Woche (ab 21.09.) zaehlt
+   nicht mit. Letzte vier Wochen: ab 24.08., die vier davor: ab 27.07. */
+function trainingsWoche(montagText, anzahl) {
+  const liste = [];
+  for (let i = 0; i < anzahl; i++) {
+    liste.push({ arrivedAt: montagText + "T1" + i + ":00:00.000Z", trainingType: "push", muscleGroups: [] });
+  }
+  return liste;
+}
+function trendBei(sessions) {
+  return werkzeug.trainingAuswerten({ sessions: sessions }, new Date(2026, 8, 24, 20, 0)).trend;
+}
+let trend = trendBei([].concat(trainingsWoche("2026-08-25", 2), trainingsWoche("2026-09-01", 2), trainingsWoche("2026-09-08", 3),
+                            trainingsWoche("2026-09-15", 3), trainingsWoche("2026-07-28", 1), trainingsWoche("2026-08-04", 1)));
+pruefe("mehr trainiert: Trend hoch", trend.richtung === "hoch" && trend.jetzt === 2.5 && trend.vorher === 0.5);
+trend = trendBei([].concat(trainingsWoche("2026-08-04", 3), trainingsWoche("2026-08-11", 3), trainingsWoche("2026-09-15", 1)));
+pruefe("weniger trainiert: Trend runter", trend.richtung === "runter");
+trend = trendBei([].concat(trainingsWoche("2026-09-15", 2), trainingsWoche("2026-08-11", 2)));
+pruefe("gleich viel: Trend gleich", trend.richtung === "gleich");
+trend = trendBei(trainingsWoche("2026-09-22", 3));
+pruefe("nur diese Woche trainiert: kein Trend, sie ist nicht vorbei", trend.richtung === "keine");
 
 
 /* ====================================================================== */
