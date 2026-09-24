@@ -6,12 +6,13 @@ Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Han
 eigene Notizen und To-dos, dazu eine macOS-Mitteilung, sobald sich am Plan
 etwas ändert.
 
-## Die fünf Bereiche
+## Die Bereiche
 
 | Reiter | zeigt |
 |---|---|
 | **Übersicht** | die Startseite: das Wichtigste aus allen Bereichen auf einem Blick |
 | **Plan** | die Woche als Liste oder Kalender |
+| **Training** | Trainings, Gewicht und Bestleistungen aus Gymbro (nur auf Friedrichs Geräten) |
 | **Notizen** | das Notizbuch: freie Notizen, verknüpft mit Terminen und Modulen |
 | **To-dos** | deine Notizen zum Abhaken, dazu Hinweise aus dem HWR-Plan |
 | **Änderungen** | was sich am Stundenplan geändert hat |
@@ -49,6 +50,42 @@ Viertelstunde her ist, sonst die Übersicht. Das iPhone beendet
 Home-Bildschirm-Apps gern im Hintergrund; wer gerade im Plan war, soll
 nach einem kurzen Wechsel in eine andere App nicht auf der Startseite
 landen.
+
+## Training aus Gymbro
+
+Gymbro (gymbro.tyl3r.de) ist die Web-App, in der Friedrich und seine
+Freunde ihre Trainings eintragen. Der Reiter **Training** zeigt daraus:
+Trainings diese Woche und diesen Monat, wie viele Wochen in Folge, die
+durchschnittliche Dauer, das letzte Training mit Muskelgruppen, die
+letzten acht Wochen als Balken, wann welche Muskelgruppe zuletzt dran
+war (am längsten her zuerst), Gewicht mit Verlauf, die neuesten
+Bestleistungen, Pläne und Ruhetage. Auf der Übersicht steht eine kurze
+Karte davon.
+
+**Wie die Daten ankommen.** Die Seite fragt die Edge Function `training`
+bei Supabase, und die holt mit dem Gymbro-Schlüssel `/api/v1/export` ab.
+Der Schlüssel liegt als Secret `GYMBRO_TOKEN` in Supabase
+(*Edge Functions → Secrets*) und sonst nirgends: die Seite und das
+Repository sind öffentlich, dort wäre er für jeden lesbar. Fehlt das
+Secret oder lehnt Gymbro es ab, sagt der Bereich genau das, statt leer zu
+bleiben.
+
+**Wer die Daten bekommt.** Nur ein Gerätecode, dessen Raum in
+`sync.training_zugang` steht, und das ist nur Friedrichs. Alle anderen
+Codes bekommen 403, für sie bleibt der Reiter unsichtbar. Krankmeldungen
+werden gar nicht erst abgeholt. `tests/test_training.py` prüft von außen,
+dass fremde Codes nichts bekommen und die Freigabeliste nicht lesbar ist.
+
+**Die Felder.** Dokumentiert sind bei Gymbro nur die Felder der Trainings
+(`arrivedAt`, `leftAt`, `trainingType`, `muscleGroups`, `rating`). Für
+Gewicht, Bestleistungen und Pläne probiert `gymbroFeld()` mehrere übliche
+Namen durch. Fehlt ein Feld, bleibt die Stelle leer. Einträge, die kein
+Objekt sind oder kein gültiges Datum haben, fallen weg, statt die ganze
+Auswertung abstürzen zu lassen (das hat ein Test so gefunden).
+
+Abgeholt wird beim Öffnen der Übersicht oder des Reiters, höchstens alle
+zehn Minuten, und über ↻ jederzeit. Der letzte Stand bleibt auf dem Gerät
+gespeichert und ist auch ohne Netz zu sehen.
 
 ## Wo das Projekt liegt — und warum nicht in „Dokumente"
 

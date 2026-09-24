@@ -54,4 +54,8 @@ echo "== Benachrichtigungen (echter Server und echter Absender) =="
 python3 tests/test_melden.py
 
 echo
+echo "== Training: nur Friedrichs Code bekommt Gymbro-Daten =="
+python3 tests/test_training.py
+
+echo
 echo "ALLE SAMMLUNGEN BESTANDEN"

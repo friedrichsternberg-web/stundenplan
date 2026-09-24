@@ -129,7 +129,13 @@ const werkzeug = eval(
   "  faecherBereichZeichnen: faecherBereichZeichnen," +
   "  abwaehlen: function (titel) { abgewaehlteFaecher.add(titel); }," +
   "  eigene: function (t) { eigeneTermine = t; }," +
-  "  notizbuch: function (z) { zettel = z; }" +
+  "  notizbuch: function (z) { zettel = z; }," +
+  "  trainingAuswerten: trainingAuswerten," +
+  "  trainingWort: trainingWort," +
+  "  trainingSichtbar: trainingSichtbar," +
+  "  trainingStartKarte: trainingStartKarte," +
+  "  trainingZeichnen: trainingZeichnen," +
+  "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }" +
   "})");
 
 
@@ -793,6 +799,106 @@ pruefe("mit dem Knopf zur Auswahl",
        document.getElementById("faecherBereich").innerHTML.indexOf("faecherOeffnen") >= 0);
 werkzeug.filterLeeren();
 STUNDENPLAN.termine = [];
+
+
+/* ====================================================================== */
+abschnitt("12. Training aus Gymbro");
+
+/* Donnerstag, 24.09.2026, 20 Uhr. Trainings am Di 22.09. und Mo 14.09.,
+   dann eine Lücke (KW 37 leer), davor KW 36. */
+const TJETZT = new Date(2026, 8, 24, 20, 0);
+const gymbro = {
+  formatVersion: 1,
+  sessions: [
+    { arrivedAt: "2026-09-22T15:30:00.000Z", leftAt: "2026-09-22T16:45:00.000Z",
+      trainingType: "push", muscleGroups: ["chest", "shoulders"], rating: 8 },
+    { arrivedAt: "2026-09-14T15:30:00.000Z", leftAt: "2026-09-14T16:30:00.000Z",
+      trainingType: "legs", muscleGroups: ["quads"], rating: 6 },
+    { arrivedAt: "2026-09-02T15:30:00.000Z", trainingType: "pull", muscleGroups: ["back"] },
+    // Vergessen auszuchecken: zehn Stunden. Darf den Schnitt nicht verderben.
+    { arrivedAt: "2026-09-15T08:00:00.000Z", leftAt: "2026-09-15T18:00:00.000Z",
+      trainingType: "pull", muscleGroups: ["back"] },
+    // Kaputte Einträge: ohne Datum, mit Unsinn. Dürfen nichts umwerfen.
+    { trainingType: "push" }, { arrivedAt: "gestern", rating: "sehr gut" }, null,
+  ],
+  weights: [
+    { date: "2026-08-10", weight: 80.4 }, { date: "2026-08-20", weight: "79,9" },
+    { date: "2026-09-23", weight: 78.6 }, { date: "2026-09-01" },
+  ],
+  prs: [{ exercise: "bench_press", weight: 80, reps: 5, date: "2026-09-22" },
+        { exercise: "squat", weight: 100, date: "2026-08-01" }, { weight: 5 }],
+  plans: "kein Feld, sondern Text",
+  cancellations: [{ date: "2026-09-20", isRestDay: true }, { date: "2026-08-30", isRestDay: false }],
+};
+let a = werkzeug.trainingAuswerten(gymbro, TJETZT);
+
+pruefe("nur Einträge mit gültigem Datum zählen", a.anzahl === 4);
+pruefe("das letzte Training ist das vom Dienstag",
+       a.letzte && a.letzte.typ === "push" && a.letzte.bewertung === 8);
+pruefe("diese Woche: eins", a.dieseWoche === 1);
+pruefe("diesen Monat: vier", a.diesenMonat === 4);
+pruefe("Serie: KW 39 und 38, KW 37 ist leer - also 2", a.serie === 2);
+pruefe("acht Wochen im Balkenbild, die jüngste mit 1",
+       a.wochen.length === 8 && a.wochen[7].anzahl === 1);
+pruefe("Dauer: 75 und 60 Minuten, die zehn Stunden fliegen raus",
+       a.dauerSchnitt === 68);
+pruefe("Muskelgruppen: am längsten her zuerst",
+       a.muskeln[0].name === "quads"
+       && a.muskeln[a.muskeln.length - 1].datum.getDate() === 22);
+pruefe("Rücken zählt mit seinem jüngsten Training",
+       a.muskeln.filter(m => m.name === "back")[0].datum.getDate() === 15);
+pruefe("Gewicht: der neueste Wert", a.gewichtAktuell && a.gewichtAktuell.wert === 78.6);
+pruefe("Vergleich mit dem letzten Wert, der 30 Tage älter ist",
+       a.gewichtVorher && a.gewichtVorher.wert === 79.9);
+pruefe("Bestleistungen ohne Übungsnamen fallen weg, neueste zuerst",
+       a.bestleistungen.length === 2 && a.bestleistungen[0].uebung === "bench_press");
+pruefe("Pläne als Text statt Liste: leer statt Absturz", a.plaene.length === 0);
+pruefe("Pausen diesen Monat: der Ruhetag, nicht die Absage vom August",
+       a.absagenMonat.length === 1 && a.absagenMonat[0].ruhetag);
+
+/* Die laufende Woche bricht die Serie nicht, solange sie nicht vorbei
+   ist: am Montag ohne Training zählt die Serie bis letzte Woche. */
+a = werkzeug.trainingAuswerten(gymbro, new Date(2026, 8, 28, 9, 0));
+pruefe("Montag ohne Training: Serie bleibt 2", a.serie === 2 && a.dieseWoche === 0);
+
+// Ganz leer, oder gar kein Objekt: nichts darf werfen.
+let geworfen = false;
+try {
+  a = werkzeug.trainingAuswerten({}, TJETZT);
+  werkzeug.trainingAuswerten(null, TJETZT);
+  werkzeug.trainingAuswerten({ sessions: "x", weights: 5 }, TJETZT);
+} catch (e) { geworfen = true; }
+pruefe("leere oder kaputte Daten werfen nicht", !geworfen);
+pruefe("leer heißt: nichts, Serie 0", a.anzahl === 0 && a.serie === 0 && a.letzte === null);
+
+// Übersetzen
+pruefe("chest heißt Brust", werkzeug.trainingWort("chest") === "Brust");
+pruefe("bench_press heißt Bankdrücken", werkzeug.trainingWort("bench_press") === "Bankdrücken");
+pruefe("Unbekanntes ohne Unterstrich", werkzeug.trainingWort("incline_curl") === "Incline curl");
+
+/* Auf dem Bildschirm: mit echten und kaputten Einträgen gemischt. */
+werkzeug.trainingSetzen({ abgerufenAm: "2026-09-24T18:00:00.000Z", daten: gymbro });
+werkzeug.trainingZeichnen();
+const tr = document.getElementById("trainingInhalt").innerHTML;
+pruefe("der Bereich zeigt das letzte Training", tr.indexOf("Push") >= 0);
+pruefe("und die Bestleistung übersetzt", tr.indexOf("Bankdrücken") >= 0);
+pruefe("kein undefined", tr.indexOf("undefined") < 0);
+pruefe("kein NaN", tr.indexOf("NaN") < 0);
+pruefe("kein [object Object]", tr.indexOf("[object Object]") < 0);
+
+/* Fremde Geräte: ohne Freigabe weder Reiter noch Karte auf der Übersicht,
+   auch wenn (warum auch immer) Daten im Speicher lägen. */
+localStorage.removeItem("stundenplan.trainingZugang");
+pruefe("ohne Freigabe ist der Reiter versteckt", werkzeug.trainingSichtbar() === false);
+pruefe("und die Übersicht hat keine Trainingskarte",
+       werkzeug.trainingStartKarte(TJETZT) === "");
+localStorage.setItem("stundenplan.trainingZugang", JSON.stringify({ antwort: "nein", am: 1 }));
+pruefe("\"nein\" versteckt ihn ebenso", werkzeug.trainingSichtbar() === false);
+localStorage.setItem("stundenplan.trainingZugang", JSON.stringify({ antwort: "ja", am: 1 }));
+pruefe("mit Freigabe ist er da", werkzeug.trainingSichtbar() === true);
+pruefe("und die Karte auch", werkzeug.trainingStartKarte(TJETZT).indexOf("Training") >= 0);
+localStorage.removeItem("stundenplan.trainingZugang");
+werkzeug.trainingSetzen(null);
 
 
 /* ====================================================================== */

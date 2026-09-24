@@ -87,6 +87,11 @@
   <button type="button" data-seite="plan" role="tab" aria-selected="false">
     Plan
   </button>
+  <!-- Nur auf Friedrichs Geräten sichtbar: app.js blendet ihn ein, sobald
+       die Funktion "training" bei Supabase den Code freigegeben hat. -->
+  <button type="button" data-seite="training" role="tab" aria-selected="false" hidden>
+    Training
+  </button>
   <button type="button" data-seite="zettel" role="tab" aria-selected="false">
     Notizen <span class="reiter-zahl" id="zettelZahl" hidden></span>
   </button>
@@ -139,6 +144,11 @@
     </div>
 
     <div class="tage" id="tage"></div>
+  </section>
+
+  <!-- ================= Training (aus Gymbro) ================= -->
+  <section id="seiteTraining" hidden>
+    <div id="trainingInhalt"></div>
   </section>
 
   <!-- ================= Bereich 2: Notizen ================= -->
