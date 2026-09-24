@@ -87,16 +87,16 @@
   <button type="button" data-seite="plan" role="tab" aria-selected="false">
     Plan
   </button>
-  <!-- Nur auf Friedrichs Geräten sichtbar: app.js blendet ihn ein, sobald
-       die Funktion "training" bei Supabase den Code freigegeben hat. -->
-  <button type="button" data-seite="training" role="tab" aria-selected="false" hidden>
-    Training
-  </button>
   <button type="button" data-seite="zettel" role="tab" aria-selected="false">
     Notizen <span class="reiter-zahl" id="zettelZahl" hidden></span>
   </button>
   <button type="button" data-seite="todos" role="tab" aria-selected="false">
     To-dos <span class="reiter-zahl" id="todoZahl" hidden></span>
+  </button>
+  <!-- Ganz rechts, neben den To-dos. Nur auf Friedrichs Geräten sichtbar: app.js blendet ihn ein, sobald
+       die Funktion "training" bei Supabase den Code freigegeben hat. -->
+  <button type="button" data-seite="training" role="tab" aria-selected="false" hidden>
+    Training
   </button>
 </nav>
 

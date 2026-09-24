@@ -825,10 +825,6 @@ function startZeichnen() {
     ${leer ? "" : ""}`,
     { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
 
-  // --- Studienphasen aus dem Uni-Plan, nur was noch kommt ------------------
-  const phasenKarte = uniplanStartKarte(jetzt);
-  if (phasenKarte) karten.push(phasenKarte);
-
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
   if (notizbuch.length) {
@@ -856,6 +852,10 @@ function startZeichnen() {
         </div>`).join(""),
       { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise" }));
   }
+
+  // --- Studienphasen aus dem Uni-Plan, ganz unten: nur was noch kommt ------
+  const phasenKarte = uniplanStartKarte(jetzt);
+  if (phasenKarte) karten.push(phasenKarte);
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");
