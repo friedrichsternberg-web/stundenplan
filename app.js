@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "f2bfabd2";
+const GEBAUTE_VERSION = "a5ec866b";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -1019,7 +1019,12 @@ function wocheZeichnen() {
     // Steht dort aber etwas Eigenes, muss der Tag sichtbar sein, sonst
     // käme man nicht heran. Seit es eigene Termine gibt, zählen die mit:
     // ein Geburtstag am Samstag darf den Tag nicht unsichtbar lassen.
-    if (versatz >= 5 && termineDesTages.length === 0
+    /* Im Kalender stehen Samstag und Sonntag immer da - eine Woche hat
+       dort sieben Spalten, und wer am Wochenende etwas eintragen will,
+       braucht die Spalte, bevor dort etwas steht. In der Liste bleiben
+       leere Wochenenden weg, dort wären sie nur zwei Zeilen "Keine
+       Veranstaltung". */
+    if (ansicht !== "kalender" && versatz >= 5 && termineDesTages.length === 0
         && aufgabenDesTages.length === 0
         && ganztagsDesTages.length === 0) continue;
 
