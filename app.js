@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "85cb531f";
+const GEBAUTE_VERSION = "56825975";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -516,7 +516,8 @@ function naechstenZeichnen() {
     marke = zeitpunktLesbar(treffer.start) + "–" + uhrzeit(treffer.ende);
   }
 
-  const zusatz = [treffer.raum, treffer.dozent].filter(Boolean).join(" · ");
+  const zusatz = treffer.arbeit ? "im Betrieb"
+    : [treffer.raum, treffer.dozent].filter(Boolean).join(" · ");
 
   /* Was danach kommt, steht nicht hier, sondern gleich darunter in der
      Karte "Heute". Beides zugleich war doppelt. */
@@ -704,6 +705,7 @@ const SYMBOLE = {
   training: '<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/>',
   notizen: '<path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
   hinweis: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.3v.2"/>',
+  phasen: '<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.5c3 2.2 8 2.2 11 0v-4.5M21.5 9.5v5"/>',
 };
 
 function symbol(name) {
@@ -795,14 +797,15 @@ function startZeichnen() {
     const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
     return `
       <button type="button" class="heute-termin${laeuft ? " heute-jetzt" : ""}${
-                t.eigen ? " heute-eigen" : ""}" data-termin="${sicher(t.id)}">
+                t.eigen ? " heute-eigen" : ""}${t.arbeit ? " heute-arbeit" : ""}" data-termin="${sicher(t.id)}">
         <span class="heute-zeit">${uhrzeit(t.start)}<span>${uhrzeit(t.ende)}</span></span>
         <span class="heute-punkt" aria-hidden="true"></span>
         <span class="heute-text">
           <span class="heute-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${
             sicher(kurzerTitel(t.titel))}${laeuft ? ` <span class="heute-marke">läuft</span>` : ""}</span>
           <span class="heute-ort">${sicher([t.raum ? t.raum.replace(/^CL:\s*/, "") : "",
-                                             t.eigen ? "eigener Termin" : ""].filter(Boolean).join(" · "))}</span>
+                                             t.eigen ? "eigener Termin" : "",
+                                             t.arbeit ? "im Betrieb" : ""].filter(Boolean).join(" · "))}</span>
           ${notiz ? `<span class="heute-notiz">✎ ${sicher(notiz)}</span>` : ""}
         </span>
       </button>`;
@@ -821,6 +824,10 @@ function startZeichnen() {
     ${heuteTodos ? `<div class="heute-abschnitt">To-dos für heute</div>${heuteTodos}` : ""}
     ${leer ? "" : ""}`,
     { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
+
+  // --- Studienphasen aus dem Uni-Plan, nur was noch kommt ------------------
+  const phasenKarte = uniplanStartKarte(jetzt);
+  if (phasenKarte) karten.push(phasenKarte);
 
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
@@ -901,6 +908,8 @@ function startKlick(ereignis) {
 
   const neueSeite = ziel.getAttribute("data-start-seite");
   if (neueSeite) {
+    // Der Uni-Plan ist kein Reiter, sondern ein Fenster.
+    if (neueSeite === "uniplan") { uniplanFensterZeigen(); return; }
     // In den Plan heißt: diese Woche, heute oben.
     if (neueSeite === "plan") {
       angezeigterMontag = montagDerWoche(new Date());
@@ -1212,7 +1221,7 @@ function terminZeichnen(termin) {
     : [termin.raum, termin.dozent, termin.art].filter(Boolean).join(" · ");
 
   return `
-    <div class="termin${termin.eigen ? " termin-eigen" : ""}"${
+    <div class="termin${termin.eigen ? " termin-eigen" : ""}${termin.arbeit ? " termin-arbeit" : ""}"${
       termin.eigen ? ` data-termin-bearbeiten="${sicher(termin.id)}"` : ""}>
       <div class="termin-zeit">${uhrzeit(termin.start)}–${uhrzeit(termin.ende)}</div>
       <div class="termin-inhalt">
@@ -1602,6 +1611,7 @@ function eigeneTermineLaden() {
         ort: typeof t.ort === "string" ? t.ort : "",
         notiz: typeof t.notiz === "string" ? t.notiz : "",
         wichtig: Boolean(t.wichtig),
+        urlaub: Boolean(t.urlaub),
         erinnerungVorgabe: typeof t.erinnerungVorgabe === "string"
                              ? t.erinnerungVorgabe : "",
         erinnerung: typeof t.erinnerung === "string" ? t.erinnerung : "",
@@ -1665,6 +1675,11 @@ function terminSetzen(kennung, felder) {
     ort: (felder.ort || "").trim(),
     notiz: (felder.notiz || "").trim(),
     wichtig: Boolean(felder.wichtig),
+    /* Urlaub entsteht im Uni-Plan-Fenster. Wird er später übers normale
+       Terminformular geändert, kennt das Formular das Feld nicht – dann
+       bleibt es, wie es war, statt still zu verschwinden. */
+    urlaub: felder.urlaub !== undefined ? Boolean(felder.urlaub)
+                                        : Boolean(vorhandener && vorhandener.urlaub),
     geaendert: Abgleich.jetzt(),
   };
 
@@ -1729,7 +1744,7 @@ function ganztagsTermineFuerTag(tagesschluessel) {
    HWR-Termine. Ein eigener Termin soll nicht verschwinden, weil ein Fach
    abgewählt wurde, mit dem er nichts zu tun hat. */
 function alleAngezeigtenTermine() {
-  return sichtbareTermine().concat(eigeneTermineAlsPlan())
+  return sichtbareTermine().concat(eigeneTermineAlsPlan(), arbeitsTermine())
     .sort((a, b) => a.start.localeCompare(b.start));
 }
 
@@ -2698,6 +2713,7 @@ function kalenderBauen(tage) {
          schlicht unlesbar. */
       return `
         <div class="kalender-termin ${termin.eigen ? "kalender-termin-eigen"
+                                      : termin.arbeit ? "kalender-termin-arbeit"
                                       : (termin.anmerkung ? "kalender-termin-hinweis" : "")}"
              style="top:${oben}px; height:${kastenHoehe}px; left:${links}%; width:calc(${breite}% - 2px)"
              data-termin="${sicher(termin.id)}"
@@ -2777,6 +2793,8 @@ function terminFensterZeigen(kennung) {
     ["Gruppe", termin.gruppe],
     ["Art", termin.art],
     ["Hinweis der HWR", termin.anmerkung],
+    ["Woher", termin.arbeit
+      ? "Praxisphase laut Uni-Plan. Arbeitszeit und Urlaub unter ⚙ → Uni-Plan." : ""],
     ["Korrigiert", termin.korrektur],
   ].filter(zeile => zeile[1]);
 
@@ -2907,6 +2925,10 @@ function zurNotizSpringen(kennung) {
    hier nichts, und der Eintrag wird als "Termin nicht mehr im Plan" gezeigt,
    statt still zu verschwinden. */
 function terminZuKennung(kennung) {
+  // Arbeit aus dem Uni-Plan: nicht gespeichert, sondern ausgerechnet.
+  if (String(kennung).indexOf("arbeit-") === 0) {
+    return arbeitsTermine().filter(t => t.id === kennung)[0] || null;
+  }
   /* Erst die eigenen. Sie stehen nicht in STUNDENPLAN.termine, würden also
      sonst nicht gefunden – und damit hinge eine Notiz an einem eigenen
      Termin im Leeren. */
@@ -4099,6 +4121,515 @@ function trainingStartKarte(jetzt) {
 
 
 /* -------------------------------------------------------------------------
+   5c. Uni-Plan: Theorie- und Praxisphasen, Arbeitszeit, Urlaub
+
+   Friedrich studiert dual: alle paar Monate wechselt er zwischen Hochschule
+   und Betrieb. Wann was ist, steht im Zeitplan des Fachbereichs Duales
+   Studium für den Studienjahrgang 2024 (PDF, Stand 09.02.2023). Die Daten
+   daraus stehen hier fest im Code – sie gelten für den ganzen Jahrgang,
+   geheim ist daran nichts.
+
+   Daraus entstehen drei Dinge:
+   - In den Praxisphasen steht montags bis freitags "Arbeit" im Plan. Diese
+     Einträge werden jedes Mal ausgerechnet, nicht gespeichert: ändert sich
+     die Arbeitszeit, sind sofort alle richtig, und gelöscht werden muss
+     auch nie etwas.
+   - Urlaub ist ein eigener ganztägiger Termin mit dem Feld urlaub. An
+     Urlaubstagen und Feiertagen fällt die Arbeit weg.
+   - Die Übersicht zeigt, was an Phasen und Fristen noch kommt.
+   ------------------------------------------------------------------------- */
+
+const UNI_PLAN = {
+  titel: "Zeitplan für den Studienjahrgang 2024",
+  herkunft: "HWR Berlin, Fachbereich Duales Studium Wirtschaft • Technik",
+  stand: "09.02.2023",
+  phasen: [
+    { halbjahr: 1, art: "praxis",  von: "2024-10-01", bis: "2024-10-20", wochen: 3 },
+    { halbjahr: 1, art: "theorie", von: "2024-10-21", bis: "2024-12-22", wochen: 9 },
+    { halbjahr: 1, art: "praxis",  von: "2024-12-23", bis: "2025-01-05", wochen: 2 },
+    { halbjahr: 1, art: "theorie", von: "2025-01-06", bis: "2025-01-26", wochen: 3 },
+    { halbjahr: 1, art: "praxis",  von: "2025-01-27", bis: "2025-04-13", wochen: 11 },
+    { halbjahr: 2, art: "theorie", von: "2025-04-14", bis: "2025-07-06", wochen: 12 },
+    { halbjahr: 2, art: "praxis",  von: "2025-07-07", bis: "2025-09-28", wochen: 12 },
+    { halbjahr: 3, art: "theorie", von: "2025-09-29", bis: "2025-12-21", wochen: 12 },
+    { halbjahr: 3, art: "praxis",  von: "2025-12-22", bis: "2026-02-22", wochen: 9 },
+    { halbjahr: 4, art: "theorie", von: "2026-02-23", bis: "2026-05-17", wochen: 12 },
+    { halbjahr: 4, art: "praxis",  von: "2026-05-18", bis: "2026-08-09", wochen: 12 },
+    { halbjahr: 5, art: "theorie", von: "2026-08-10", bis: "2026-11-01", wochen: 12 },
+    { halbjahr: 5, art: "praxis",  von: "2026-11-02", bis: "2027-01-31", wochen: 13 },
+    { halbjahr: 6, art: "theorie", von: "2027-02-01", bis: "2027-04-25", wochen: 12 },
+    { halbjahr: 6, art: "praxis",  von: "2027-04-26", bis: "2027-09-26", wochen: 22 },
+  ],
+  fristen: [
+    { halbjahr: 2, titel: "Abgabe 1. Praxistransferbericht", von: "2025-04-14" },
+    { halbjahr: 3, titel: "Abgabe 2. Praxistransferbericht", von: "2025-09-29" },
+    { halbjahr: 4, titel: "Abgabe 3. Praxistransferbericht", von: "2026-02-23" },
+    { halbjahr: 4, titel: "Vergabe des Themas der Studienarbeit", von: "2026-06-22" },
+    { halbjahr: 4, titel: "Abgabe der Studienarbeit", von: "2026-08-17" },
+    /* Im PDF steht "11.01.2027 – 31.02.2027". Einen 31. Februar gibt es
+       nicht; die Praxisphase, in der die Prüfung liegt, endet am 31.01.
+       Gemeint ist also sehr wahrscheinlich der 31.01.2027. */
+    { halbjahr: 5, titel: "Mündliche Transferprüfung", von: "2027-01-11", bis: "2027-01-31",
+      hinweis: "Im PDF steht als Ende der 31.02.2027 – gemeint ist vermutlich der 31.01." },
+    { halbjahr: 6, titel: "Vergabe des Themas der Bachelorarbeit", von: "2027-04-22" },
+    { halbjahr: 6, titel: "Abgabe der Bachelorarbeit", von: "2027-07-05" },
+    { halbjahr: 6, titel: "Mündliche Bachelorprüfung", von: "2027-09-13", bis: "2027-09-30" },
+  ],
+  hinweise: [
+    "Wiederholungs- bzw. Nachklausuren finden in der Regel in der 2. bis 4. "
+      + "Vorlesungswoche der Folgesemester statt.",
+    "Änderungen bleiben der Fachleiterin/dem Fachleiter vorbehalten.",
+  ],
+};
+
+/* Die Einstellungen zur Arbeitszeit. Sie werden zwischen den Geräten
+   abgeglichen, als ein Eintrag mit fester Kennung – sonst müsste man sie
+   auf dem Handy und am Laptop je einmal einstellen. */
+const SPEICHER_UNIPLAN = "stundenplan.uniplan";
+const UNIPLAN_KENNUNG = "einstellung-uniplan";
+/* Feiertage nach Mecklenburg-Vorpommern: dort liegt der Betrieb, und für
+   die Arbeit zählt, wo gearbeitet wird, nicht wo man studiert. */
+const UNIPLAN_VORGABE = { arbeit: true, von: "08:00", bis: "16:30", land: "MV", geaendert: 0 };
+const FEIERTAG_LAENDER = {
+  MV: "Mecklenburg-Vorpommern (mit Frauentag und Reformationstag)",
+  BE: "Berlin (mit Frauentag)",
+  BB: "Brandenburg (mit Reformationstag)",
+};
+
+let uniplan = Object.assign({}, UNIPLAN_VORGABE);
+
+function uniplanGeraderuecken(roh) {
+  const e = roh && typeof roh === "object" ? roh : {};
+  const uhr = w => (typeof w === "string" && /^\d{2}:\d{2}$/.test(w) ? w : null);
+  return {
+    // Als Text "ja"/"nein" gespeichert, siehe abgleichSammeln(); alte
+    // Stände oder der erste Start liefern true/false oder gar nichts.
+    arbeit: e.arbeit === undefined ? UNIPLAN_VORGABE.arbeit : e.arbeit === true || e.arbeit === "ja",
+    von: uhr(e.von) || UNIPLAN_VORGABE.von,
+    bis: uhr(e.bis) || UNIPLAN_VORGABE.bis,
+    land: FEIERTAG_LAENDER[e.land] ? e.land : UNIPLAN_VORGABE.land,
+    geaendert: Number(e.geaendert) || 0,
+  };
+}
+
+function uniplanLaden() {
+  try {
+    return uniplanGeraderuecken(JSON.parse(localStorage.getItem(SPEICHER_UNIPLAN) || "null"));
+  } catch (fehler) {
+    return uniplanGeraderuecken(null);
+  }
+}
+
+function uniplanSetzen(felder) {
+  uniplan = uniplanGeraderuecken(Object.assign({}, uniplan, felder, { geaendert: Abgleich.jetzt() }));
+  // Ende vor Anfang ergäbe Kästchen mit negativer Höhe. Dann lieber die Vorgabe.
+  if (uniplan.bis <= uniplan.von) { uniplan.von = UNIPLAN_VORGABE.von; uniplan.bis = UNIPLAN_VORGABE.bis; }
+  try { localStorage.setItem(SPEICHER_UNIPLAN, JSON.stringify(uniplan)); }
+  catch (fehler) { /* dann gilt es bis zum Neuladen */ }
+  Abgleich.anstossen();
+}
+
+
+/* --- Kalenderrechnen -------------------------------------------------- */
+
+/* Tage als Text "2026-11-02" – gerechnet über 12 Uhr mittags, damit die
+   Zeitumstellung keinen Tag verschluckt oder doppelt zählt. */
+function tagPlus(tag, anzahl) {
+  const d = new Date(tag + "T12:00:00");
+  d.setDate(d.getDate() + anzahl);
+  return tagesSchluessel(d);
+}
+
+function tageBis(von, bis) {
+  return Math.round((new Date(bis + "T12:00:00") - new Date(von + "T12:00:00")) / 86400000);
+}
+
+/* Ostersonntag nach der gregorianischen Osterformel (Meeus/Jones/Butcher).
+   Daran hängen Karfreitag, Ostermontag, Himmelfahrt und Pfingstmontag. */
+function ostersonntag(jahr) {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tag = ((h + l - 7 * m + 114) % 31) + 1;
+  return jahr + "-" + String(monat).padStart(2, "0") + "-" + String(tag).padStart(2, "0");
+}
+
+/* Die gesetzlichen Feiertage eines Jahres, die auf einen Werktag fallen
+   können: bundesweit, dazu je nach Land der Frauentag (Berlin, und seit
+   2023 Mecklenburg-Vorpommern) und der Reformationstag (Brandenburg,
+   Mecklenburg-Vorpommern). { "2026-12-25": "1. Weihnachtstag", … } */
+const feiertagsSpeicher = {};
+function feiertage(jahr, land) {
+  const schluessel = jahr + land;
+  if (feiertagsSpeicher[schluessel]) return feiertagsSpeicher[schluessel];
+  const ostern = ostersonntag(jahr);
+  const liste = {
+    [jahr + "-01-01"]: "Neujahr",
+    [tagPlus(ostern, -2)]: "Karfreitag",
+    [tagPlus(ostern, 1)]: "Ostermontag",
+    [jahr + "-05-01"]: "Tag der Arbeit",
+    [tagPlus(ostern, 39)]: "Christi Himmelfahrt",
+    [tagPlus(ostern, 50)]: "Pfingstmontag",
+    [jahr + "-10-03"]: "Tag der Deutschen Einheit",
+    [jahr + "-12-25"]: "1. Weihnachtstag",
+    [jahr + "-12-26"]: "2. Weihnachtstag",
+  };
+  if (land === "BE" || (land === "MV" && jahr >= 2023)) liste[jahr + "-03-08"] = "Frauentag";
+  if (land === "BB" || land === "MV") liste[jahr + "-10-31"] = "Reformationstag";
+  feiertagsSpeicher[schluessel] = liste;
+  return liste;
+}
+
+function feiertagAm(tag, land) {
+  return feiertage(Number(tag.slice(0, 4)), land)[tag] || "";
+}
+
+function urlaube() {
+  return eigeneTermine.filter(t => t.urlaub)
+    .map(t => ({ id: t.id, von: t.start.slice(0, 10), bis: (t.ende || t.start).slice(0, 10), titel: t.titel }))
+    .sort((a, b) => a.von.localeCompare(b.von));
+}
+
+function imUrlaub(tag, liste) {
+  return liste.some(u => u.von <= tag && u.bis >= tag);
+}
+
+/* Die Phase, in der ein Tag liegt, oder null (vor dem Studium, danach). */
+function phaseAm(tag) {
+  return UNI_PLAN.phasen.filter(p => p.von <= tag && p.bis >= tag)[0] || null;
+}
+
+/* Alle Arbeitstage als Termine in der Form des Stundenplans. Das sind über
+   das ganze Studium gut vierhundert – zu viele, um sie bei jedem Zeichnen
+   neu zu bauen. Deshalb werden sie aufgehoben, solange sich nichts
+   ändert, wovon sie abhängen: Einstellung und Urlaub. */
+let arbeitsSpeicher = { schluessel: "", termine: [] };
+
+function arbeitsTermine() {
+  if (!uniplan.arbeit) return [];
+  const liste = urlaube();
+  const schluessel = JSON.stringify([uniplan.von, uniplan.bis, uniplan.land, liste]);
+  if (arbeitsSpeicher.schluessel === schluessel) return arbeitsSpeicher.termine;
+
+  const termine = [];
+  for (const phase of UNI_PLAN.phasen) {
+    if (phase.art !== "praxis") continue;
+    for (let tag = phase.von; tag <= phase.bis; tag = tagPlus(tag, 1)) {
+      const wochentag = new Date(tag + "T12:00:00").getDay();
+      if (wochentag === 0 || wochentag === 6) continue;
+      if (feiertagAm(tag, uniplan.land) || imUrlaub(tag, liste)) continue;
+      termine.push({
+        id: "arbeit-" + tag,
+        start: tag + "T" + uniplan.von,
+        ende: tag + "T" + uniplan.bis,
+        titel: "Arbeit",
+        raum: "", dozent: "", anmerkung: "", art: "", gruppe: "",
+        arbeit: true,
+      });
+    }
+  }
+  arbeitsSpeicher = { schluessel, termine };
+  return termine;
+}
+
+
+/* --- Was noch kommt ------------------------------------------------------ */
+
+const PHASEN_NAME = { theorie: "Theorie", praxis: "Praxis" };
+
+/* Alles ab heute in zeitlicher Folge: die laufende Phase, die kommenden,
+   die Fristen und dein Urlaub. Vergangenes fällt weg. */
+function uniplanAusblick(heute) {
+  const aktuell = phaseAm(heute);
+  const eintraege = [];
+  for (const p of UNI_PLAN.phasen) {
+    if (p.von > heute) {
+      eintraege.push({ art: p.art, von: p.von, bis: p.bis, titel: PHASEN_NAME[p.art] + "phase",
+                       halbjahr: p.halbjahr, wochen: p.wochen });
+    }
+  }
+  for (const f of UNI_PLAN.fristen) {
+    if ((f.bis || f.von) >= heute) {
+      eintraege.push({ art: "frist", von: f.von, bis: f.bis || "", titel: f.titel, hinweis: f.hinweis || "" });
+    }
+  }
+  for (const u of urlaube()) {
+    if (u.bis >= heute) eintraege.push({ art: "urlaub", von: u.von, bis: u.bis, titel: u.titel || "Urlaub", id: u.id });
+  }
+  eintraege.sort((a, b) => a.von.localeCompare(b.von) || (a.art === "frist" ? 1 : -1));
+
+  let fortschritt = null;
+  if (aktuell) {
+    const gesamt = tageBis(aktuell.von, aktuell.bis) + 1;
+    const vergangen = tageBis(aktuell.von, heute);
+    fortschritt = {
+      art: aktuell.art,
+      halbjahr: aktuell.halbjahr,
+      woche: Math.min(aktuell.wochen, Math.floor(vergangen / 7) + 1),
+      wochen: aktuell.wochen,
+      nochTage: tageBis(heute, aktuell.bis),
+      bis: aktuell.bis,
+      anteil: Math.max(0, Math.min(1, vergangen / gesamt)),
+    };
+  }
+  return { aktuell: fortschritt, eintraege };
+}
+
+function datumMitJahr(tag) {
+  const d = new Date(tag + "T12:00:00");
+  return datumKurz(d) + d.getFullYear();
+}
+
+function inTagen(heute, tag) {
+  const n = tageBis(heute, tag);
+  if (n <= 0) return "heute";
+  if (n === 1) return "morgen";
+  if (n < 14) return "in " + n + " Tagen";
+  if (n < 70) return "in " + Math.round(n / 7) + " Wochen";
+  return "in " + Math.round(n / 30.4) + " Monaten";
+}
+
+/* Das Widget auf der Übersicht. Oben die laufende Phase mit Fortschritt,
+   darunter eine Leiste bis zum Ende des Studiums – Theorie blau, Praxis
+   grün, Fristen als Striche –, und die nächsten Stationen als Liste. */
+function uniplanStartKarte(jetzt) {
+  const heute = tagesSchluessel(jetzt);
+  const ende = UNI_PLAN.phasen[UNI_PLAN.phasen.length - 1].bis;
+  if (heute > ende) return "";
+  const a = uniplanAusblick(heute);
+
+  const oben = a.aktuell ? `
+    <div class="up-jetzt">
+      <span class="up-marke up-marke-${a.aktuell.art}">${PHASEN_NAME[a.aktuell.art]}</span>
+      <span class="up-jetzt-text"><strong>Woche ${a.aktuell.woche} von ${a.aktuell.wochen}</strong>
+        · ${a.aktuell.halbjahr}. Studienhalbjahr</span>
+      <span class="up-jetzt-rest">noch ${a.aktuell.nochTage} ${a.aktuell.nochTage === 1 ? "Tag" : "Tage"}</span>
+    </div>
+    <div class="up-fortschritt up-fortschritt-${a.aktuell.art}">
+      <span style="width:${Math.round(a.aktuell.anteil * 100)}%"></span>
+    </div>` : `<p class="start-leer">Das Studium beginnt am ${datumMitJahr(UNI_PLAN.phasen[0].von)}.</p>`;
+
+  /* Die Leiste: von heute bis zum Ende des Studiums, jede Phase so breit,
+     wie sie dauert. */
+  const spanne = Math.max(1, tageBis(heute, ende));
+  const pos = tag => Math.max(0, Math.min(100, tageBis(heute, tag) / spanne * 100));
+  const stuecke = UNI_PLAN.phasen.filter(p => p.bis >= heute).map(p => {
+    const links = pos(p.von < heute ? heute : p.von);
+    const breite = pos(p.bis) - links;
+    return `<span class="up-stueck up-stueck-${p.art}" style="left:${links.toFixed(2)}%;width:${breite.toFixed(2)}%"
+                  title="${PHASEN_NAME[p.art]} ${datumMitJahr(p.von)} – ${datumMitJahr(p.bis)}"></span>`;
+  }).join("");
+  const striche = UNI_PLAN.fristen.filter(f => f.von >= heute).map(f =>
+    `<span class="up-strich" style="left:${pos(f.von).toFixed(2)}%" title="${sicher(f.titel)}"></span>`).join("");
+  const jahre = [];
+  for (let j = Number(heute.slice(0, 4)) + 1; j <= Number(ende.slice(0, 4)); j++) {
+    jahre.push(`<span class="up-jahr" style="left:${pos(j + "-01-01").toFixed(2)}%">${j}</span>`);
+  }
+
+  const liste = a.eintraege.slice(0, 5).map(e => `
+    <div class="up-eintrag up-eintrag-${e.art}">
+      <span class="up-punkt"></span>
+      <span class="up-eintrag-text">
+        <strong>${sicher(e.titel)}</strong>
+        <span class="up-leise">${sicher(datumMitJahr(e.von) + (e.bis ? " – " + datumMitJahr(e.bis) : ""))}${
+          e.wochen ? " · " + e.wochen + " Wochen" : ""}</span>
+      </span>
+      <span class="up-wann">${sicher(inTagen(heute, e.von))}</span>
+    </div>`).join("");
+
+  return startKarte("Studienphasen", "uniplan", "Uni-Plan", `
+    ${oben}
+    <div class="up-leiste" role="img" aria-label="Phasen bis zum Ende des Studiums am ${datumMitJahr(ende)}">
+      ${stuecke}${striche}
+    </div>
+    <div class="up-achse"><span>heute</span>${jahre.join("")}<span class="up-achse-ende">${datumKurz(new Date(ende + "T12:00:00"))}${ende.slice(0, 4)}</span></div>
+    <div class="up-legende"><span class="up-leg up-leg-theorie">Theorie</span><span class="up-leg up-leg-praxis">Praxis</span><span class="up-leg up-leg-frist">Frist</span></div>
+    ${liste ? `<div class="up-liste">${liste}</div>` : ""}`,
+    { symbol: "phasen", farbe: "gruen", breit: true, klasse: "start-karte-phasen" });
+}
+
+
+/* --- Das Fenster "Uni-Plan" ------------------------------------------- */
+
+function uniplanFensterZeigen() {
+  uniplanFensterZeichnen();
+  const fenster = document.getElementById("uniplanHintergrund");
+  if (fenster) fenster.hidden = false;
+}
+
+function uniplanFensterZeichnen(meldung) {
+  const bereich = document.getElementById("uniplanInhalt");
+  if (!bereich) return;
+  const heute = tagesSchluessel(new Date());
+  const liste = urlaube();
+  const kommend = liste.filter(u => u.bis >= heute);
+  const vorbei = liste.length - kommend.length;
+
+  /* Halbjahre, die ganz vorbei sind, stehen eingeklappt unten. Oben soll
+     stehen, was gilt und was kommt. */
+  const zeilen = [];
+  const frueher = [];
+  for (let hj = 1; hj <= 6; hj++) {
+    const letzterTag = UNI_PLAN.phasen.filter(p => p.halbjahr === hj).slice(-1)[0].bis;
+    const ziel = letzterTag < heute ? frueher : zeilen;
+    const eintraege = UNI_PLAN.phasen.filter(p => p.halbjahr === hj)
+      .map(p => ({ sort: p.von, html: `
+        <tr class="${p.bis < heute ? "up-vorbei" : ""}${p.von <= heute && p.bis >= heute ? " up-jetzt-zeile" : ""}">
+          <td>${datumMitJahr(p.von)} – ${datumMitJahr(p.bis)}</td>
+          <td><span class="up-marke up-marke-${p.art}">${PHASEN_NAME[p.art]}</span>${
+            p.von <= heute && p.bis >= heute ? ` <span class="heute-marke">jetzt</span>` : ""}</td>
+          <td class="up-zahl">${p.wochen} Wo.</td>
+        </tr>` }))
+      .concat(UNI_PLAN.fristen.filter(f => f.halbjahr === hj).map(f => ({ sort: f.von, html: `
+        <tr class="up-frist-zeile${(f.bis || f.von) < heute ? " up-vorbei" : ""}">
+          <td>${datumMitJahr(f.von)}${f.bis ? " – " + datumMitJahr(f.bis) : ""}</td>
+          <td colspan="2"><em>${sicher(f.titel)}</em>${f.hinweis
+            ? `<span class="up-leise up-block">${sicher(f.hinweis)}</span>` : ""}</td>
+        </tr>` })))
+      .sort((a, b) => a.sort.localeCompare(b.sort));
+    ziel.push(`<tr class="up-halbjahr"><th colspan="3">${hj}. Studienhalbjahr</th></tr>`
+              + eintraege.map(e => e.html).join(""));
+  }
+
+  bereich.innerHTML = `
+    <p class="filter-hinweis">${sicher(UNI_PLAN.titel)}<br>${sicher(UNI_PLAN.herkunft)} · Stand ${sicher(UNI_PLAN.stand)}</p>
+    ${meldung ? `<p class="geraete-meldung">${sicher(meldung)}</p>` : ""}
+
+    <h3 class="melden-titel">Arbeit in den Praxisphasen</h3>
+    <label class="form-haken">
+      <input type="checkbox" id="uniplanArbeit" ${uniplan.arbeit ? "checked" : ""}>
+      <span>Im Kalender eintragen, Montag bis Freitag</span>
+    </label>
+    <div class="form-zeiten">
+      <label class="form-feld"><span>Von</span>
+        <input type="time" id="uniplanVon" value="${sicher(uniplan.von)}" step="300"></label>
+      <label class="form-feld"><span>Bis</span>
+        <input type="time" id="uniplanBis" value="${sicher(uniplan.bis)}" step="300"></label>
+    </div>
+    <label class="form-feld"><span>Feiertage nach</span>
+      <select id="uniplanLand">
+        ${Object.keys(FEIERTAG_LAENDER).map(k => `<option value="${k}"${
+          uniplan.land === k ? " selected" : ""}>${sicher(FEIERTAG_LAENDER[k])}</option>`).join("")}
+      </select></label>
+    <p class="filter-hinweis">An Feiertagen und im Urlaub steht keine Arbeit im Kalender.</p>
+
+    <h3 class="melden-titel up-abstand">Urlaub</h3>
+    ${kommend.length ? kommend.map(u => `
+      <div class="up-urlaub">
+        <span><strong>${sicher(u.titel || "Urlaub")}</strong>
+          <span class="up-leise up-block">${datumMitJahr(u.von)}${u.bis !== u.von ? " – " + datumMitJahr(u.bis) : ""}
+            · ${urlaubsTage(u)} ${urlaubsTage(u) === 1 ? "Arbeitstag" : "Arbeitstage"}</span></span>
+        <button type="button" class="knopf-schlicht start-klein knopf-gefahr" data-urlaub-weg="${sicher(u.id)}">Löschen</button>
+      </div>`).join("") : `<p class="filter-hinweis">Noch kein Urlaub eingetragen.</p>`}
+    ${vorbei ? `<p class="filter-hinweis">${vorbei} vergangene${vorbei === 1 ? "r" : ""} Urlaub${vorbei === 1 ? "" : "e"} ausgeblendet.</p>` : ""}
+    <div class="up-urlaub-neu">
+      <label class="form-feld"><span>Von</span><input type="date" id="urlaubVon"></label>
+      <label class="form-feld"><span>Bis</span><input type="date" id="urlaubBis"></label>
+      <button type="button" class="knopf-schlicht knopf-betont" id="urlaubNeu">+ Urlaub eintragen</button>
+    </div>
+
+    <h3 class="melden-titel up-abstand">Zeitplan</h3>
+    <table class="up-tabelle">${zeilen.join("")}</table>
+    ${frueher.length ? `<details class="up-frueher"><summary>Vergangene Halbjahre (${frueher.length})</summary>
+      <table class="up-tabelle">${frueher.join("")}</table></details>` : ""}
+    ${UNI_PLAN.hinweise.map(t => `<p class="filter-hinweis">${sicher(t)}</p>`).join("")}`;
+}
+
+/* Wie viele Arbeitstage ein Urlaub kostet: Werktage in Praxisphasen, ohne
+   Feiertage. Ein Urlaub in der Theoriephase kostet keinen. */
+function urlaubsTage(u) {
+  let anzahl = 0;
+  for (let tag = u.von; tag <= u.bis; tag = tagPlus(tag, 1)) {
+    const phase = phaseAm(tag);
+    const wt = new Date(tag + "T12:00:00").getDay();
+    if (phase && phase.art === "praxis" && wt !== 0 && wt !== 6 && !feiertagAm(tag, uniplan.land)) anzahl++;
+  }
+  return anzahl;
+}
+
+function urlaubEintragen(von, bis) {
+  if (!von) return "Bitte einen ersten Urlaubstag wählen.";
+  const ende = bis && bis >= von ? bis : von;
+  terminSetzen(neueTerminKennung(), {
+    titel: "Urlaub",
+    start: von + "T00:00",
+    ende: ende + "T23:59",
+    ganztags: true,
+    urlaub: true,
+  });
+  return "";
+}
+
+function uniplanVerbinden() {
+  const fenster = document.getElementById("uniplanHintergrund");
+  const inhalt = document.getElementById("uniplanInhalt");
+  if (!fenster || !inhalt) return;
+
+  document.getElementById("uniplanSchliessen").addEventListener("click", () => {
+    fenster.hidden = true;
+    uniplanBereichZeichnen();
+  });
+  fenster.addEventListener("click", ereignis => {
+    if (ereignis.target === fenster) { fenster.hidden = true; uniplanBereichZeichnen(); }
+  });
+
+  inhalt.addEventListener("change", ereignis => {
+    const id = ereignis.target && ereignis.target.id;
+    if (id === "uniplanArbeit") uniplanSetzen({ arbeit: ereignis.target.checked });
+    else if (id === "uniplanVon") uniplanSetzen({ von: ereignis.target.value });
+    else if (id === "uniplanBis") uniplanSetzen({ bis: ereignis.target.value });
+    else if (id === "uniplanLand") uniplanSetzen({ land: ereignis.target.value });
+    else return;
+    allesZeichnen();
+  });
+
+  inhalt.addEventListener("click", ereignis => {
+    const ziel = ereignis.target;
+    if (!ziel) return;
+    if (ziel.id === "urlaubNeu") {
+      const fehler = urlaubEintragen(document.getElementById("urlaubVon").value,
+                                     document.getElementById("urlaubBis").value);
+      allesZeichnen();
+      uniplanFensterZeichnen(fehler || "Urlaub eingetragen.");
+      return;
+    }
+    const weg = ziel.getAttribute && ziel.getAttribute("data-urlaub-weg");
+    if (weg) {
+      terminSetzen(weg, { titel: "" });
+      allesZeichnen();
+      uniplanFensterZeichnen("Urlaub gelöscht.");
+    }
+  });
+
+  document.getElementById("uniplanBereich").addEventListener("click", ereignis => {
+    if (ereignis.target && ereignis.target.id === "uniplanOeffnen") uniplanFensterZeigen();
+  });
+}
+
+/* Der Abschnitt in den Einstellungen. */
+function uniplanBereichZeichnen() {
+  const bereich = document.getElementById("uniplanBereich");
+  if (!bereich) return;
+  const heute = tagesSchluessel(new Date());
+  const a = uniplanAusblick(heute);
+  const naechste = a.eintraege.filter(e => e.art === "theorie" || e.art === "praxis")[0];
+  bereich.innerHTML = `
+    <h3 class="melden-titel">Uni-Plan</h3>
+    <p class="filter-hinweis">${a.aktuell
+      ? `Gerade ${PHASEN_NAME[a.aktuell.art]}phase, ${a.aktuell.halbjahr}. Studienhalbjahr, bis ${datumMitJahr(a.aktuell.bis)}.`
+      : "Gerade keine Phase aus dem Zeitplan."}${naechste
+      ? ` Danach ${naechste.titel} ab ${datumMitJahr(naechste.von)}.` : ""}
+      Arbeit im Kalender: ${uniplan.arbeit ? uniplan.von + "–" + uniplan.bis + " Uhr" : "aus"}.</p>
+    <button type="button" class="knopf-schlicht" id="uniplanOeffnen">Uni-Plan und Urlaub</button>`;
+}
+
+
+/* -------------------------------------------------------------------------
    5b. Der Bereich "Notizen"
 
    Das Notizbuch. Eine Liste von Notizen, ein Fenster zum Schreiben, ein
@@ -4768,6 +5299,7 @@ function abgleichSammeln() {
       ort: termin.ort || "",
       notiz: termin.notiz || "",
       wichtig: Boolean(termin.wichtig),
+      urlaub: Boolean(termin.urlaub),
       erinnerungVorgabe: termin.erinnerungVorgabe || "",
       erinnerung: termin.erinnerung || "",
       geaendert: Number(termin.geaendert) || 0,
@@ -4808,6 +5340,21 @@ function abgleichSammeln() {
      löscht sie damit auf allen Geräten. Die Stelle ist absichtlich hier,
      vor den Grabsteinen: ein Löschvermerk soll auch einen unbekannten
      Eintrag begraben können. */
+  /* Die Uni-Plan-Einstellung – erst, wenn sie einmal geändert wurde. Bis
+     dahin gilt auf jedem Gerät die Vorgabe, und es gibt nichts abzugleichen.
+     "ja"/"nein" statt true/false, damit der Abdruck beim Vergleichen
+     eindeutig bleibt. */
+  if (uniplan.geaendert) {
+    eintraege[UNIPLAN_KENNUNG] = {
+      art: "einstellung",
+      arbeit: uniplan.arbeit ? "ja" : "nein",
+      von: uniplan.von,
+      bis: uniplan.bis,
+      land: uniplan.land,
+      geaendert: uniplan.geaendert,
+    };
+  }
+
   for (const kennung of Object.keys(unbekannteEintraege)) {
     if (!eintraege[kennung]) eintraege[kennung] = unbekannteEintraege[kennung];
   }
@@ -4841,6 +5388,7 @@ function abgleichUebernehmen(nutzlast) {
   const neueZettel = [];
   const neueGrabsteine = {};
   const neueUnbekannte = {};
+  let neueUniplan = null;
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -4862,12 +5410,20 @@ function abgleichUebernehmen(nutzlast) {
         ort: typeof eintrag.ort === "string" ? eintrag.ort : "",
         notiz: typeof eintrag.notiz === "string" ? eintrag.notiz : "",
         wichtig: Boolean(eintrag.wichtig),
+        urlaub: eintrag.urlaub === true || eintrag.urlaub === "true",
         erinnerungVorgabe: typeof eintrag.erinnerungVorgabe === "string"
                              ? eintrag.erinnerungVorgabe : "",
         erinnerung: typeof eintrag.erinnerung === "string"
                       ? eintrag.erinnerung : "",
         geaendert: zeitpunkt,
       });
+      continue;
+    }
+
+    /* Die Einstellungen zum Uni-Plan (Arbeitszeit, Feiertage). Ein
+       einziger Eintrag mit fester Kennung. */
+    if (eintrag.art === "einstellung" && kennung === UNIPLAN_KENNUNG) {
+      neueUniplan = uniplanGeraderuecken(eintrag);
       continue;
     }
 
@@ -4925,6 +5481,12 @@ function abgleichUebernehmen(nutzlast) {
   zettel = neueZettel;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
+  // Steht im Abgleich noch keine Einstellung, bleibt die auf dem Gerät.
+  if (neueUniplan) {
+    uniplan = neueUniplan;
+    try { localStorage.setItem(SPEICHER_UNIPLAN, JSON.stringify(uniplan)); }
+    catch (fehler) { /* siehe unten */ }
+  }
 
   /* Direkt in den Speicher, nicht über notizenSpeichern() – das würde
      Abgleich.anstossen() aufrufen und damit einen Abgleich anstoßen, der
@@ -5402,6 +5964,7 @@ function geraeteVerbinden() {
 
   function oeffnen() {
     faecherBereichZeichnen();
+    uniplanBereichZeichnen();
     aenderungenBereichZeichnen();
     geraeteZeichnen();
     meldenZeichnen();
@@ -6097,6 +6660,7 @@ function starten() {
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
   if (training) trainingZustand = "ok";
+  uniplan = uniplanLaden();
 
   /* Das Thema steht schon am <html>, gesetzt vom kurzen Skript im Kopf der
      index.html. Hier wird es nur noch in die Variable geholt, damit der
@@ -6126,6 +6690,7 @@ function starten() {
   geraeteVerbinden();
   terminFormVerbinden();
   zettelVerbinden();
+  uniplanVerbinden();
   // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht
   // hier kein weiterer Zeichen-Aufruf.
