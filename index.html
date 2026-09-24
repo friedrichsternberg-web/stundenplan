@@ -140,6 +140,10 @@
       </button>
     </div>
 
+    <!-- Die Woche auf einen Blick: Stunden je Tag als Balken. Gefüllt von
+         planUeberblickZeichnen() in app.js. -->
+    <div id="planUeberblick"></div>
+
     <div class="tage" id="tage"></div>
   </section>
 
@@ -150,23 +154,30 @@
 
   <!-- ================= Bereich 2: Notizen ================= -->
   <section id="seiteZettel" hidden>
-    <div class="zettel-leiste">
-      <input type="search" id="zettelSuchfeld" placeholder="Notizen durchsuchen …"
-             autocomplete="off" autocorrect="off" spellcheck="false">
-      <button type="button" class="knopf-schlicht knopf-betont" id="zettelNeu">
-        + Notiz
-      </button>
-    </div>
+    <!-- Kopfkarte wie auf der Übersicht. Die Unterzeile (wie viele
+         Notizen) setzt zettelZeichnen(). -->
+    <section class="start-karte bereich-kopf">
+      <div class="start-karte-kopf">
+        <span class="start-symbol start-symbol-gelb"><svg class="symbol" viewBox="0 0 24 24" aria-hidden="true"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
+          d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z"/><path
+          d="M14 3v6h6M8 13h8M8 17h5"/></svg></span>
+        <div class="start-karte-titel">
+          <h2>Notizbuch</h2>
+          <span class="start-unterzeile" id="zettelUnterzeile"></span>
+        </div>
+        <button type="button" class="knopf-schlicht start-klein knopf-betont" id="zettelNeu">+ Notiz</button>
+      </div>
+      <div class="start-karte-inhalt zettel-leiste">
+        <input type="search" id="zettelSuchfeld" placeholder="Notizen durchsuchen …"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+    </section>
     <div id="zettelListe"></div>
   </section>
 
   <!-- ================= Bereich 3: To-dos ================= -->
   <section id="seiteTodos" hidden>
-    <p class="bereich-hinweis">
-      Alles zum Abhaken: die Kurznotizen an einzelnen Terminen, eigene
-      To-dos ohne Vorlesung, und die Hinweise, die schon im Stundenplan der
-      HWR stehen.
-    </p>
     <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
     <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
     <div id="todoInhalt"></div>
@@ -308,8 +319,10 @@
          Änderungen meldet jetzt die Übersicht mit einem großen Hinweis,
          die ganze Liste steht hier. Siehe aenderungenBereichZeichnen(). -->
     <div id="aenderungenBereich"></div>
-    <h3 class="melden-titel">Geräte abgleichen</h3>
-    <div id="geraeteInhalt"></div>
+    <div id="abgleichBereich">
+      <h3 class="melden-titel">Geräte abgleichen</h3>
+      <div id="geraeteInhalt"></div>
+    </div>
     <!-- Hell oder dunkel. Steht im selben Fenster, weil es dieselbe Sorte
          Einstellung ist: gilt für die App, nicht für den Plan. -->
     <div id="themaBereich"></div>

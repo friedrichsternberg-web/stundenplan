@@ -22,6 +22,25 @@ An „To-dos" steht eine Zahl, sobald dort etwas offen ist. Einen Reiter
 abhaken. Die ganze Liste steht im ⚙-Fenster unter **Änderungen am
 Stundenplan**.
 
+## Ein Stil für alle Bereiche
+
+Seit dem 24.09.2026 sehen alle Reiter aus wie die Übersicht: Karten mit
+abgesetztem Kopf, farbigem Symbol und weichem Schatten. `bereichKarte()` in
+`app.js` baut sie; wer einen Bereich ergänzt, nimmt diese Funktion statt
+eigener Überschriften.
+
+- **Plan**: oben die Kalenderwoche mit einem Balken je Tag (Stunden Uni
+  blau, Eigenes grün, Arbeit grau) und der aktuellen Phase. Die Tage haben
+  eine Datumskachel, heute ausgefüllt; die Uhrzeit steht als Anfang groß,
+  Ende klein darunter.
+- **To-dos**: Kopf mit „5 offen · 1 überfällig“ und einem Balken, wie sich
+  das Offene auf die Zeitgruppen verteilt. Jede Zeitgruppe ist eine Karte
+  mit Farbpunkt, passend zum Balken.
+- **Notizen**: Kopfkarte „Notizbuch“ mit Suchfeld und „+ Notiz“.
+- **Training**: jede Karte mit eigenem Symbol, die Zahlenkacheln im
+  Kartenstil.
+- **Einstellungen**: jeder Abschnitt ein eigener Block mit Symbol.
+
 ## Die Übersicht
 
 Die App geht mit der Übersicht auf. Jede Karte hat einen abgesetzten Kopf
