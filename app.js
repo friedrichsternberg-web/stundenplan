@@ -1019,7 +1019,12 @@ function wocheZeichnen() {
     // Steht dort aber etwas Eigenes, muss der Tag sichtbar sein, sonst
     // käme man nicht heran. Seit es eigene Termine gibt, zählen die mit:
     // ein Geburtstag am Samstag darf den Tag nicht unsichtbar lassen.
-    if (versatz >= 5 && termineDesTages.length === 0
+    /* Im Kalender stehen Samstag und Sonntag immer da - eine Woche hat
+       dort sieben Spalten, und wer am Wochenende etwas eintragen will,
+       braucht die Spalte, bevor dort etwas steht. In der Liste bleiben
+       leere Wochenenden weg, dort wären sie nur zwei Zeilen "Keine
+       Veranstaltung". */
+    if (ansicht !== "kalender" && versatz >= 5 && termineDesTages.length === 0
         && aufgabenDesTages.length === 0
         && ganztagsDesTages.length === 0) continue;
 

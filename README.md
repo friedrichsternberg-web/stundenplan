@@ -176,6 +176,11 @@ merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
 
+Im **Kalender** stehen immer alle sieben Tage, Samstag und Sonntag auch
+dann, wenn dort nichts eingetragen ist. In der **Liste** fehlen leere
+Wochenenden weiterhin, dort wären sie nur zwei Zeilen „Keine
+Veranstaltung“.
+
 In der **Liste** steht in der laufenden Woche immer der heutige Tag oben.
 Die vergangenen Tage dieser Woche sind eingeklappt; ein Knopf darüber holt
 sie zurück („▸ 2 vergangene Tage dieser Woche anzeigen"). In anderen Wochen
