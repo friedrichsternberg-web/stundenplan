@@ -29,10 +29,9 @@ abgesetztem Kopf, farbigem Symbol und weichem Schatten. `bereichKarte()` in
 `app.js` baut sie; wer einen Bereich ergänzt, nimmt diese Funktion statt
 eigener Überschriften.
 
-- **Plan**: oben die Kalenderwoche mit einem Balken je Tag (Stunden Uni
-  blau, Eigenes grün, Arbeit grau) und der aktuellen Phase. Die Tage haben
-  eine Datumskachel, heute ausgefüllt; die Uhrzeit steht als Anfang groß,
-  Ende klein darunter.
+- **Plan**: Die Tage haben eine Datumskachel, heute ausgefüllt; die
+  Uhrzeit steht als Anfang groß, Ende klein darunter. (Eine Wochenkarte
+  mit Stundenbalken gab es kurz, sie ist wieder raus.)
 - **To-dos**: Kopf mit „5 offen · 1 überfällig“ und einem Balken, wie sich
   das Offene auf die Zeitgruppen verteilt. Jede Zeitgruppe ist eine Karte
   mit Farbpunkt, passend zum Balken.
@@ -50,7 +49,9 @@ mit farbigem Symbol, damit man sie ohne Lesen auseinanderhält.
   nächste kommt. Antippen öffnet den Termin.
 - **Änderungen am Stundenplan**: ein großer Kasten, nur wenn es ungesehene
   gibt. Jede Änderung hat einen Haken, mit der letzten verschwindet er.
-- **Nächste To-dos** | **Training**: nebeneinander, Training rechts.
+- **Nächste To-dos** links, **Training** und darunter **Notizen** rechts.
+  Beide Spalten sind gleich breit und enden unten bündig: die kürzere
+  Seite streckt ihre letzte Karte (`.start-paar` im Stilblatt).
   To-dos zeigt die vier nächsten offenen, Überfälliges zuerst. Training
   zeigt die Zahl dieser Woche, acht Wochen als kleine Balken und den
   Trend: die letzten vier abgeschlossenen Wochen gegen die vier davor

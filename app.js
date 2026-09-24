@@ -823,25 +823,35 @@ function startZeichnen() {
           ? gruppenTitel[gruppe]
           : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
         gruppe === "ueberfaellig")).join("");
-  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
-    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
-                  breit: !trainingKarteStart }));
+  const todosKarte = startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
+    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos" });
 
   // --- Training, rechts neben den To-dos ------------------------------------
-  if (trainingKarteStart) karten.push(trainingKarteStart);
+  // Steht rechts neben den To-dos, siehe unten.
 
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
+  let notizenKarte = "";
   if (notizbuch.length) {
-    karten.push(startKarte("Notizen", "zettel", "Alle " + zettel.length,
+    notizenKarte = startKarte("Notizen", "zettel", "Alle " + zettel.length,
       notizbuch.map(z => `
         <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
           <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
           ${zettelVorschau(z)
             ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
         </button>`).join(""),
-      { symbol: "notizen", farbe: "gelb", klasse: "start-karte-notizen" }));
+      { symbol: "notizen", farbe: "gelb", klasse: "start-karte-notizen" });
   }
+
+  /* To-dos links, Training und Notizen rechts übereinander. Beide Spalten
+     gleich breit und unten bündig: die kürzere Seite streckt ihre letzte
+     Karte, statt eine Lücke zu lassen. Fehlt rechts beides – auf fremden
+     Geräten ohne Training und ohne Notizen –, gehen die To-dos über die
+     ganze Breite. */
+  const rechts = trainingKarteStart + notizenKarte;
+  karten.push(rechts
+    ? `<div class="start-paar">${todosKarte}<div class="start-spalte">${rechts}</div></div>`
+    : `<div class="start-paar start-paar-allein">${todosKarte}</div>`);
 
   // --- Hinweise aus dem HWR-Plan, nächste 7 Tage, nur wenn es welche gibt -
   const grenze = tagesSchluessel(tageDazu(jetzt, 7));
@@ -855,7 +865,7 @@ function startZeichnen() {
           <span class="start-hinweis-text">${sicher(x.anmerkung)}</span>
           <span class="start-todo-wann">${sicher(tagLesbar(x.start.slice(0, 10)) + " · " + kurzerTitel(x.titel))}</span>
         </div>`).join(""),
-      { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise" }));
+      { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise", breit: true }));
   }
 
   // --- Studienphasen aus dem Uni-Plan, ganz unten: nur was noch kommt ------
@@ -1023,8 +1033,6 @@ function wocheZeichnen() {
     });
   }
 
-  planUeberblickZeichnen(tage, montag);
-
   document.getElementById("tage").innerHTML =
     ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
 
@@ -1164,67 +1172,6 @@ function kalenderTexteAnpassen() {
 
    heuteText lässt sich übergeben, damit der Test nicht vom Wochentag
    abhängt, an dem er läuft. */
-/* Der Kopf über dem Plan: die Kalenderwoche, was in ihr los ist, und je
-   Tag ein Balken mit den Stunden - Vorlesung blau, eigene Termine grün,
-   Arbeit grau. So sieht man vor dem ersten Scrollen, welcher Tag voll
-   ist und wo Luft bleibt. */
-function planUeberblickZeichnen(tage, montag) {
-  const bereich = document.getElementById("planUeberblick");
-  if (!bereich) return;
-
-  const stunden = t => Math.max(0, (alsDatum(t.ende) - alsDatum(t.start)) / 3600000);
-  const heute = tagesSchluessel(new Date());
-  let uni = 0, eigen = 0, arbeit = 0, anzahl = 0;
-  const saeulen = tage.map(tag => {
-    const teile = { uni: 0, eigen: 0, arbeit: 0 };
-    for (const t of tag.termine) {
-      const art = t.arbeit ? "arbeit" : t.eigen ? "eigen" : "uni";
-      teile[art] += stunden(t);
-    }
-    uni += teile.uni; eigen += teile.eigen; arbeit += teile.arbeit;
-    anzahl += tag.termine.filter(t => !t.arbeit).length;
-    return { tag, teile, summe: teile.uni + teile.eigen + teile.arbeit };
-  });
-  const hoechste = Math.max(8, ...saeulen.map(x => x.summe));
-  const h = zahl => String(Math.round(zahl * 10) / 10).replace(".", ",");
-
-  const unterzeile = [
-    anzahl ? anzahl + (anzahl === 1 ? " Termin" : " Termine") : "",
-    uni ? h(uni) + " Std. Uni" : "",
-    arbeit ? h(arbeit) + " Std. Arbeit" : "",
-    eigen ? h(eigen) + " Std. Eigenes" : "",
-  ].filter(Boolean).join(" · ") || "Nichts eingetragen";
-
-  const phase = phaseAm(tagesSchluessel(tageDazu(montag, 2)));
-
-  bereich.innerHTML = bereichKarte({
-    titel: "KW " + kalenderwoche(montag),
-    symbol: "heute", farbe: "blau",
-    unterzeile: unterzeile,
-    rechts: phase ? `<span class="up-marke up-marke-${phase.art}">${PHASEN_NAME[phase.art]}</span>` : "",
-    klasse: "plan-ueberblick",
-    inhalt: `
-      <div class="woche-balken">
-        ${saeulen.map(x => `
-          <div class="woche-spalte${x.tag.schluessel === heute ? " woche-heute" : ""}"
-               title="${sicher(WOCHENTAGE[x.tag.datum.getDay()])}: ${h(x.summe)} Std.">
-            <span class="woche-wert">${x.summe ? h(x.summe) : ""}</span>
-            <span class="woche-saeule">
-              ${["arbeit", "eigen", "uni"].map(art => x.teile[art]
-                ? `<span class="woche-teil woche-teil-${art}" style="height:${(x.teile[art] / hoechste * 100).toFixed(1)}%"></span>`
-                : "").join("")}
-            </span>
-            <span class="woche-name">${WOCHENTAGE[x.tag.datum.getDay()].slice(0, 2)}</span>
-          </div>`).join("")}
-      </div>
-      <div class="up-legende">
-        ${uni ? `<span class="up-leg up-leg-theorie">Uni</span>` : ""}
-        ${eigen ? `<span class="up-leg woche-leg-eigen">Eigenes</span>` : ""}
-        ${arbeit ? `<span class="up-leg woche-leg-arbeit">Arbeit</span>` : ""}
-      </div>`,
-  });
-}
-
 function listeBauen(tage, heuteText) {
   const stuecke = [];
   const heute = heuteText || tagesSchluessel(new Date());
