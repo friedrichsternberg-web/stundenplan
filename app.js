@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "56825975";
+const GEBAUTE_VERSION = "b142f24f";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -759,23 +759,6 @@ function startZeichnen() {
   const karten = [];
   const trainingKarteStart = trainingStartKarte(jetzt);
 
-  // --- Die vier nächsten To-dos -------------------------------------------
-  const gruppenTitel = {};
-  for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
-  const todoInhalt = todos.offen === 0
-    ? `<p class="start-leer">Nichts offen.</p>`
-    : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
-        gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
-          ? gruppenTitel[gruppe]
-          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
-        gruppe === "ueberfaellig")).join("");
-  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
-    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
-                  breit: !trainingKarteStart }));
-
-  // --- Training, oben rechts ----------------------------------------------
-  if (trainingKarteStart) karten.push(trainingKarteStart);
-
   // --- Heute: Termine, Ganztägiges, fällige To-dos ------------------------
   const h = heuteSammeln(jetzt);
   const anzahlText = [
@@ -825,9 +808,22 @@ function startZeichnen() {
     ${leer ? "" : ""}`,
     { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
 
-  // --- Studienphasen aus dem Uni-Plan, nur was noch kommt ------------------
-  const phasenKarte = uniplanStartKarte(jetzt);
-  if (phasenKarte) karten.push(phasenKarte);
+  // --- Die vier nächsten To-dos -------------------------------------------
+  const gruppenTitel = {};
+  for (const gruppe of ZEITGRUPPEN) gruppenTitel[gruppe.schluessel] = gruppe.titel;
+  const todoInhalt = todos.offen === 0
+    ? `<p class="start-leer">Nichts offen.</p>`
+    : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
+        gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+          ? gruppenTitel[gruppe]
+          : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
+        gruppe === "ueberfaellig")).join("");
+  karten.push(startKarte("Nächste To-dos", "todos", todos.offen > 0 ? "Alle " + todos.offen : "Alle",
+    todoInhalt, { symbol: "todos", farbe: "gruen", klasse: "start-karte-todos",
+                  breit: !trainingKarteStart }));
+
+  // --- Training, rechts neben den To-dos ------------------------------------
+  if (trainingKarteStart) karten.push(trainingKarteStart);
 
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
   const notizbuch = zettelSortiert().slice(0, 2);
@@ -856,6 +852,10 @@ function startZeichnen() {
         </div>`).join(""),
       { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise" }));
   }
+
+  // --- Studienphasen aus dem Uni-Plan, ganz unten: nur was noch kommt ------
+  const phasenKarte = uniplanStartKarte(jetzt);
+  if (phasenKarte) karten.push(phasenKarte);
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");

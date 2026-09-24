@@ -2580,15 +2580,10 @@ a.knopf-schlicht {
 
 /* --- Übersicht, Anordnung und Widgets (24.09.2026, zweite Runde) --------- */
 
-/* Oben To-dos und Training nebeneinander, darunter Heute über die ganze
-   Breite. Auf dem Handy untereinander – und dort Heute zuerst: wer
-   unterwegs aufs Handy schaut, will wissen, was jetzt kommt. */
+/* Heute über die ganze Breite ganz oben, darunter To-dos und Training
+   nebeneinander. Auf dem Handy alles untereinander. */
 .start-raster { gap: 16px; }
 .start-karte-heute { grid-column: 1 / -1; }
-
-@media (max-width: 700px) {
-  .start-karte-heute { order: -1; }
-}
 
 /* Die Zeitleiste in "Heute". Drei Spalten mit fester Breite links, damit
    jede Uhrzeit genau unter der vorigen steht. */
