@@ -147,6 +147,14 @@ const werkzeug = eval(
   "  zettelTeile: zettelTeile," +
   "  zettelZusammensetzen: zettelZusammensetzen," +
   "  bearbeiten: function (an) { bearbeitenModus = an; }," +
+  "  zettelSortiert: zettelSortiert," +
+  "  zettelReihenfolgeSetzen: zettelReihenfolgeSetzen," +
+  "  zettelAnheftenUmschalten: zettelAnheftenUmschalten," +
+  "  einkaufHinzufuegen: einkaufHinzufuegen," +
+  "  einkaufUmschalten: einkaufUmschalten," +
+  "  einkaufEntfernen: einkaufEntfernen," +
+  "  einkaufSortiert: einkaufSortiert," +
+  "  einkaufWert: function (neu) { if (neu) einkauf = neu; return einkauf; }," +
   "  lage: function () { return { notizen: notizen, aufgaben: aufgaben," +
   "        termine: eigeneTermine, zettel: zettel, grabsteine: grabsteine," +
   "        unbekannt: unbekannteEintraege }; }," +
@@ -247,9 +255,9 @@ const ausgangslage = {
   zettel: [
     { id: "zettel-1", text: "Klausurvorbereitung\n\nKapitel 3 und 4.",
       verweise: ["fach:34 - Schluesselkompetenzen V", "termin:sked.b1"],
-      wichtig: false, geaendert: 444 },
+      wichtig: false, angeheftet: true, position: 2, geaendert: 444 },
     { id: "zettel-2", text: "Lerngruppe", verweise: ["zettel:zettel-1"],
-      wichtig: true, geaendert: 555 },
+      wichtig: true, angeheftet: false, position: null, geaendert: 555 },
   ],
   grabsteine: { "eigen-weg": 666 },
   unbekannt: {},
@@ -702,6 +710,108 @@ pruefe("die index.html setzt genau dieses Attribut",
        kopfSkript.indexOf('setAttribute("data-thema"') >= 0);
 pruefe("und app.js ebenfalls",
        anwendung.indexOf('"data-thema", themaIstDunkel()') >= 0);
+
+
+/* ====================================================================== */
+abschnitt("15. Anheften, Verschieben, Einkaufszettel");
+
+function z(id, geaendert, extra) {
+  return Object.assign({ id: id, text: id, verweise: [], wichtig: false,
+                         angeheftet: false, position: null, geaendert: geaendert }, extra || {});
+}
+werkzeug.setzen({ zettel: [z("zettel-a", 1), z("zettel-b", 3), z("zettel-c", 2),
+                           z("zettel-d", 4, { angeheftet: true })] });
+let folge = werkzeug.zettelSortiert().map(x => x.id).join();
+pruefe("Angeheftetes zuerst, sonst die juengste oben",
+       folge === "zettel-d,zettel-b,zettel-c,zettel-a");
+
+// Von Hand verschieben: a nach oben, dann b, dann c.
+pruefe("Verschieben aendert etwas",
+       werkzeug.zettelReihenfolgeSetzen(["zettel-a", "zettel-b", "zettel-c"]) === true);
+folge = werkzeug.zettelSortiert().map(x => x.id).join();
+pruefe("die gezogene Reihenfolge gilt", folge === "zettel-d,zettel-a,zettel-b,zettel-c");
+const zeiten = werkzeug.lage().zettel.map(x => x.id + ":" + x.geaendert).join();
+pruefe("dieselbe Reihenfolge noch einmal aendert nichts",
+       werkzeug.zettelReihenfolgeSetzen(["zettel-a", "zettel-b", "zettel-c"]) === false
+       && werkzeug.lage().zettel.map(x => x.id + ":" + x.geaendert).join() === zeiten);
+
+/* Nur wer seinen Platz wechselt, bekommt einen neuen Zeitstempel - sonst
+   ginge bei jedem Verschieben die ganze Liste durch den Abgleich. */
+werkzeug.zettelReihenfolgeSetzen(["zettel-b", "zettel-a", "zettel-c"]);
+const nachher = {};
+werkzeug.lage().zettel.forEach(x => { nachher[x.id] = x.geaendert; });
+pruefe("c blieb an seinem Platz und behaelt seinen Zeitstempel",
+       zeiten.indexOf("zettel-c:" + nachher["zettel-c"]) >= 0);
+
+// Eine neue Notiz steht oben, vor allen verschobenen.
+werkzeug.zettelSetzen("zettel-neu", { text: "Neu", verweise: [] });
+folge = werkzeug.zettelSortiert().map(x => x.id);
+pruefe("eine neue Notiz steht oben (unter den angehefteten)", folge[1] === "zettel-neu");
+
+// Anheften: wechselt den Abschnitt und steht dort oben.
+werkzeug.zettelAnheftenUmschalten("zettel-c");
+folge = werkzeug.zettelSortiert().map(x => x.id);
+pruefe("angeheftet steht c im oberen Abschnitt ganz oben", folge[0] === "zettel-c" && folge[1] === "zettel-d");
+pruefe("und hat seine alte Stelle abgegeben",
+       werkzeug.lage().zettel.filter(x => x.id === "zettel-c")[0].position === null);
+werkzeug.zettelAnheftenUmschalten("zettel-c");
+pruefe("losgeloest steht es bei den Notizen zuerst, direkt unter den angehefteten",
+       werkzeug.zettelSortiert().map(x => x.id).join().indexOf("zettel-d,zettel-c") === 0);
+
+// Anheften und Stelle ueberleben den Abgleich.
+werkzeug.zettelAnheftenUmschalten("zettel-a");
+const paket15 = werkzeug.sammeln();
+pruefe("angeheftet und Stelle werden mitgeschickt",
+       paket15.eintraege["zettel-a"].angeheftet === true
+       && paket15.eintraege["zettel-b"].position === 0);
+werkzeug.setzen({});
+werkzeug.uebernehmen(paket15);
+pruefe("und kommen so an",
+       werkzeug.zettelSortiert().map(x => x.id).slice(0, 2).join() === "zettel-a,zettel-d"
+       && werkzeug.lage().zettel.filter(x => x.id === "zettel-b")[0].position === 0);
+
+// --- Einkaufszettel ---
+werkzeug.setzen({});
+werkzeug.einkaufWert([]);
+pruefe("leerer Text wird nicht angelegt", werkzeug.einkaufHinzufuegen("   ") === false);
+werkzeug.einkaufHinzufuegen("Milch");
+werkzeug.einkaufHinzufuegen("  Brot   vom  Baecker ");
+werkzeug.einkaufHinzufuegen("Eier");
+let liste15 = werkzeug.einkaufSortiert();
+pruefe("drei offen, in der Reihenfolge des Aufschreibens",
+       liste15.offen.map(p => p.text).join() === "Milch,Brot vom Baecker,Eier");
+pruefe("Leerzeichen werden aufgeraeumt", liste15.offen[1].text === "Brot vom Baecker");
+
+const milch = liste15.offen[0].id;
+werkzeug.einkaufUmschalten(milch);
+liste15 = werkzeug.einkaufSortiert();
+pruefe("abgehakt wandert Milch zu Gekauft",
+       liste15.offen.length === 2 && liste15.gekauft.length === 1 && liste15.gekauft[0].text === "Milch");
+
+// Durch den Abgleich - und kein "text"-Feld, damit alte Fassungen es durchreichen.
+const paketE = werkzeug.sammeln();
+const eintragMilch = paketE.eintraege[milch];
+pruefe("ein Artikel geht als art einkauf, ohne Feld text",
+       eintragMilch.art === "einkauf" && eintragMilch.inhalt === "Milch"
+       && eintragMilch.text === undefined && eintragMilch.erledigt === true);
+werkzeug.einkaufWert([]);
+werkzeug.uebernehmen(paketE);
+liste15 = werkzeug.einkaufSortiert();
+pruefe("auf dem anderen Geraet: zwei offen, Milch gekauft",
+       liste15.offen.length === 2 && liste15.gekauft[0].text === "Milch");
+pruefe("der Einkauf landet nicht bei den Notizen oder To-dos",
+       Object.keys(werkzeug.lage().notizen).length === 0 && werkzeug.lage().aufgaben.length === 0
+       && werkzeug.lage().zettel.length === 0);
+
+// Gekaufte entfernen: weg, und mit Grabstein, damit sie nicht wiederkommen.
+werkzeug.einkaufEntfernen(liste15.gekauft.map(p => p.id));
+pruefe("Gekauftes ist entfernt", werkzeug.einkaufSortiert().gekauft.length === 0
+       && werkzeug.einkaufSortiert().offen.length === 2);
+pruefe("mit Grabstein", werkzeug.lage().grabsteine[milch] > 0);
+const paketG = werkzeug.sammeln();
+pruefe("der Grabstein geht in den Abgleich", paketG.eintraege[milch].geloescht === true);
+werkzeug.einkaufWert([]);
+werkzeug.setzen({});
 
 
 /* ====================================================================== */

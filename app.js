@@ -836,7 +836,7 @@ function startZeichnen() {
     notizenKarte = startKarte("Notizen", "zettel", "Alle " + zettel.length,
       notizbuch.map(z => `
         <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
-          <span class="start-zettel-titel">${z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
+          <span class="start-zettel-titel">${z.angeheftet ? "📌 " : z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
           ${zettelVorschau(z)
             ? `<span class="start-zettel-vorschau">${sicher(zettelVorschau(z))}</span>` : ""}
         </button>`).join(""),
@@ -1831,11 +1831,19 @@ function zettelLaden() {
    Browserspeicher, aus dem Abgleich oder aus dem Formular, und in allen
    drei Fällen soll hinterher dasselbe herauskommen. */
 function zettelGeraderuecken(roh) {
+  /* position: die Stelle in der Liste, die du von Hand festgelegt hast
+     (kleiner = weiter oben). null heißt: noch nie verschoben – solche
+     Notizen stehen oben, die jüngste zuerst. So landet eine neue Notiz
+     ganz oben, ohne dass alle anderen umnummeriert werden müssen. */
+  const position = roh.position === null || roh.position === undefined || roh.position === ""
+    ? null : Number(roh.position);
   return {
     id: String(roh.id),
     text: typeof roh.text === "string" ? roh.text : "",
     verweise: verweiseSaeubern(roh.verweise),
     wichtig: Boolean(roh.wichtig),
+    angeheftet: roh.angeheftet === true || roh.angeheftet === "true",
+    position: isFinite(position) ? position : null,
     geaendert: Number(roh.geaendert) || 0,
   };
 }
@@ -1962,6 +1970,9 @@ function zettelSetzen(kennung, felder) {
   }
 
   const vorhandener = zettelZuKennung(kennung);
+  const warAngeheftet = Boolean(vorhandener && vorhandener.angeheftet);
+  const angeheftet = felder && felder.angeheftet !== undefined
+                       ? Boolean(felder.angeheftet) : warAngeheftet;
   const neuer = zettelGeraderuecken({
     id: kennung,
     text: text,
@@ -1969,6 +1980,11 @@ function zettelSetzen(kennung, felder) {
     wichtig: felder && felder.wichtig !== undefined
                ? Boolean(felder.wichtig)
                : Boolean(vorhandener && vorhandener.wichtig),
+    angeheftet: angeheftet,
+    /* Wer angeheftet oder abgelöst wird, wechselt den Abschnitt und
+       steht dort zuerst oben. Die alte Stelle gälte in der anderen Liste
+       nichts mehr. */
+    position: angeheftet !== warAngeheftet ? null : (vorhandener ? vorhandener.position : null),
     geaendert: Abgleich.jetzt(),
   });
 
@@ -1982,11 +1998,122 @@ function zettelSetzen(kennung, felder) {
 
 /* Die Notizen, sortiert wie man sie sucht: zuletzt angefasste zuerst,
    Wichtiges ganz oben. */
+/* Angeheftete zuerst. Innerhalb eines Abschnitts gilt die Reihenfolge,
+   die du durch Ziehen festgelegt hast; Notizen ohne feste Stelle (neu,
+   noch nie verschoben) stehen davor, die jüngste zuerst.
+
+   Früher kam "wichtig" nach oben. Seit man selbst sortieren kann, würde
+   das jede von Hand gewählte Reihenfolge durcheinanderwerfen – den Platz
+   ganz oben regelt jetzt das Anheften. */
 function zettelSortiert() {
   return zettel.slice().sort((a, b) => {
-    if (Boolean(a.wichtig) !== Boolean(b.wichtig)) return a.wichtig ? -1 : 1;
+    if (a.angeheftet !== b.angeheftet) return a.angeheftet ? -1 : 1;
+    const aFrei = a.position === null, bFrei = b.position === null;
+    if (aFrei !== bFrei) return aFrei ? -1 : 1;
+    if (!aFrei && a.position !== b.position) return a.position - b.position;
     return (Number(b.geaendert) || 0) - (Number(a.geaendert) || 0);
   });
+}
+
+/* Legt die Reihenfolge eines Abschnitts fest: kennungen in der neuen
+   Folge, von oben nach unten. Nur Notizen, deren Stelle sich wirklich
+   ändert, bekommen einen neuen Zeitstempel – sonst zöge ein einziges
+   Verschieben sämtliche Notizen durch den Abgleich. */
+function zettelReihenfolgeSetzen(kennungen) {
+  const jetzt = Abgleich.jetzt();
+  let geaendert = false;
+  kennungen.forEach((kennung, stelle) => {
+    const z = zettelZuKennung(kennung);
+    if (!z || z.position === stelle) return;
+    z.position = stelle;
+    z.geaendert = jetzt;
+    geaendert = true;
+  });
+  if (geaendert) zettelSpeichern();
+  return geaendert;
+}
+
+function zettelAnheftenUmschalten(kennung) {
+  const z = zettelZuKennung(kennung);
+  if (!z) return;
+  zettelSetzen(kennung, { text: z.text, verweise: z.verweise, wichtig: z.wichtig,
+                          angeheftet: !z.angeheftet });
+}
+
+
+/* --- Der Einkaufszettel -------------------------------------------------
+
+   Eine Liste zum Abhaken, oben im Notizbuch angeheftet. Jeder Artikel ist
+   ein eigener Eintrag im Abgleich und nicht eine Zeile in einem großen
+   Text: hakt man im Laden auf dem Handy "Milch" ab, während am Laptop
+   "Brot" dazukommt, bleibt beides erhalten. Ein einziger Text würde beim
+   Zusammenführen eine der beiden Änderungen verlieren.
+
+   Der Text steht im Feld "inhalt", nicht "text" – aus demselben Grund wie
+   beim Notizbuch (siehe abgleichSammeln): eine ältere Fassung der App
+   machte aus einem Eintrag mit "text" sonst eine Notiz an einem Termin. */
+const SPEICHER_EINKAUF = "stundenplan.einkauf";
+let einkauf = [];
+
+function einkaufGeraderuecken(roh) {
+  return {
+    id: String(roh.id),
+    text: typeof roh.text === "string" ? roh.text : "",
+    erledigt: roh.erledigt === true || roh.erledigt === "true",
+    angelegt: Number(roh.angelegt) || Number(roh.geaendert) || 0,
+    geaendert: Number(roh.geaendert) || 0,
+  };
+}
+
+function einkaufLaden() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SPEICHER_EINKAUF) || "[]");
+    return Array.isArray(roh)
+      ? roh.filter(p => p && typeof p.id === "string" && p.text).map(einkaufGeraderuecken) : [];
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function einkaufSpeichern() {
+  try { localStorage.setItem(SPEICHER_EINKAUF, JSON.stringify(einkauf)); }
+  catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+/* Offenes in der Reihenfolge, in der es aufgeschrieben wurde; Gekauftes
+   darunter, zuletzt Abgehaktes zuerst. */
+function einkaufSortiert() {
+  const offen = einkauf.filter(p => !p.erledigt).sort((a, b) => a.angelegt - b.angelegt);
+  const gekauft = einkauf.filter(p => p.erledigt).sort((a, b) => b.geaendert - a.geaendert);
+  return { offen, gekauft };
+}
+
+function einkaufHinzufuegen(text) {
+  const sauber = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!sauber) return false;
+  const jetzt = Abgleich.jetzt();
+  const kennung = "einkauf-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+  einkauf.push({ id: kennung, text: sauber, erledigt: false, angelegt: jetzt, geaendert: jetzt });
+  grabsteinEntfernen(kennung);
+  einkaufSpeichern();
+  return true;
+}
+
+function einkaufUmschalten(kennung) {
+  const posten = einkauf.filter(p => p.id === kennung)[0];
+  if (!posten) return;
+  posten.erledigt = !posten.erledigt;
+  posten.geaendert = Abgleich.jetzt();
+  einkaufSpeichern();
+}
+
+function einkaufEntfernen(kennungen) {
+  const weg = new Set(kennungen);
+  if (!weg.size) return;
+  einkauf = einkauf.filter(p => !weg.has(p.id));
+  for (const kennung of weg) grabsteinSetzen(kennung);
+  einkaufSpeichern();
 }
 
 /* Volltextsuche über Überschrift und Text. Kleinschreibung auf beiden
@@ -4726,15 +4853,32 @@ function uniplanBereichZeichnen() {
    sucht: im Fenster des Termins.
    ------------------------------------------------------------------------- */
 
+/* Die Stecknadel für "angeheftet", einmal als Text, damit Karte und Knopf
+   dasselbe Zeichen benutzen. */
+const NADEL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="1.6"
+  stroke-linejoin="round" stroke-linecap="round"><path d="M9 3.5h6l-1 6.5 3.2 3v1.3H6.8V13L10 10z"/><path
+  d="M12 14.3v6.2" fill="none"/></svg>`;
+
 function zettelZeichnen() {
   const bereich = document.getElementById("zettelListe");
   if (!bereich) return;
 
+  // Der Einkaufszettel steht oben im selben Bereich.
+  einkaufZeichnen();
+  const einkaufKarte = document.getElementById("einkaufKarte");
+  if (einkaufKarte) einkaufKarte.hidden = Boolean(zettelFilter);
+
+  /* Während eine Notiz gezogen wird, nicht neu zeichnen. Käme mittendrin
+     ein Abgleich, ersetzte er die Karte unter dem Finger durch eine neue,
+     und das Ziehen liefe ins Leere. Nach dem Loslassen wird ohnehin neu
+     gezeichnet. */
+  if (zettelZieht) return;
+
   const unterzeile = document.getElementById("zettelUnterzeile");
   if (unterzeile) {
-    const markiert = zettel.filter(z => z.wichtig).length;
+    const angeheftet = zettel.filter(z => z.angeheftet).length;
     unterzeile.textContent = zettel.length + (zettel.length === 1 ? " Notiz" : " Notizen")
-      + (markiert ? " · " + markiert + " markiert" : "");
+      + (angeheftet ? " · " + angeheftet + " angeheftet" : "");
   }
 
   let liste = zettelGefunden(zettelSuche);
@@ -4767,17 +4911,28 @@ function zettelZeichnen() {
     return;
   }
 
-  bereich.innerHTML = filterBalken + liste.map(z => {
+  /* Verschieben geht nur in der ganzen Liste. Beim Suchen oder Filtern
+     fehlen Notizen dazwischen – wohin eine gezogene Notiz dann gehörte,
+     wäre Raten. */
+  const ziehbar = !String(zettelSuche || "").trim() && !zettelFilter;
+
+  const karte = z => {
     const vorschau = zettelVorschau(z);
     const marken = z.verweise.map(verweisBeschreiben);
     return `
-      <div class="zettel-karte${z.wichtig ? " zettel-karte-wichtig" : ""}"
-           data-zettel-oeffnen="${sicher(z.id)}"
+      <div class="zettel-karte${z.wichtig ? " zettel-karte-wichtig" : ""}${
+             z.angeheftet ? " zettel-karte-angeheftet" : ""}"
+           data-zettel-oeffnen="${sicher(z.id)}"${ziehbar ? ` data-ziehbar="1"` : ""}
            role="button" tabindex="0">
         <div class="zettel-karte-kopf">
           <span class="zettel-karte-titel">${
             z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
           <span class="zettel-karte-zeit">${sicher(zettelDatum(z))}</span>
+          <button type="button" class="zettel-nadel${z.angeheftet ? " zettel-nadel-an" : ""}"
+                  data-zettel-anheften="${sicher(z.id)}"
+                  aria-pressed="${z.angeheftet ? "true" : "false"}"
+                  aria-label="${z.angeheftet ? "Nicht mehr anheften" : "Anheften"}"
+                  title="${z.angeheftet ? "Nicht mehr anheften" : "Anheften"}">${NADEL_SVG}</button>
         </div>
         ${vorschau
           ? `<div class="zettel-karte-vorschau">${sicher(vorschau)}</div>`
@@ -4789,7 +4944,158 @@ function zettelZeichnen() {
               sicher(m.titel)}</span>`).join("")}
           </div>`}
       </div>`;
-  }).join("");
+  };
+
+  const oben = liste.filter(z => z.angeheftet);
+  const rest = liste.filter(z => !z.angeheftet);
+  bereich.innerHTML = filterBalken
+    + (oben.length ? `
+        <div class="zettel-abschnitt">${NADEL_SVG} Angeheftet</div>
+        <div class="zettel-gruppe" data-zettel-gruppe="oben">${oben.map(karte).join("")}</div>` : "")
+    + (rest.length ? `
+        ${oben.length ? `<div class="zettel-abschnitt">Notizen</div>` : ""}
+        <div class="zettel-gruppe" data-zettel-gruppe="rest">${rest.map(karte).join("")}</div>` : "")
+    + (ziehbar && liste.length > 1
+        ? `<p class="zettel-tipp">Zum Verschieben eine Notiz gedrückt halten und ziehen.</p>` : "");
+}
+
+/* Der Einkaufszettel. Gezeichnet wird nur die Liste darunter, nie das
+   Eingabefeld – siehe index.html. */
+function einkaufZeichnen() {
+  const liste = document.getElementById("einkaufListe");
+  if (!liste) return;
+  const { offen, gekauft } = einkaufSortiert();
+
+  const unterzeile = document.getElementById("einkaufUnterzeile");
+  if (unterzeile) {
+    unterzeile.textContent = offen.length + " offen"
+      + (gekauft.length ? " · " + gekauft.length + " gekauft" : "");
+  }
+
+  const zeile = p => `
+    <div class="einkauf-posten${p.erledigt ? " einkauf-gekauft" : ""}">
+      <button type="button" class="todo-haken" data-einkauf-haken="${sicher(p.id)}"
+              aria-label="${p.erledigt ? "Wieder auf die Liste" : "Gekauft"}">${p.erledigt ? "✓" : ""}</button>
+      <span class="einkauf-text">${sicher(p.text)}</span>
+      <button type="button" class="einkauf-weg" data-einkauf-weg="${sicher(p.id)}"
+              aria-label="Entfernen" title="Entfernen">×</button>
+    </div>`;
+
+  liste.innerHTML =
+    (offen.length ? offen.map(zeile).join("")
+      : `<p class="start-leer">${gekauft.length ? "Alles gekauft." : "Noch nichts auf der Liste."}</p>`)
+    + (gekauft.length ? `
+        <div class="einkauf-gekauft-kopf">
+          <span>Gekauft (${gekauft.length})</span>
+          <button type="button" class="knopf-schlicht start-klein" id="einkaufGekaufteWeg">Gekaufte entfernen</button>
+        </div>
+        ${gekauft.map(zeile).join("")}` : "");
+}
+
+/* --- Notizen verschieben: gedrückt halten, dann ziehen ------------------
+
+   Wie auf dem iPhone: kurz auf der Notiz liegen bleiben, bis sie sich
+   hebt, dann nach oben oder unten ziehen. Bewegt sich der Finger vorher,
+   ist es kein Halten, sondern Scrollen – dann passiert nichts.
+
+   Die Karte springt beim Ziehen von Platz zu Platz, sobald der Finger die
+   Mitte der Nachbarkarte überquert. Losgelassen, wird die neue Folge
+   gespeichert und abgeglichen. */
+const ZIEHEN_NACH_MS = 450;
+let zettelZieht = false;
+let zettelKlickSperre = false;
+
+function zettelZiehenVerbinden(liste) {
+  let halten = null;
+  let karte = null;
+  let start = null;
+
+  function haltenAbbrechen() {
+    if (halten) { clearTimeout(halten); halten = null; }
+  }
+
+  liste.addEventListener("pointerdown", ereignis => {
+    if (ereignis.pointerType === "mouse" && ereignis.button !== 0) return;
+    const ziel = ereignis.target && ereignis.target.closest
+      ? ereignis.target.closest(".zettel-karte[data-ziehbar]") : null;
+    if (!ziel || ereignis.target.closest("button")) return;
+    start = { x: ereignis.clientX, y: ereignis.clientY };
+    haltenAbbrechen();
+    halten = setTimeout(() => {
+      halten = null;
+      karte = ziel;
+      zettelZieht = true;
+      karte.classList.add("zettel-zieht");
+      liste.classList.add("zettel-liste-zieht");
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, ZIEHEN_NACH_MS);
+  });
+
+  /* Am Dokument und nicht an der Liste: die Karte wandert beim Ziehen im
+     Seitenaufbau, und mit ihr ginge eine Zuordnung an ein einzelnes
+     Element verloren. Das Dokument bleibt immer dasselbe. */
+  document.addEventListener("pointermove", ereignis => {
+    if (!karte) {
+      if (halten && start
+          && Math.hypot(ereignis.clientX - start.x, ereignis.clientY - start.y) > 8) {
+        haltenAbbrechen();
+      }
+      return;
+    }
+    ereignis.preventDefault();
+    const y = ereignis.clientY;
+    // Am Rand des Bildschirms mitscrollen, sonst käme man nie weiter als
+    // bis zur letzten sichtbaren Notiz.
+    if (y < 70) window.scrollBy(0, -12);
+    else if (y > window.innerHeight - 70) window.scrollBy(0, 12);
+
+    const gruppe = karte.parentElement;
+    let davor = null;
+    for (const andere of gruppe.children) {
+      if (andere === karte || !andere.classList.contains("zettel-karte")) continue;
+      const r = andere.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { davor = andere; break; }
+    }
+    if (davor) {
+      if (karte.nextElementSibling !== davor) gruppe.insertBefore(karte, davor);
+    } else if (gruppe.lastElementChild !== karte) {
+      gruppe.appendChild(karte);
+    }
+  });
+
+  function beenden() {
+    haltenAbbrechen();
+    if (!karte) return;
+    const gruppe = karte.parentElement;
+    karte.classList.remove("zettel-zieht");
+    liste.classList.remove("zettel-liste-zieht");
+    const kennungen = [...gruppe.querySelectorAll(".zettel-karte")]
+      .map(k => k.getAttribute("data-zettel-oeffnen"));
+    karte = null;
+    zettelZieht = false;
+    // Nach dem Loslassen kommt oft noch ein Klick hinterher. Der soll die
+    // Notiz nicht öffnen – man wollte sie ja verschieben.
+    zettelKlickSperre = true;
+    setTimeout(() => { zettelKlickSperre = false; }, 400);
+    zettelReihenfolgeSetzen(kennungen);
+    zettelZeichnen();
+    startZeichnen();
+  }
+  document.addEventListener("pointerup", beenden);
+  document.addEventListener("pointercancel", beenden);
+
+  /* Auf dem iPhone würde die Seite beim Ziehen scrollen und das Ziehen
+     abbrechen. Das hier hält sie still, aber nur während gezogen wird –
+     sonst scrollt die Liste ganz normal. */
+  liste.addEventListener("touchmove", ereignis => {
+    if (karte) ereignis.preventDefault();
+  }, { passive: false });
+  // Langes Drücken öffnet sonst das Menü "Kopieren, Teilen …".
+  liste.addEventListener("contextmenu", ereignis => {
+    if (ereignis.target.closest && ereignis.target.closest(".zettel-karte[data-ziehbar]")) {
+      ereignis.preventDefault();
+    }
+  });
 }
 
 /* Wann zuletzt angefasst, kurz. Heute steht die Uhrzeit, sonst das Datum –
@@ -4828,6 +5134,7 @@ function zettelFilterSetzen(verweis) {
 let offeneVerweise = [];
 let offenerZettelText = "";
 let offenerZettelWichtig = false;
+let offenerZettelAngeheftet = false;
 
 function zettelWerteLesen() {
   const kopf = document.getElementById("zettelTitel");
@@ -4839,6 +5146,8 @@ function zettelWerteLesen() {
       kopf ? kopf.value : "", feld ? feld.value : "");
   }
   if (haken) offenerZettelWichtig = Boolean(haken.checked);
+  const nadel = document.getElementById("zettelAngeheftet");
+  if (nadel) offenerZettelAngeheftet = Boolean(nadel.checked);
 }
 
 /* Öffnet eine Notiz. Ohne Kennung entsteht eine neue; vorgabe ist eine
@@ -4850,6 +5159,7 @@ function zettelFensterZeigen(kennung, vorgabe) {
   offenerZettel = kennung || neueZettelKennung();
   offenerZettelText = vorhandener ? vorhandener.text : "";
   offenerZettelWichtig = vorhandener ? Boolean(vorhandener.wichtig) : false;
+  offenerZettelAngeheftet = vorhandener ? Boolean(vorhandener.angeheftet) : false;
   offeneVerweise = verweiseSaeubern(
     vorhandener ? vorhandener.verweise : (vorgabe || []));
 
@@ -4887,10 +5197,16 @@ function zettelFensterZeichnen() {
               placeholder="Text …"
               >${sicher(teile.rest)}</textarea>
 
-    <label class="form-haken">
-      <input type="checkbox" id="zettelWichtig"${offenerZettelWichtig ? " checked" : ""}>
-      <span>★ Wichtig</span>
-    </label>
+    <div class="zettel-haken-reihe">
+      <label class="form-haken">
+        <input type="checkbox" id="zettelAngeheftet"${offenerZettelAngeheftet ? " checked" : ""}>
+        <span>📌 Anheften</span>
+      </label>
+      <label class="form-haken">
+        <input type="checkbox" id="zettelWichtig"${offenerZettelWichtig ? " checked" : ""}>
+        <span>★ Wichtig</span>
+      </label>
+    </div>
 
     <div class="zettel-verweise-kopf">Verknüpft mit</div>
     <div class="zettel-marken zettel-marken-gross">
@@ -5017,6 +5333,7 @@ function zettelSichern() {
     text: offenerZettelText,
     verweise: offeneVerweise,
     wichtig: offenerZettelWichtig,
+    angeheftet: offenerZettelAngeheftet,
   });
 }
 
@@ -5420,7 +5737,20 @@ function abgleichSammeln() {
       inhalt: z.text,
       verweise: verweiseSaeubern(z.verweise),
       wichtig: Boolean(z.wichtig),
+      angeheftet: Boolean(z.angeheftet),
+      // "" statt null: der Abdruck beim Vergleichen macht aus allem Text.
+      position: z.position === null ? "" : z.position,
       geaendert: Number(z.geaendert) || 0,
+    };
+  }
+
+  for (const posten of einkauf) {
+    eintraege[posten.id] = {
+      art: "einkauf",
+      inhalt: posten.text,
+      erledigt: Boolean(posten.erledigt),
+      angelegt: posten.angelegt,
+      geaendert: Number(posten.geaendert) || 0,
     };
   }
 
@@ -5481,6 +5811,7 @@ function abgleichUebernehmen(nutzlast) {
   const neueGrabsteine = {};
   const neueUnbekannte = {};
   let neueUniplan = null;
+  const neuerEinkauf = [];
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -5530,7 +5861,19 @@ function abgleichUebernehmen(nutzlast) {
       if (!inhalt && verweise.length === 0) continue;
       neueZettel.push(zettelGeraderuecken({
         id: kennung, text: inhalt, verweise: verweise,
-        wichtig: eintrag.wichtig, geaendert: zeitpunkt,
+        wichtig: eintrag.wichtig, angeheftet: eintrag.angeheftet,
+        position: eintrag.position, geaendert: zeitpunkt,
+      }));
+      continue;
+    }
+
+    // Ein Artikel vom Einkaufszettel.
+    if (eintrag.art === "einkauf") {
+      const inhalt = typeof eintrag.inhalt === "string" ? eintrag.inhalt : "";
+      if (!inhalt) continue;
+      neuerEinkauf.push(einkaufGeraderuecken({
+        id: kennung, text: inhalt, erledigt: eintrag.erledigt,
+        angelegt: eintrag.angelegt, geaendert: zeitpunkt,
       }));
       continue;
     }
@@ -5571,6 +5914,7 @@ function abgleichUebernehmen(nutzlast) {
   aufgaben = neueAufgaben;
   eigeneTermine = neueTermine;
   zettel = neueZettel;
+  einkauf = neuerEinkauf;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
   // Steht im Abgleich noch keine Einstellung, bleibt die auf dem Gerät.
@@ -5593,6 +5937,7 @@ function abgleichUebernehmen(nutzlast) {
        also nur, wenn man ohne Netz neu lud. */
     localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
     localStorage.setItem(SPEICHER_ZETTEL, JSON.stringify(zettel));
+    localStorage.setItem(SPEICHER_EINKAUF, JSON.stringify(einkauf));
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
@@ -6329,9 +6674,17 @@ function zettelVerbinden() {
   const liste = document.getElementById("zettelListe");
   if (liste) {
     liste.addEventListener("click", ereignis => {
+      if (zettelKlickSperre) return;
       const ziel = ereignis.target && ereignis.target.closest
-        ? ereignis.target.closest("#zettelFilterWeg,[data-zettel-oeffnen]") : null;
+        ? ereignis.target.closest("#zettelFilterWeg,[data-zettel-anheften],[data-zettel-oeffnen]") : null;
       if (!ziel) return;
+      const anheften = ziel.getAttribute("data-zettel-anheften");
+      if (anheften) {
+        zettelAnheftenUmschalten(anheften);
+        zettelZeichnen();
+        startZeichnen();
+        return;
+      }
       if (ziel.id === "zettelFilterWeg") {
         zettelFilter = "";
         zettelZeichnen();
@@ -6350,6 +6703,37 @@ function zettelVerbinden() {
       if (!karte) return;
       ereignis.preventDefault();
       zettelFensterZeigen(karte.getAttribute("data-zettel-oeffnen"));
+    });
+  }
+
+  if (liste) zettelZiehenVerbinden(liste);
+
+  // --- Einkaufszettel ---
+  const einkaufForm = document.getElementById("einkaufForm");
+  if (einkaufForm) {
+    einkaufForm.addEventListener("submit", ereignis => {
+      ereignis.preventDefault();
+      const feld = document.getElementById("einkaufFeld");
+      if (einkaufHinzufuegen(feld.value)) {
+        feld.value = "";
+        einkaufZeichnen();
+      }
+      // Die Tastatur bleibt offen: meistens kommt gleich der nächste Artikel.
+      feld.focus();
+    });
+  }
+  const einkaufListe = document.getElementById("einkaufListe");
+  if (einkaufListe) {
+    einkaufListe.addEventListener("click", ereignis => {
+      const ziel = ereignis.target && ereignis.target.closest
+        ? ereignis.target.closest("[data-einkauf-haken],[data-einkauf-weg],#einkaufGekaufteWeg") : null;
+      if (!ziel) return;
+      const haken = ziel.getAttribute("data-einkauf-haken");
+      const weg = ziel.getAttribute("data-einkauf-weg");
+      if (haken) einkaufUmschalten(haken);
+      else if (weg) einkaufEntfernen([weg]);
+      else einkaufEntfernen(einkaufSortiert().gekauft.map(p => p.id));
+      einkaufZeichnen();
     });
   }
 
@@ -6391,7 +6775,8 @@ function zettelVerbinden() {
       }
     });
     document.getElementById("zettelInhalt").addEventListener("change", ereignis => {
-      if (ereignis.target && ereignis.target.id === "zettelWichtig") {
+      if (ereignis.target && (ereignis.target.id === "zettelWichtig"
+                              || ereignis.target.id === "zettelAngeheftet")) {
         zettelSichernUndMelden();
       }
     });
@@ -6749,6 +7134,7 @@ function starten() {
   grabsteine = grabsteineLaden();
   eigeneTermine = eigeneTermineLaden();
   zettel = zettelLaden();
+  einkauf = einkaufLaden();
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
   if (training) trainingZustand = "ok";

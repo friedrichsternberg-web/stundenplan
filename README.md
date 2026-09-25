@@ -726,6 +726,26 @@ ohne es anzufassen.
 `tests/test_zettel.js` spielt diese alte Fassung Zeile für Zeile nach,
 statt sich darauf zu verlassen.
 
+
+### Anheften, Verschieben, Einkaufszettel
+
+- **Anheften**: die Stecknadel rechts auf jeder Karte, oder „📌 Anheften“ im
+  Notizfenster. Angeheftete Notizen stehen im Abschnitt „Angeheftet“ ganz
+  oben. Wer angeheftet oder abgelöst wird, steht im neuen Abschnitt zuerst.
+- **Verschieben**: eine Notiz knapp eine halbe Sekunde gedrückt halten, bis
+  sie sich hebt, dann nach oben oder unten ziehen. Bewegt sich der Finger
+  vorher, ist es Scrollen. Die Reihenfolge steht im Feld `position` und wird
+  abgeglichen; nur Notizen, deren Platz sich ändert, gehen dabei durch den
+  Abgleich. Beim Suchen oder Filtern ist Verschieben aus, weil dann Notizen
+  dazwischen fehlen. Neue Notizen stehen oben. „Wichtig“ sortiert nicht mehr
+  nach oben, das würde jede selbst gewählte Reihenfolge umwerfen.
+- **Einkaufszettel**: oben im Notizbuch, fest angeheftet. Artikel eintippen,
+  Enter oder „Hinzufügen“; die Tastatur bleibt offen für den nächsten.
+  Abhaken schiebt den Artikel nach „Gekauft“, „Gekaufte entfernen“ räumt
+  auf. Jeder Artikel ist ein eigener Eintrag (`art: "einkauf"`, Text im
+  Feld `inhalt` wie beim Notizbuch), damit gleichzeitiges Abhaken auf Handy
+  und Laptop nichts überschreibt. Das Eingabefeld wird nie neu gezeichnet,
+  ein halb getippter Artikel übersteht also jeden Abgleich.
 ## Erinnerungen
 
 Seit dem 22.09.2026 kann sich ein To-do oder ein eigener Termin per
