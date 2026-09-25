@@ -3087,3 +3087,135 @@ a.knopf-schlicht {
   .start-paar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .start-spalte { gap: 12px; }
 }
+
+
+/* --- Notizen: Anheften, Verschieben, Einkaufszettel ---------------------- */
+
+.zettel-abschnitt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+.zettel-abschnitt svg { width: 14px; height: 14px; fill: currentColor; }
+
+.zettel-karte-kopf { align-items: center; }
+
+/* Die Stecknadel rechts auf jeder Karte. Leer = nicht angeheftet,
+   ausgefüllt und blau = angeheftet. */
+.zettel-nadel {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin: -6px -8px -6px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--schrift-leise);
+  cursor: pointer;
+}
+.zettel-nadel svg { width: 17px; height: 17px; fill: none; }
+.zettel-nadel:hover { background: var(--flaeche-gedaempft); color: var(--schrift); }
+.zettel-nadel-an { color: var(--akzent); }
+.zettel-nadel-an svg { fill: currentColor; }
+
+/* Langes Drücken soll die Karte heben, nicht Text markieren oder das
+   Teilen-Menü öffnen. */
+.zettel-karte[data-ziehbar] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Die Karte, die gerade gezogen wird: sichtbar angehoben. */
+.zettel-karte.zettel-zieht {
+  position: relative;
+  z-index: 5;
+  transform: scale(1.025);
+  border-color: var(--akzent);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+  transition: transform .12s, box-shadow .12s;
+  cursor: grabbing;
+}
+.zettel-liste-zieht .zettel-karte:not(.zettel-zieht) { opacity: .85; }
+
+.zettel-tipp { text-align: center; font-size: 12px; color: var(--schrift-leise); margin: 6px 0 18px; }
+
+.zettel-haken-reihe { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+
+/* Der Einkaufszettel */
+.einkauf-karte { margin-bottom: 14px; }
+.zettel-nadel-marke { display: inline-flex; color: var(--akzent); }
+.zettel-nadel-marke svg { width: 17px; height: 17px; }
+
+.einkauf-neu { display: flex; gap: 8px; margin: 2px 0 6px; }
+.einkauf-neu input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--linie);
+  border-radius: var(--rundung);
+  background: var(--flaeche);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 16px;   /* unter 16px zoomt iOS beim Antippen hinein */
+}
+.einkauf-neu input:focus { outline: none; border-color: var(--neu); }
+
+.einkauf-posten {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linie);
+}
+.einkauf-neu + #einkaufListe > .einkauf-posten:first-child { border-top: 0; }
+.einkauf-text { flex: 1; min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
+
+.einkauf-gekauft .einkauf-text { text-decoration: line-through; color: var(--schrift-leise); }
+.einkauf-gekauft .todo-haken {
+  background: var(--neu);
+  border-color: var(--neu);
+  color: #fff;
+}
+
+.einkauf-weg {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--schrift-leise);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.einkauf-weg:hover { background: var(--flaeche-gedaempft); color: var(--entfallen); }
+
+.einkauf-gekauft-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linie);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+.einkauf-gekauft-kopf + .einkauf-posten { border-top: 0; }
+/* Mit der Stecknadel hat der Kartenkopf drei Teile. Die Überschrift nimmt
+   den Platz, Uhrzeit und Nadel stehen rechts beisammen. */
+.zettel-karte-kopf .zettel-karte-titel { flex: 1 1 auto; }
