@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "b730fcda";
+const GEBAUTE_VERSION = "b375568a";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -467,10 +467,8 @@ function faecherBereichZeichnen() {
     <h3 class="melden-titel">Fächer</h3>
     <p class="filter-hinweis">
       ${belegt === faecher.length
-        ? `Alle ${faecher.length} Fächer stehen in deinem Plan.`
-        : `${belegt} von ${faecher.length} Fächern stehen in deinem Plan.
-           Die übrigen hast du abgewählt, meist Wahlpflichtfächer, die du
-           nicht belegst.`}
+        ? `Alle ${faecher.length} Fächer im Plan.`
+        : `${belegt} von ${faecher.length} Fächern im Plan.`}
     </p>
     <button type="button" class="knopf-schlicht" id="faecherOeffnen">Fächer auswählen</button>`;
 }
@@ -2277,9 +2275,6 @@ function notizFeldZeichnen(kennung, text, datum) {
   return `
     <div class="notiz-bearbeiten">
       <textarea id="notizFeld" class="notiz-feld" rows="2"
-                placeholder="${mitDatum
-                  ? "z. B. Bibliotheksbuch zurückgeben"
-                  : "z. B. heute online · Abgabe bis Freitag · fällt aus"}"
       >${sicher(text)}</textarea>
       <div class="notiz-felder">
         ${mitDatum
@@ -2465,7 +2460,7 @@ function erinnerungHinweisSetzen() {
 
   const vergangen = zeitpunkt < new Date().toISOString().slice(0, 16);
   hinweis.textContent = vergangen
-    ? "Dieser Zeitpunkt ist schon vorbei – es kommt keine Meldung mehr."
+    ? "Zeitpunkt schon vorbei."
     : "Meldet sich " + zeitpunktLesbar(zeitpunkt) + ".";
   hinweis.classList.toggle("erinnerung-vorbei", vergangen);
 }
@@ -3333,11 +3328,7 @@ function todosZeichnen() {
 
   if (alle.length === 0) {
     stuecke.push(`
-      <p class="leer-text">
-        Noch nichts eingetragen. Über <strong>+ Neues To-do</strong> legst du
-        etwas an, das an keiner Vorlesung hängt. Zu einer bestimmten
-        Vorlesung schreibst du im Plan über <strong>Bearbeiten</strong>.
-      </p>`);
+      <p class="leer-text">Keine To-dos.</p>`);
   } else if (offen.length === 0) {
     stuecke.push(`<p class="leer-text">Nichts offen. Alles abgehakt.</p>`);
   } else {
@@ -3547,8 +3538,7 @@ function aenderungenBereichZeichnen() {
     <h3 class="melden-titel">Änderungen am Stundenplan</h3>
     <p class="filter-hinweis">${anzahl === 0
       ? "Seit dem ersten Abruf hat sich nichts geändert."
-      : anzahl + (anzahl === 1 ? " Änderung" : " Änderungen")
-        + " seit dem ersten Abruf. Neue meldet die Übersicht mit einem Hinweis."}</p>
+      : anzahl + (anzahl === 1 ? " Änderung" : " Änderungen") + " seit dem ersten Abruf."}</p>
     ${anzahl ? `<button type="button" class="knopf-schlicht" id="verlaufOeffnen">Änderungen anzeigen</button>` : ""}`;
 }
 
@@ -4728,7 +4718,6 @@ function uniplanFensterZeichnen(meldung) {
         ${Object.keys(FEIERTAG_LAENDER).map(k => `<option value="${k}"${
           uniplan.land === k ? " selected" : ""}>${sicher(FEIERTAG_LAENDER[k])}</option>`).join("")}
       </select></label>
-    <p class="filter-hinweis">An Feiertagen und im Urlaub steht keine Arbeit im Kalender.</p>
 
     <h3 class="melden-titel up-abstand">Urlaub</h3>
     ${kommend.length ? kommend.map(u => `
@@ -4737,7 +4726,7 @@ function uniplanFensterZeichnen(meldung) {
           <span class="up-leise up-block">${datumMitJahr(u.von)}${u.bis !== u.von ? " – " + datumMitJahr(u.bis) : ""}
             · ${urlaubsTage(u)} ${urlaubsTage(u) === 1 ? "Arbeitstag" : "Arbeitstage"}</span></span>
         <button type="button" class="knopf-schlicht start-klein knopf-gefahr" data-urlaub-weg="${sicher(u.id)}">Löschen</button>
-      </div>`).join("") : `<p class="filter-hinweis">Noch kein Urlaub eingetragen.</p>`}
+      </div>`).join("") : `<p class="filter-hinweis">Kein Urlaub eingetragen.</p>`}
     ${vorbei ? `<p class="filter-hinweis">${vorbei} vergangene${vorbei === 1 ? "r" : ""} Urlaub${vorbei === 1 ? "" : "e"} ausgeblendet.</p>` : ""}
     <div class="up-urlaub-neu">
       <label class="form-feld"><span>Von</span><input type="date" id="urlaubVon"></label>
@@ -4906,7 +4895,7 @@ function zettelZeichnen() {
     bereich.innerHTML = filterBalken + `<p class="leer-text">${
       zettelSuche || zettelFilter
         ? "Dazu gibt es noch keine Notiz."
-        : "Noch keine Notizen. Tipp auf „+ Notiz“."
+        : "Keine Notizen."
     }</p>`;
     return;
   }
@@ -4955,8 +4944,7 @@ function zettelZeichnen() {
     + (rest.length ? `
         ${oben.length ? `<div class="zettel-abschnitt">Notizen</div>` : ""}
         <div class="zettel-gruppe" data-zettel-gruppe="rest">${rest.map(karte).join("")}</div>` : "")
-    + (ziehbar && liste.length > 1
-        ? `<p class="zettel-tipp">Zum Verschieben eine Notiz gedrückt halten und ziehen.</p>` : "");
+    ;
 }
 
 /* Der Einkaufszettel. Gezeichnet wird nur die Liste darunter, nie das
@@ -5190,11 +5178,9 @@ function zettelFensterZeichnen() {
   const teile = zettelTeile(offenerZettelText);
 
   inhalt.innerHTML = `
-    <input type="text" id="zettelTitel" class="zettel-titel"
-           placeholder="Überschrift" maxlength="120" autocomplete="off"
+    <input type="text" id="zettelTitel" class="zettel-titel" maxlength="120" autocomplete="off"
            value="${sicher(teile.titel)}">
     <textarea id="zettelFeld" class="zettel-feld" rows="9"
-              placeholder="Text …"
               >${sicher(teile.rest)}</textarea>
 
     <div class="zettel-haken-reihe">
@@ -5602,8 +5588,7 @@ function erinnerungsdienstZeichnen() {
       if (sekunden <= 900) {
         anzeige.className = "filter-hinweis";
         anzeige.textContent =
-          "Läuft. Zuletzt vor " + Math.round(sekunden / 60) + " Min. nachgeschaut. "
-          + "Erinnerungen kommen auf bis zu fünf Minuten genau.";
+          "Läuft. Zuletzt vor " + Math.round(sekunden / 60) + " Min. nachgeschaut.";
       } else {
         anzeige.className = "melden-hindernis";
         anzeige.textContent =
@@ -5632,10 +5617,6 @@ function themaZeichnen() {
 
   bereich.innerHTML = `
     <h3 class="melden-titel">Aussehen</h3>
-    <p class="filter-hinweis">
-      „Automatisch“ folgt der Einstellung deines Geräts – am iPhone also
-      auch der Zeitschaltung, falls du eine eingerichtet hast.
-    </p>
     <div class="schalter" role="group" aria-label="Aussehen">
       ${wahl.map(eintrag => `
         <button type="button" data-thema="${eintrag[0]}"
@@ -6001,23 +5982,13 @@ function geraeteZeichnen(meldung) {
 
   if (!Abgleich.code()) {
     bereich.innerHTML = `
-      <p class="filter-hinweis">
-        Notizen, To-dos und eigene Termine liegen bisher nur in diesem
-        Browser. Schalte den Abgleich ein, dann zeigen Handy und Laptop
-        dasselbe.
-      </p>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht knopf-betont" id="abgleichEin">
           Abgleich einschalten
         </button>
       </div>
-      <p class="filter-hinweis">
-        Auf einem anderen Gerät schon eingerichtet? Dann trag hier dessen
-        Code ein – die Einträge beider Geräte werden zusammengeführt, es geht
-        nichts verloren.
-      </p>
       <div class="code-eingabe">
-        <input type="text" id="codeFeld" placeholder="ABCDE-FGHJK-…"
+        <input type="text" id="codeFeld"
                autocapitalize="characters" autocomplete="off" spellcheck="false">
         <button type="button" class="knopf-schlicht" id="codeUebernehmen">Übernehmen</button>
       </div>
@@ -6029,10 +6000,6 @@ function geraeteZeichnen(meldung) {
   bereich.innerHTML = `
     <p class="abgleich-stand abgleich-${stand.stand}">${sicher(stand.text)}</p>
 
-    <p class="filter-hinweis">
-      Dein Code. Trag ihn auf jedem weiteren Gerät einmal ein, oder schick dir
-      den Link – ein Tippen darauf richtet das Gerät ein.
-    </p>
     <div class="code-anzeige">${sicher(Abgleich.codeLesbar(Abgleich.code()))}</div>
 
     <div class="filter-knoepfe">
@@ -6044,15 +6011,6 @@ function geraeteZeichnen(meldung) {
 
     <div class="kalender-abo">
       <h3 class="melden-titel">Apple Kalender</h3>
-      <p class="filter-hinweis">
-        <strong>Alles in einem Kalender:</strong> der Stundenplan der HWR,
-        deine eigenen Termine und die offenen To-dos. Einmal abonniert,
-        holt sich die Kalender App auch Raumwechsel und Ausfälle von selbst.
-      </p>
-      <p class="filter-hinweis">
-        Hast du den HWR-Kalender schon separat abonniert, entferne das alte
-        Abo – sonst steht jede Vorlesung doppelt drin.
-      </p>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht" id="kalenderAbo">
           Abo-Adresse kopieren
@@ -6060,18 +6018,8 @@ function geraeteZeichnen(meldung) {
         <a class="knopf-schlicht knopf-betont" id="kalenderOeffnen"
            href="${sicher(kalenderAdresse("webcal"))}">In Kalender öffnen</a>
       </div>
-      <p class="filter-hinweis">
-        Es geht nur in eine Richtung: von hier in den Kalender. Was du in
-        der Kalender App einträgst, kommt nicht zurück – dafür bräuchte ich
-        dein iCloud-Passwort, und das nehme ich nicht an.
-      </p>
     </div>
 
-    <p class="filter-hinweis geraete-warnung">
-      Bewahr den Code auf, etwa im Passwortspeicher. Wer ihn hat, sieht deine
-      Notizen – und ohne ihn kommst du an die abgelegten Einträge nicht mehr
-      heran, falls dieser Browser einmal geleert wird.
-    </p>
     <div class="filter-knoepfe">
       <button type="button" class="knopf-schlicht knopf-gefahr" id="abgleichAus">
         Abgleich ausschalten
@@ -6099,10 +6047,6 @@ function meldenZeichnen(meldung) {
   const grund = Melden.hindernis();
   if (grund) {
     bereich.innerHTML = rahmen(`
-      <p class="filter-hinweis">
-        Wenn sich am Stundenplan etwas ändert – Ausfall, Raumwechsel,
-        verschobene Zeit –, meldet sich die App von selbst.
-      </p>
       <p class="melden-hindernis">${sicher(grund)}</p>`);
     return;
   }
@@ -6112,11 +6056,6 @@ function meldenZeichnen(meldung) {
   Melden.angemeldet().then(async an => {
     if (!an) {
       bereich.innerHTML = rahmen(`
-        <p class="filter-hinweis">
-          Wenn sich am Stundenplan etwas ändert – Ausfall, Raumwechsel,
-          verschobene Zeit –, meldet sich die App von selbst. Ohne dass du
-          nachsehen musst.
-        </p>
         <div class="filter-knoepfe">
           <button type="button" class="knopf-schlicht knopf-betont" id="meldenEin">
             Benachrichtigungen einschalten
@@ -6129,10 +6068,6 @@ function meldenZeichnen(meldung) {
     bereich.innerHTML = rahmen(`
       <p class="abgleich-stand abgleich-gut">
         Eingeschaltet auf diesem Gerät${anzahl > 1 ? ` · ${anzahl} Geräte insgesamt` : ""}
-      </p>
-      <p class="filter-hinweis">
-        Schick dir eine Probe, damit du weißt, dass die Kette wirklich
-        funktioniert – und nicht erst beim nächsten echten Ausfall.
       </p>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht" id="meldenProbe">Probe schicken</button>
@@ -6267,7 +6202,7 @@ function formErinnerungHinweisSetzen() {
 
   const vergangen = zeitpunkt < new Date().toISOString().slice(0, 16);
   hinweis.textContent = vergangen
-    ? "Dieser Zeitpunkt ist schon vorbei – es kommt keine Meldung mehr."
+    ? "Zeitpunkt schon vorbei."
     : "Meldet sich " + zeitpunktLesbar(zeitpunkt) + ".";
   hinweis.classList.toggle("erinnerung-vorbei", vergangen);
 }
@@ -6352,18 +6287,6 @@ function terminFormVerbinden() {
   });
 }
 
-/* Der stille Hinweis im To-do-Bereich, solange nichts eingerichtet ist.
-   Steht dort und nicht im Kopf, weil er nur die To-dos betrifft. */
-function abgleichHinweisZeichnen() {
-  const zeile = document.getElementById("abgleichHinweis");
-  if (!zeile) return;
-  const aus = !Abgleich.code();
-  zeile.hidden = !aus;
-  if (aus) {
-    zeile.innerHTML = `Diese Einträge gelten nur auf diesem Gerät.
-      <button type="button" class="knopf-verweis" id="abgleichHinweisKnopf">Abgleich einrichten</button>`;
-  }
-}
 
 /* Ein Code in der Adresse (…#code=ABCDE…) richtet das Gerät ein.
 
@@ -6428,7 +6351,6 @@ function geraeteVerbinden() {
       Abgleich.codeSetzen(Abgleich.codeErzeugen());
       geraeteZeichnen("Eingerichtet. Deine Einträge werden gerade hochgeladen.");
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
-      abgleichHinweisZeichnen();
       meldenZeichnen();
       return;
     }
@@ -6441,7 +6363,6 @@ function geraeteVerbinden() {
       }
       geraeteZeichnen("Übernommen. Wird zusammengeführt …");
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
-      abgleichHinweisZeichnen();
       meldenZeichnen();
       return;
     }
@@ -6481,7 +6402,6 @@ function geraeteVerbinden() {
                    + "Ablage. Sie werden nur nicht mehr abgeglichen.")) return;
       Abgleich.codeLoeschen();
       geraeteZeichnen();
-      abgleichHinweisZeichnen();
       meldenZeichnen();
       return;
     }
@@ -6543,16 +6463,6 @@ function geraeteVerbinden() {
     Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
   });
 
-  // Der Verweis aus dem To-do-Bereich öffnet dasselbe Fenster.
-  document.getElementById("todoInhalt").addEventListener("click", ereignis => {
-    if (ereignis.target && ereignis.target.id === "abgleichHinweisKnopf") oeffnen();
-  });
-  const hinweisZeile = document.getElementById("abgleichHinweis");
-  if (hinweisZeile) {
-    hinweisZeile.addEventListener("click", ereignis => {
-      if (ereignis.target && ereignis.target.id === "abgleichHinweisKnopf") oeffnen();
-    });
-  }
 }
 
 
@@ -6571,7 +6481,6 @@ function allesZeichnen() {
   todosZeichnen();
   verlaufZeichnen();
   reiterZahlenSetzen();
-  abgleichHinweisZeichnen();
 }
 
 /* Wechselt den Bereich. Die drei Abschnitte liegen alle in der Seite und

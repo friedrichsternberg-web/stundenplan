@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=b730fcda">
+<link rel="stylesheet" href="style.css?v=b375568a">
 </head>
 <body>
 
@@ -165,7 +165,7 @@
         <button type="button" class="knopf-schlicht start-klein knopf-betont" id="zettelNeu">+ Notiz</button>
       </div>
       <div class="start-karte-inhalt zettel-leiste">
-        <input type="search" id="zettelSuchfeld" placeholder="Notizen durchsuchen …"
+        <input type="search" id="zettelSuchfeld"
                autocomplete="off" autocorrect="off" spellcheck="false">
       </div>
     </section>
@@ -189,7 +189,7 @@
       </div>
       <div class="start-karte-inhalt">
         <form class="einkauf-neu" id="einkaufForm" autocomplete="off">
-          <input type="text" id="einkaufFeld" placeholder="Was brauchst du? z. B. Milch"
+          <input type="text" id="einkaufFeld"
                  maxlength="120" enterkeyhint="done" autocorrect="on">
           <button type="submit" class="knopf-schlicht knopf-betont start-klein">Hinzufügen</button>
         </form>
@@ -202,8 +202,6 @@
 
   <!-- ================= Bereich 3: To-dos ================= -->
   <section id="seiteTodos" hidden>
-    <!-- Sichtbar nur, solange der Abgleich nicht eingerichtet ist. -->
-    <p class="abgleich-hinweis" id="abgleichHinweis" hidden></p>
     <div id="todoInhalt"></div>
   </section>
 
@@ -234,8 +232,7 @@
     <form id="terminForm" class="termin-form">
       <label class="form-feld">
         <span>Was?</span>
-        <input type="text" id="formTitel" required maxlength="120"
-               placeholder="Zahnarzt, Geburtstag, Schicht …" autocomplete="off">
+        <input type="text" id="formTitel" required maxlength="120" autocomplete="off">
       </label>
 
       <label class="form-haken">
@@ -261,12 +258,12 @@
       </div>
 
       <label class="form-feld">
-        <span>Wo? <em>(freiwillig)</em></span>
+        <span>Wo?</span>
         <input type="text" id="formOrt" maxlength="120" autocomplete="off">
       </label>
 
       <label class="form-feld">
-        <span>Notiz <em>(freiwillig)</em></span>
+        <span>Notiz</span>
         <textarea id="formNotiz" rows="2" maxlength="500"></textarea>
       </label>
 
@@ -317,7 +314,6 @@
       <button type="button" class="knopf-schlicht" id="verweisSchliessen">Fertig</button>
     </div>
     <input type="search" id="verweisSuchfeld" class="verweis-suche"
-           placeholder="Modul, Termin oder Notiz suchen …"
            autocomplete="off" autocorrect="off" spellcheck="false">
     <div id="verweisListe"></div>
   </div>
@@ -370,10 +366,6 @@
       <h2>Welche Fächer besuchst du?</h2>
       <button type="button" class="knopf-schlicht" id="filterSchliessen">Fertig</button>
     </div>
-    <p class="filter-hinweis">
-      Der Plan enthält alle Wahlpflichtfächer des Semesters. Nimm die heraus,
-      die du nicht belegst – die Auswahl bleibt in diesem Browser gespeichert.
-    </p>
     <div class="filter-knoepfe">
       <button type="button" class="knopf-schlicht" id="filterAlle">Alle auswählen</button>
       <button type="button" class="knopf-schlicht" id="filterKeine">Alle abwählen</button>
@@ -390,9 +382,6 @@
       <h2>Änderungen am Stundenplan</h2>
       <button type="button" class="knopf-schlicht" id="verlaufSchliessen">Fertig</button>
     </div>
-    <p class="filter-hinweis">
-      Was sich seit dem ersten Abruf am Plan geändert hat, das Neueste oben.
-    </p>
     <div id="verlauf"></div>
   </div>
 </div>
@@ -412,12 +401,12 @@
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=b730fcda"></script>
-<script src="melden.js?v=b730fcda"></script>
+<script src="sync.js?v=b375568a"></script>
+<script src="melden.js?v=b375568a"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=b730fcda"></script>
+<script src="app.js?v=b375568a"></script>
 
 </body>
 </html>
