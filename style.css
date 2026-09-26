@@ -3147,7 +3147,6 @@ a.knopf-schlicht {
 }
 .zettel-liste-zieht .zettel-karte:not(.zettel-zieht) { opacity: .85; }
 
-.zettel-tipp { text-align: center; font-size: 12px; color: var(--schrift-leise); margin: 6px 0 18px; }
 
 .zettel-haken-reihe { display: flex; flex-wrap: wrap; gap: 6px 20px; }
 
@@ -3219,3 +3218,28 @@ a.knopf-schlicht {
 /* Mit der Stecknadel hat der Kartenkopf drei Teile. Die Überschrift nimmt
    den Platz, Uhrzeit und Nadel stehen rechts beisammen. */
 .zettel-karte-kopf .zettel-karte-titel { flex: 1 1 auto; }
+
+
+/* --- Kein versehentliches Zoomen ------------------------------------------
+
+   Doppeltes Tippen zoomt auf dem iPhone sonst in die Seite hinein - bei
+   schnellem Abhaken zweier To-dos passiert das ständig. "manipulation"
+   schaltet genau das ab. Mit zwei Fingern aufziehen geht weiterhin, das
+   braucht man zum Lesen kleiner Schrift. Gilt über html für die ganze
+   Seite: der Wert wirkt auf alle Kinder mit. */
+html { touch-action: manipulation; }
+
+/* Der zweite Auslöser: ein Eingabefeld mit Schrift unter 16 Pixeln zoomt
+   beim Antippen von selbst hinein. Auf Touch-Geräten deshalb nie
+   kleiner - am Rechner mit Maus bleibt die feinere Größe. */
+@media (pointer: coarse) {
+  /* Genau die Felder, die beim Nachmessen am 26.09.2026 darunter lagen.
+     Nicht pauschal alle Felder: die Notiz-Überschrift ist mit 19 Pixeln
+     absichtlich größer und soll es bleiben. */
+  #zettelSuchfeld,
+  #verweisSuchfeld,
+  #zettelFeld,
+  #aufgabeErinnerung,
+  #formErinnerung,
+  #codeFeld { font-size: 16px; }
+}

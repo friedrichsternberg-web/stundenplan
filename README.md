@@ -22,6 +22,22 @@ An „To-dos" steht eine Zahl, sobald dort etwas offen ist. Einen Reiter
 abhaken. Die ganze Liste steht im ⚙-Fenster unter **Änderungen am
 Stundenplan**.
 
+## Ohne Erklärtexte, ohne Zoom-Versehen
+
+Seit dem 26.09.2026 stehen in der App keine Platzhalter in Eingabefeldern
+und keine Sätze mehr, die erklären, wie etwas geht. Was bleibt, sind
+Zustände („8 von 21 Fächern im Plan“, „Nichts offen.“, „Meldet sich
+Di 29.09., 18:00.“), Fehlermeldungen und die Hinweise aus dem
+Uni-Plan-PDF. Wer etwas ergänzt, hält sich bitte daran; die
+Erklärungen gehören in diese README.
+
+Zoomen: `touch-action: manipulation` am `html` schaltet das Zoomen durch
+doppeltes Tippen ab, Aufziehen mit zwei Fingern geht weiter. Außerdem
+zoomt iOS beim Antippen eines Eingabefelds mit weniger als 16 Pixeln
+Schrift von selbst hinein; die sechs Felder, die darunter lagen, sind auf
+Touch-Geräten jetzt 16 Pixel groß (Liste am Ende von `style.css`). Ein
+neues Eingabefeld also nie unter 16 Pixel setzen.
+
 ## Ein Stil für alle Bereiche
 
 Seit dem 24.09.2026 sehen alle Reiter aus wie die Übersicht: Karten mit
