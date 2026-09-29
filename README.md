@@ -192,6 +192,18 @@ merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
 
+Im **Kalender** öffnet ein Tippen auf einen Tag (oben im Kopf oder in der
+Ganztagszeile) das Tagesfenster. Darin steht genau die Karte, die die Liste
+für diesen Tag zeigt, mit allen Knöpfen: + To-do, + Termin, und an jedem
+Termin + Notiz und + To-do. Ein To-do im Kalender antippen öffnet es dort
+zum Bearbeiten. Beide Ansichten bauen die Tageskarte mit derselben Funktion
+`tagKarteBauen()`, damit sie nicht wieder auseinanderlaufen. Im
+Bearbeiten-Modus trägt jeder Tag im Kalender ein kleines Plus.
+
+In den Kalenderkästchen fehlt die Modulnummer („Schlüsselkompetenzen V“
+statt „34 - Schlüsselkompetenzen V“), sonst bliebe in den schmalen Spalten
+vom Namen nichts übrig.
+
 Im **Kalender** stehen immer alle sieben Tage, Samstag und Sonntag auch
 dann, wenn dort nichts eingetragen ist. In der **Liste** fehlen leere
 Wochenenden weiterhin, dort wären sie nur zwei Zeilen „Keine

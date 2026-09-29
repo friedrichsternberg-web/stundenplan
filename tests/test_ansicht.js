@@ -142,6 +142,8 @@ const werkzeug = eval(
   "  startAenderungen: startAenderungen," +
   "  ungesehen: ungeseheneAenderungen," +
   "  kurzerTitel: kurzerTitel," +
+  "  tagKarteBauen: tagKarteBauen," +
+  "  offeneNotizSetzen: function (w) { offeneNotiz = w; }," +
   "  uniplanSetzenTest: function (felder) { uniplan = uniplanGeraderuecken(Object.assign({}, uniplan, felder)); }," +
   "  arbeitsTermine: arbeitsTermine," +
   "  feiertagAm: feiertagAm," +
@@ -1144,6 +1146,38 @@ pruefe("und nichts Vergangenes", karte.indexOf("Studienarbeit") < 0 && karte.ind
 pruefe("keine kaputten Werte im Widget", !/undefined|NaN/.test(karte));
 pruefe("nach dem Studium kein Widget", werkzeug.uniplanStartKarte(new Date(2027, 9, 5)) === "");
 werkzeug.eigene([]);
+
+
+/* ====================================================================== */
+abschnitt("16. Kalender und Liste koennen dasselbe");
+
+const tag16 = {
+  datum: new Date(2026, 9, 1), schluessel: "2026-10-01", istHeute: false, ganztags: [],
+  termine: [planTermin("t.k", "2026-10-01T09:45", "2026-10-01T11:15", "34 - Schluesselkompetenzen V")],
+  aufgaben: [{ id: "eigen-k", text: "Bibliothek", datum: "2026-10-01", erledigt: false, wichtig: false }],
+};
+werkzeug.bearbeiten(false);
+let kal = werkzeug.kalenderBauen([tag16]);
+pruefe("im Kalender oeffnet der Tagkopf das Tagesfenster", kal.indexOf('data-tag-oeffnen="2026-10-01"') >= 0);
+pruefe("ein To-do im Kalender oeffnet es zum Bearbeiten", kal.indexOf('data-tag-bearbeiten="eigen-k"') >= 0);
+pruefe("im schmalen Kalenderkasten fehlt die Modulnummer",
+       kal.indexOf(">Schluesselkompetenzen V<") >= 0 && kal.indexOf(">34 - Schluessel") < 0);
+
+// Das Tagesfenster zeigt die Knoepfe auch ohne Bearbeiten-Modus.
+let karte16 = werkzeug.tagKarteBauen(tag16, true);
+pruefe("die Tageskarte im Fenster hat + To-do und + Termin",
+       karte16.indexOf("data-aufgabe-neu") >= 0 && karte16.indexOf("data-termin-neu") >= 0);
+pruefe("und an jedem Termin + Notiz und + To-do",
+       karte16.indexOf("data-zettel-neu") >= 0 && karte16.indexOf('data-notiz-oeffnen="t.k"') >= 0);
+pruefe("ohne Fenster und ohne Bearbeiten keine Knoepfe",
+       werkzeug.tagKarteBauen(tag16, false).indexOf("data-aufgabe-neu") < 0);
+
+// Ein neues To-do fuer den Tag wird IN der Karte geschrieben.
+werkzeug.offeneNotizSetzen("neu:2026-10-01");
+karte16 = werkzeug.tagKarteBauen(tag16, true);
+pruefe("das Eingabefeld fuer ein neues To-do steht in der Tageskarte",
+       karte16.indexOf('id="notizFeld"') >= 0 && karte16.indexOf('data-notiz-speichern="neu:2026-10-01"') >= 0);
+werkzeug.offeneNotizSetzen(null);
 
 
 /* ====================================================================== */

@@ -1040,6 +1040,9 @@ function wocheZeichnen() {
     ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
 
   if (ansicht === "kalender") kalenderTexteAnpassen();
+
+  // Alles, was die Woche neu zeichnet, zeichnet auch das offene Tagesfenster.
+  if (tagesFensterSchluessel) tagesFensterZeichnen();
 }
 
 
@@ -1211,46 +1214,119 @@ function listeBauen(tage, heuteText) {
     }
   }
 
-  for (const eintrag of sichtbar) {
-    const tag = eintrag.datum;
-    const termineDesTages = eintrag.termine;
-    const istHeute = eintrag.istHeute;
-
-    const kopfZusatz = termineDesTages.length === 0
-      ? "frei"
-      : uhrzeit(termineDesTages[0].start) + "–"
-        + uhrzeit(termineDesTages[termineDesTages.length - 1].ende);
-
-    const klassen = "tag" + (istHeute ? " tag-heute" : "");
-
-    stuecke.push(`
-      <div class="${klassen}">
-        <div class="tag-kopf">
-          <span class="tag-kachel"><small>${WOCHENTAGE[tag.getDay()].slice(0, 2)}</small><strong>${tag.getDate()}</strong></span>
-          <span class="tag-kopf-titel">${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}
-            <span class="tag-kopf-zusatz">${kopfZusatz}${termineDesTages.length
-              ? " · " + termineDesTages.length + (termineDesTages.length === 1 ? " Termin" : " Termine") : ""}</span></span>
-        </div>
-        ${termineDesTages.length === 0
-          ? `<div class="tag-leer">Keine Veranstaltung.</div>`
-          : termineDesTages.map(terminZeichnen).join("")}
-        ${(eintrag.ganztags || []).map(ganztagsTerminZeichnen).join("")}
-        ${eintrag.aufgaben.map(freieAufgabeZeichnen).join("")}
-        ${bearbeitenModus
-          ? `<div class="tag-fuss">
-               <button type="button" class="notiz-neu"
-                       data-aufgabe-neu="${sicher(eintrag.schluessel)}">
-                 + To-do für diesen Tag
-               </button>
-               <button type="button" class="notiz-neu"
-                       data-termin-neu="${sicher(eintrag.schluessel)}">
-                 + Termin an diesem Tag
-               </button>
-             </div>`
-          : ""}
-      </div>`);
-  }
+  for (const eintrag of sichtbar) stuecke.push(tagKarteBauen(eintrag));
   return stuecke.join("");
+}
+
+/* Die Karte eines Tages: Kopf, Termine, Ganztägiges, To-dos, und im
+   Bearbeiten-Modus die Knöpfe zum Anlegen. Die Listenansicht zeigt sie
+   für jeden Tag, der Kalender im Tagesfenster (siehe tagesFensterZeigen).
+   Eine Funktion für beide, damit Liste und Kalender nicht auseinander-
+   laufen – was man in der einen kann, kann man in der anderen auch.
+
+   mitKnoepfen: die Knöpfe zeigen, auch wenn der Bearbeiten-Modus aus ist
+   (im Tagesfenster, das man ja genau dafür öffnet). */
+function tagKarteBauen(eintrag, mitKnoepfen) {
+  const tag = eintrag.datum;
+  const termineDesTages = eintrag.termine;
+  const istHeute = eintrag.istHeute;
+  const knoepfe = bearbeitenModus || Boolean(mitKnoepfen);
+
+  const kopfZusatz = termineDesTages.length === 0
+    ? "frei"
+    : uhrzeit(termineDesTages[0].start) + "–"
+      + uhrzeit(termineDesTages[termineDesTages.length - 1].ende);
+
+  // terminZeichnen() fragt den Bearbeiten-Modus selbst ab. Für das
+  // Tagesfenster gilt er als an, solange die Karte gebaut wird.
+  const vorher = bearbeitenModus;
+  bearbeitenModus = knoepfe;
+  const termine = termineDesTages.map(terminZeichnen).join("");
+  bearbeitenModus = vorher;
+
+  /* Ein neues To-do für genau diesen Tag wird hier geschrieben, in der
+     Karte selbst. Früher entstand das Feld dafür nur im Reiter To-dos -
+     aus dem Plan heraus tippte man "+ To-do für diesen Tag" und sah
+     nichts. */
+  const neuesTodo = offeneNotiz === "neu:" + eintrag.schluessel
+    ? `<div class="termin termin-aufgabe">${notizFeldZeichnen(offeneNotiz, "", eintrag.schluessel)}</div>`
+    : "";
+
+  return `
+    <div class="tag${istHeute ? " tag-heute" : ""}">
+      <div class="tag-kopf">
+        <span class="tag-kachel"><small>${WOCHENTAGE[tag.getDay()].slice(0, 2)}</small><strong>${tag.getDate()}</strong></span>
+        <span class="tag-kopf-titel">${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}
+          <span class="tag-kopf-zusatz">${kopfZusatz}${termineDesTages.length
+            ? " · " + termineDesTages.length + (termineDesTages.length === 1 ? " Termin" : " Termine") : ""}</span></span>
+      </div>
+      ${termineDesTages.length === 0 ? `<div class="tag-leer">Keine Veranstaltung.</div>` : termine}
+      ${(eintrag.ganztags || []).map(ganztagsTerminZeichnen).join("")}
+      ${eintrag.aufgaben.map(freieAufgabeZeichnen).join("")}
+      ${neuesTodo}
+      ${knoepfe && !neuesTodo
+        ? `<div class="tag-fuss">
+             <button type="button" class="notiz-neu"
+                     data-aufgabe-neu="${sicher(eintrag.schluessel)}">
+               + To-do für diesen Tag
+             </button>
+             <button type="button" class="notiz-neu"
+                     data-termin-neu="${sicher(eintrag.schluessel)}">
+               + Termin an diesem Tag
+             </button>
+           </div>`
+        : ""}
+    </div>`;
+}
+
+/* Alles, was an einem Tag steht, in der Form, die tagKarteBauen() und
+   kalenderBauen() erwarten. */
+function tagEintragBauen(datum) {
+  const schluessel = tagesSchluessel(datum);
+  return {
+    datum: datum,
+    schluessel: schluessel,
+    termine: alleAngezeigtenTermine().filter(t => tagesSchluessel(t.start) === schluessel),
+    aufgaben: aufgabenFuerTag(schluessel),
+    ganztags: ganztagsTermineFuerTag(schluessel),
+    istHeute: schluessel === tagesSchluessel(new Date()),
+  };
+}
+
+
+/* --- Das Tagesfenster (Kalenderansicht) ---------------------------------
+
+   Im Kalender ist in den schmalen Spalten kein Platz für Knöpfe und
+   Eingabefelder. Ein Tippen auf den Tag oben öffnet deshalb ein Fenster
+   mit genau der Karte, die die Listenansicht für diesen Tag zeigt – mit
+   allen Knöpfen. Ein Tippen auf ein To-do im Kalender öffnet dasselbe
+   Fenster, mit dem To-do gleich zum Bearbeiten. */
+let tagesFensterSchluessel = "";
+
+function tagesFensterZeigen(schluessel, zuBearbeiten) {
+  tagesFensterSchluessel = schluessel;
+  offeneNotiz = zuBearbeiten || null;
+  tagesFensterZeichnen();
+  const fenster = document.getElementById("tagHintergrund");
+  if (fenster) fenster.hidden = false;
+  if (zuBearbeiten) notizfeldAktivieren();
+}
+
+function tagesFensterZeichnen() {
+  const inhalt = document.getElementById("tagInhalt");
+  if (!inhalt || !tagesFensterSchluessel) return;
+  const datum = alsDatum(tagesFensterSchluessel + "T12:00");
+  const titel = document.getElementById("tagFensterTitel");
+  if (titel) titel.textContent = WOCHENTAGE[datum.getDay()] + ", " + datumKurz(datum);
+  inhalt.innerHTML = tagKarteBauen(tagEintragBauen(datum), true);
+}
+
+function tagesFensterSchliessen() {
+  const fenster = document.getElementById("tagHintergrund");
+  if (fenster) fenster.hidden = true;
+  tagesFensterSchluessel = "";
+  // Ein halb offenes Eingabefeld darf nicht in der Liste weiterleben.
+  if (offeneNotiz) { offeneNotiz = null; wocheZeichnen(); todosZeichnen(); }
 }
 
 function terminZeichnen(termin) {
@@ -2500,9 +2576,17 @@ function notizKlick(ereignis) {
                               + "[data-todo-haken],[data-aufgabe-neu],[data-termin],"
                               + "[data-termin-neu],[data-termin-bearbeiten],"
                               + "[data-zettel-neu],[data-zettel-oeffnen],"
-                              + "[data-datum-schnell],[data-vergangene-umschalten]")
+                              + "[data-datum-schnell],[data-vergangene-umschalten],"
+                              + "[data-tag-oeffnen]")
     : null;
   if (!ziel) return;
+
+  // Kalender: Tag oder To-do angetippt – das Tagesfenster öffnen.
+  const tagOeffnen = ziel.getAttribute("data-tag-oeffnen");
+  if (tagOeffnen) {
+    tagesFensterZeigen(tagOeffnen, ziel.getAttribute("data-tag-bearbeiten"));
+    return;
+  }
 
   // Vergangene Tage der laufenden Woche auf- oder zuklappen.
   const woche = ziel.getAttribute("data-vergangene-umschalten");
@@ -2762,7 +2846,9 @@ function kalenderBauen(tage) {
   const jetztOben = (jetztMinute - startMinute) * proMinute;
 
   const kopfSpalten = tage.map(eintrag => `
-    <div class="kalender-tagkopf ${eintrag.istHeute ? "kalender-tagkopf-heute" : ""}">
+    <div class="kalender-tagkopf ${eintrag.istHeute ? "kalender-tagkopf-heute" : ""}"
+         data-tag-oeffnen="${sicher(eintrag.schluessel)}" role="button" tabindex="0">
+      ${bearbeitenModus ? `<span class="kalender-tag-plus" aria-hidden="true">+</span>` : ""}
       <div class="kalender-tagname">${WOCHENTAGE[eintrag.datum.getDay()].slice(0, 2)}</div>
       <div class="kalender-tagzahl">${String(eintrag.datum.getDate()).padStart(2, "0")}.${String(eintrag.datum.getMonth() + 1).padStart(2, "0")}.</div>
     </div>`).join("");
@@ -2777,9 +2863,10 @@ function kalenderBauen(tage) {
     eintrag => eintrag.aufgaben.length > 0 || (eintrag.ganztags || []).length > 0);
 
   const ganztagsZeile = !gibtAufgaben ? "" : `
-    <div class="kalender-ganztag-ecke">Ganztags</div>
+    <div class="kalender-ganztag-ecke">Ganz&shy;tags</div>
     ${tage.map(eintrag => `
-      <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}">
+      <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}"
+           data-tag-oeffnen="${sicher(eintrag.schluessel)}">
         ${(eintrag.ganztags || []).map(termin => {
           /* Ort und Notiz standen bisher nur im Bearbeiten-Fenster. Ein
              ganztaegiger Termin hat aber keine Uhrzeit, die ihn erklaert -
@@ -2803,7 +2890,8 @@ function kalenderBauen(tage) {
             + (aufgabe.erledigt ? " kalender-aufgabe-erledigt" : "")
             + (aufgabe.wichtig && !aufgabe.erledigt ? " kalender-aufgabe-wichtig" : "");
           return `
-            <div class="${klassen}" data-notiz-oeffnen="${sicher(aufgabe.id)}"
+            <div class="${klassen}" data-tag-oeffnen="${sicher(eintrag.schluessel)}"
+                 data-tag-bearbeiten="${sicher(aufgabe.id)}"
                  title="${sicher(aufgabe.text)}">
               ${aufgabe.wichtig ? "★ " : ""}${aufgabe.erledigt ? "✓ " : ""}${sicher(aufgabe.text)}
             </div>`;
@@ -2891,7 +2979,7 @@ function kalenderBauen(tage) {
                   istWichtig(termin.id) ? "★" : "✎"}</span>`
               : ""}</div>
           <div class="kalender-termin-titel"
-               style="-webkit-line-clamp:${titelZeilen}">${sicher(termin.titel)}</div>
+               style="-webkit-line-clamp:${titelZeilen}">${sicher(kurzerTitel(termin.titel))}</div>
           ${knapp ? "" : `
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
             ${hwrHinweis ? `<div class="kalender-termin-zeile"><strong>${sicher(hwrHinweis)}</strong></div>` : ""}`}
@@ -3306,15 +3394,18 @@ function todosZeichnen() {
     unterzeile: [offen.length + " offen",
                  faecher.ueberfaellig.length ? faecher.ueberfaellig.length + " überfällig" : "",
                  erledigt.length ? erledigt.length + " erledigt" : ""].filter(Boolean).join(" · "),
-    rechts: offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
+    rechts: seite === "todos" && offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
       <button type="button" class="knopf-schlicht start-klein"
               data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">+ Neues To-do</button>`,
     inhalt: kopfInhalt,
     klasse: "bereich-kopf",
   }));
 
-  // Wird gerade eine neue Aufgabe geschrieben, steht das Feld gleich darunter.
-  if (offeneNotiz && offeneNotiz.indexOf("neu:") === 0) {
+  /* Wird gerade eine neue Aufgabe geschrieben, steht das Feld gleich
+     darunter – aber nur, wenn man im Reiter To-dos ist. Sonst gäbe es das
+     Feld zweimal (hier versteckt, und im Plan sichtbar), und das Speichern
+     läse womöglich das versteckte. */
+  if (seite === "todos" && offeneNotiz && offeneNotiz.indexOf("neu:") === 0) {
     stuecke.push(`
       <div class="todo todo-offen-bearbeiten todo-einzeln">
         ${notizFeldZeichnen(offeneNotiz, "", offeneNotiz.slice(4))}
@@ -3415,7 +3506,8 @@ function aufgabeZeichnen(aufgabe, fach) {
   const markeZeigen = vorbei && fach !== "ueberfaellig";
 
   // Wird der Eintrag gerade bearbeitet, steht hier das Textfeld statt der Zeile.
-  if (offeneNotiz === aufgabe.kennung) {
+  // Nur im Reiter To-dos selbst – siehe todosZeichnen().
+  if (offeneNotiz === aufgabe.kennung && seite === "todos") {
     return `
       <div class="todo todo-offen-bearbeiten">
         <div class="todo-wann">${sicher(wann)}</div>
@@ -6789,6 +6881,16 @@ function knoepfeVerbinden() {
   // Alle Notiz-Knöpfe laufen über diesen einen Zuhörer, siehe notizKlick().
   // Er hängt an beiden Bereichen, in denen Notizen vorkommen.
   document.getElementById("tage").addEventListener("click", notizKlick);
+
+  // Das Tagesfenster des Kalenders: dieselben Knöpfe wie die Liste.
+  const tagFenster = document.getElementById("tagHintergrund");
+  if (tagFenster) {
+    document.getElementById("tagInhalt").addEventListener("click", notizKlick);
+    document.getElementById("tagSchliessen").addEventListener("click", tagesFensterSchliessen);
+    tagFenster.addEventListener("click", ereignis => {
+      if (ereignis.target === tagFenster) tagesFensterSchliessen();
+    });
+  }
   document.getElementById("todoInhalt").addEventListener("click", notizKlick);
   document.getElementById("seiteStart").addEventListener("click", startKlick);
   const trainingBereich = document.getElementById("seiteTraining");

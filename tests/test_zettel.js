@@ -440,7 +440,7 @@ function terminTag() {
 
 werkzeug.setzen({});
 werkzeug.bearbeiten(true);
-let liste = werkzeug.listeBauen(terminTag());
+let liste = werkzeug.listeBauen(terminTag(), "2026-09-28");
 
 pruefe("der Notizbuch-Knopf verweist auf den Termin",
        liste.indexOf('data-zettel-neu="termin:sked.a1"') >= 0);
@@ -459,7 +459,7 @@ pruefe("die beiden Knoepfe zeigen NICHT auf dasselbe",
 
 // Ohne Bearbeiten-Modus steht dort nichts - sonst waere die Liste unlesbar.
 werkzeug.bearbeiten(false);
-liste = werkzeug.listeBauen(terminTag());
+liste = werkzeug.listeBauen(terminTag(), "2026-09-28");
 pruefe("ohne Bearbeiten-Modus steht dort kein Knopf",
        liste.indexOf("+ Notiz") < 0 && liste.indexOf("+ To-do") < 0);
 
@@ -472,7 +472,7 @@ werkzeug.setzen({ zettel: [
   { id: "zettel-modul", text: "Gilt fuers ganze Modul",
     verweise: ["fach:34 - Schluesselkompetenzen V"], wichtig: false, geaendert: 2 },
 ]});
-liste = werkzeug.listeBauen(terminTag());
+liste = werkzeug.listeBauen(terminTag(), "2026-09-28");
 
 pruefe("die Notiz an diesem Termin steht in der Liste",
        liste.indexOf("Klausurthemen") >= 0);

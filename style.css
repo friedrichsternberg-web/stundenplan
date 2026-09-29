@@ -1445,8 +1445,11 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
      Dafür darf keine Mindestbreite mehr gelten: die fünf Tage teilen sich
      einfach, was da ist (bei 390 px Gerätebreite rund 72 px je Tag).
      Die Stundenhöhe wird passend dazu in app.js kleiner gewählt. */
+  /* 36 statt 30 px: "08:00" setzt das iPhone breiter, als die Rechnung
+     mit 9 px Schrift ergab - bei 30 px war die erste Ziffer abgeschnitten
+     (gesehen am 29.09.2026). */
   :root {
-    --zeitspalte: 30px;
+    --zeitspalte: 36px;
     --tagspalte: 0px;
   }
 
@@ -1470,7 +1473,19 @@ h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
   .kalender-tagname { font-size: 9px; }
   .kalender-tagzahl { font-size: 12px; }
 
-  .kalender-stunde { font-size: 9px; right: 4px; }
+  .kalender-stunde { font-size: 9px; right: 3px; }
+
+  /* "Ganztags" passt einzeilig nicht in die Zeitspalte und ragte in den
+     Montag hinein. Zweizeilig, getrennt an der Stelle im HTML. */
+  .kalender-ganztag-ecke {
+    font-size: 8px;
+    line-height: 1.15;
+    padding: 4px 2px;
+    text-align: center;
+    -webkit-hyphens: manual;
+    hyphens: manual;
+    overflow: hidden;
+  }
 
   /* Apple empfiehlt mindestens 44 Punkt Kantenlänge für alles, was mit dem
      Finger getroffen werden soll. Am Mausrand darf es kleiner sein, mit dem
@@ -3225,9 +3240,14 @@ a.knopf-schlicht {
    Doppeltes Tippen zoomt auf dem iPhone sonst in die Seite hinein - bei
    schnellem Abhaken zweier To-dos passiert das ständig. "manipulation"
    schaltet genau das ab. Mit zwei Fingern aufziehen geht weiterhin, das
-   braucht man zum Lesen kleiner Schrift. Gilt über html für die ganze
-   Seite: der Wert wirkt auf alle Kinder mit. */
-html { touch-action: manipulation; }
+   braucht man zum Lesen kleiner Schrift.
+
+   Am 26.09.2026 stand das nur am html - laut Regelwerk wirkt es damit auf
+   alle Kinder, das iPhone hat trotzdem weiter gezoomt. Deshalb an jedem
+   Element, und zusätzlich maximum-scale=1 im viewport von index.html:
+   das hält Safari von jedem selbsttätigen Zoom ab, das Aufziehen mit
+   zwei Fingern erlaubt iOS trotzdem. */
+html, body, * { touch-action: manipulation; }
 
 /* Der zweite Auslöser: ein Eingabefeld mit Schrift unter 16 Pixeln zoomt
    beim Antippen von selbst hinein. Auf Touch-Geräten deshalb nie
@@ -3243,3 +3263,36 @@ html { touch-action: manipulation; }
   #formErinnerung,
   #codeFeld { font-size: 16px; }
 }
+
+
+/* --- Kalender: ein Tag lässt sich antippen -------------------------------- */
+
+.kalender-tagkopf[data-tag-oeffnen],
+.kalender-ganztag[data-tag-oeffnen] { cursor: pointer; }
+.kalender-tagkopf:active { filter: brightness(.96); }
+
+/* Im Bearbeiten-Modus ein Plus am Tag, als Zeichen, dass man dort etwas
+   anlegen kann. */
+.kalender-tag-plus {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.kalender-tagkopf-heute .kalender-tag-plus { background: var(--akzent-schrift); color: var(--akzent); }
+
+/* Das Tagesfenster zeigt die Karte aus der Liste - ohne eigenen Rahmen,
+   das Fenster ist schon einer. */
+#tagInhalt .tag { box-shadow: none; margin-bottom: 0; }
+/* Das Datum steht schon im Fensterkopf. */
+#tagInhalt .tag-kopf { display: none; }
+#tagInhalt .tag-kopf + .termin,
+#tagInhalt .tag-kopf + .tag-leer { border-top: 0; }
