@@ -3059,20 +3059,25 @@ function terminFensterZeigen(kennung) {
         <dd>${sicher(zeile[1])}</dd>`).join("")}
     </dl>
     ${notizText(kennung) ? `
-      <div class="termin-notiz">
-        <div class="termin-notiz-kopf">${istWichtig(kennung) ? "★" : "✎"} Kurznotiz</div>
-        ${sicher(notizText(kennung))}
+      <div class="termin-notiz termin-todo${notizErledigt(kennung) ? " termin-todo-erledigt" : ""}">
+        <button type="button" class="todo-haken" data-todo-haken="${sicher(kennung)}"
+                aria-label="${notizErledigt(kennung) ? "Wieder öffnen" : "Als erledigt abhaken"}">${
+          notizErledigt(kennung) ? "✓" : ""}</button>
+        <div>
+          <div class="termin-notiz-kopf">${istWichtig(kennung) ? "★ " : ""}To-do</div>
+          <div class="termin-todo-text">${sicher(notizText(kennung))}</div>
+        </div>
       </div>` : ""}
     ${terminZettelZeichnen(termin, kennung)}
     <div class="filter-knoepfe">
+      <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
+        ${notizText(kennung) ? "To-do bearbeiten" : "+ To-do"}
+      </button>
       ${termin.eigen ? `
         <button type="button" class="knopf-schlicht knopf-betont"
                 data-termin-bearbeiten="${sicher(kennung)}">
           Termin ändern
-        </button>` : `
-        <button type="button" class="knopf-schlicht" data-notiz-bearbeiten="${sicher(kennung)}">
-          ${notizText(kennung) ? "Kurznotiz bearbeiten" : "Kurznotiz hinzufügen"}
-        </button>`}
+        </button>` : ""}
     </div>`;
 
   fenster.hidden = false;
@@ -3107,7 +3112,7 @@ function terminZettelZeichnen(termin, kennung) {
     <div class="termin-zettel-knoepfe">
       <button type="button" class="knopf-schlicht"
               data-zettel-neu="termin:${sicher(kennung)}">
-        + Notiz zu diesem Termin
+        + Notiz
       </button>
       ${fach ? `
         <button type="button" class="knopf-schlicht"
@@ -3138,28 +3143,6 @@ function terminZettelZeichnen(termin, kennung) {
 }
 
 
-/* Vom Detailfenster aus zur Notiz springen.
-
-   Statt das Textfeld hier noch einmal zu bauen, führt der Weg zurück in die
-   Liste: dort steckt die Bearbeitung schon, samt Speichern, Löschen und
-   Wichtig-Haken. Zwei Textfelder für dieselbe Sache wären zwei Stellen, an
-   denen sich später ein Unterschied einschleicht. */
-function zurNotizSpringen(kennung) {
-  const fenster = document.getElementById("terminHintergrund");
-  if (fenster) fenster.hidden = true;
-
-  offeneNotiz = kennung;
-  if (!bearbeitenModus) bearbeitenUmschalten();
-  ansichtSetzen("liste");
-  notizfeldAktivieren();
-
-  // Ohne das steht das Feld womöglich außerhalb des Sichtfelds, und es
-  // sieht aus, als wäre nichts passiert.
-  const feld = document.getElementById("notizFeld");
-  if (feld && feld.scrollIntoView) {
-    feld.scrollIntoView({ block: "center" });
-  }
-}
 
 
 /* -------------------------------------------------------------------------
@@ -7048,8 +7031,17 @@ function knoepfeVerbinden() {
       const ziel = ereignis.target.closest
         ? ereignis.target.closest("[data-notiz-bearbeiten],[data-termin-bearbeiten],"
                                   + "[data-zettel-oeffnen],[data-zettel-neu],"
-                                  + "[data-zettel-fach]") : null;
+                                  + "[data-zettel-fach],[data-todo-haken]") : null;
       if (!ziel) return;
+
+      // Das To-do am Termin abhaken, ohne das Fenster zu verlassen.
+      const zuHaken = ziel.getAttribute("data-todo-haken");
+      if (zuHaken) {
+        erledigtUmschalten(zuHaken);
+        allesZeichnen();
+        terminFensterZeigen(zuHaken);
+        return;
+      }
 
       // Eine verknüpfte Notiz öffnen.
       const zuOeffnen = ziel.getAttribute("data-zettel-oeffnen");
@@ -7081,7 +7073,13 @@ function knoepfeVerbinden() {
         terminFormularZeigen(eigener);
         return;
       }
-      zurNotizSpringen(ziel.getAttribute("data-notiz-bearbeiten"));
+      /* To-do anlegen oder ändern: im Tagesfenster, am Termin selbst –
+         genau wie in der Listenansicht. Früher sprang dieser Knopf in die
+         Listenansicht und warf einen aus dem Kalender. */
+      const zuBearbeiten = ziel.getAttribute("data-notiz-bearbeiten");
+      const termin = terminZuKennung(zuBearbeiten);
+      terminFenster.hidden = true;
+      if (termin) tagesFensterZeigen(tagesSchluessel(termin.start), zuBearbeiten);
     });
   }
 

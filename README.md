@@ -196,7 +196,10 @@ Im **Kalender** öffnet ein Tippen auf einen Tag (oben im Kopf oder in der
 Ganztagszeile) das Tagesfenster. Darin steht genau die Karte, die die Liste
 für diesen Tag zeigt, mit allen Knöpfen: + To-do, + Termin, und an jedem
 Termin + Notiz und + To-do. Ein To-do im Kalender antippen öffnet es dort
-zum Bearbeiten. Beide Ansichten bauen die Tageskarte mit derselben Funktion
+zum Bearbeiten. Ein Termin im Kalender antippen öffnet das Terminfenster; dort
+stehen dieselben Knöpfe (+ Notiz, + To-do bzw. To-do bearbeiten), und ein
+vorhandenes To-do lässt sich direkt abhaken. Bearbeitet wird im
+Tagesfenster, man bleibt also im Kalender. Beide Ansichten bauen die Tageskarte mit derselben Funktion
 `tagKarteBauen()`, damit sie nicht wieder auseinanderlaufen. Im
 Bearbeiten-Modus trägt jeder Tag im Kalender ein kleines Plus.
 

@@ -143,6 +143,7 @@ const werkzeug = eval(
   "  ungesehen: ungeseheneAenderungen," +
   "  kurzerTitel: kurzerTitel," +
   "  tagKarteBauen: tagKarteBauen," +
+  "  terminFensterZeigen: terminFensterZeigen," +
   "  offeneNotizSetzen: function (w) { offeneNotiz = w; }," +
   "  uniplanSetzenTest: function (felder) { uniplan = uniplanGeraderuecken(Object.assign({}, uniplan, felder)); }," +
   "  arbeitsTermine: arbeitsTermine," +
@@ -1178,6 +1179,27 @@ karte16 = werkzeug.tagKarteBauen(tag16, true);
 pruefe("das Eingabefeld fuer ein neues To-do steht in der Tageskarte",
        karte16.indexOf('id="notizFeld"') >= 0 && karte16.indexOf('data-notiz-speichern="neu:2026-10-01"') >= 0);
 werkzeug.offeneNotizSetzen(null);
+
+
+/* ====================================================================== */
+abschnitt("17. Das Terminfenster im Kalender hat + To-do");
+
+STUNDENPLAN.termine = [planTermin("t.f", "2026-10-01T08:45", "2026-10-01T13:15", "WPF - Nachhaltiges Wirtschaften (Do)")];
+werkzeug.setzen({}, []);
+werkzeug.terminFensterZeigen("t.f");
+let fenster17 = document.getElementById("terminInhalt").innerHTML;
+pruefe("ohne To-do steht dort + To-do", fenster17.indexOf("+ To-do") >= 0
+       && fenster17.indexOf('data-notiz-bearbeiten="t.f"') >= 0);
+pruefe("und + Notiz wie in der Liste", fenster17.indexOf('data-zettel-neu="termin:t.f"') >= 0);
+pruefe("das Wort Kurznotiz kommt nicht mehr vor", fenster17.indexOf("Kurznotiz") < 0);
+werkzeug.setzen({ "t.f": { text: "Aufgabe vorbereiten", erledigt: false, wichtig: false, geaendert: 1 } }, []);
+werkzeug.terminFensterZeigen("t.f");
+fenster17 = document.getElementById("terminInhalt").innerHTML;
+pruefe("mit To-do steht es abhakbar da", fenster17.indexOf('data-todo-haken="t.f"') >= 0
+       && fenster17.indexOf("Aufgabe vorbereiten") >= 0);
+pruefe("und der Knopf heisst To-do bearbeiten", fenster17.indexOf("To-do bearbeiten") >= 0);
+werkzeug.setzen({}, []);
+STUNDENPLAN.termine = [];
 
 
 /* ====================================================================== */

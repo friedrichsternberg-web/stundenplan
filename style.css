@@ -3296,3 +3296,9 @@ html, body, * { touch-action: manipulation; }
 #tagInhalt .tag-kopf { display: none; }
 #tagInhalt .tag-kopf + .termin,
 #tagInhalt .tag-kopf + .tag-leer { border-top: 0; }
+
+/* Das To-do am Termin im Terminfenster: abhakbar wie überall sonst. */
+.termin-todo { display: flex; align-items: flex-start; gap: 11px; }
+.termin-todo .todo-haken { margin-top: 2px; }
+.termin-todo-erledigt .todo-haken { background: var(--neu); border-color: var(--neu); color: #fff; }
+.termin-todo-erledigt .termin-todo-text { text-decoration: line-through; color: var(--schrift-leise); }
