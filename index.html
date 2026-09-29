@@ -6,7 +6,7 @@
 <!-- viewport-fit=cover lässt die Seite bis in die Ecken laufen. Damit dann
      nichts unter der Kamera-Aussparung des iPhones verschwindet, hält das
      CSS über env(safe-area-inset-*) Abstand. -->
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 
 <!-- Legst du die Seite auf den Home-Bildschirm, öffnet sie sich ohne
      Adressleiste wie eine App. -->
@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=b375568a">
+<link rel="stylesheet" href="style.css?v=616e1885">
 </head>
 <body>
 
@@ -206,6 +206,19 @@
   </section>
 
 </main>
+
+<!-- Ein Tag aus dem Kalender, mit derselben Karte wie in der Liste. Steht
+     vor den übrigen Fenstern, damit Terminformular und Notizfenster, die
+     man von hier aus öffnet, darüber liegen. Siehe tagesFensterZeigen(). -->
+<div class="filter-hintergrund" id="tagHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2 id="tagFensterTitel">Tag</h2>
+      <button type="button" class="knopf-schlicht" id="tagSchliessen">Fertig</button>
+    </div>
+    <div id="tagInhalt"></div>
+  </div>
+</div>
 
 <!-- Ein angetippter Kalendertermin. Im Raster ist der Platz begrenzt; hier
      steht alles, was dort nicht hineinpasst. Gefüllt von
@@ -401,12 +414,12 @@
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=b375568a"></script>
-<script src="melden.js?v=b375568a"></script>
+<script src="sync.js?v=616e1885"></script>
+<script src="melden.js?v=616e1885"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=b375568a"></script>
+<script src="app.js?v=616e1885"></script>
 
 </body>
 </html>
