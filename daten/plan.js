@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-09-30T23:02",
+ "geprueftAm": "2026-10-01T08:26",
  "fensterVon": "2026-09-28T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
