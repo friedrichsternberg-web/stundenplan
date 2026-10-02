@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "3e7007d3";
+const GEBAUTE_VERSION = "d75089fb";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -3221,15 +3221,16 @@ function aufgabenSammeln() {
     });
   }
 
-  /* Wichtiges zuerst, innerhalb dessen nach Datum.
+  /* Streng nach Datum und Uhrzeit, das Früheste zuerst.
 
-     Erledigtes ist davon ausgenommen – es wandert ohnehin in den eigenen
-     Abschnitt weiter unten. Ein abgehaktes "wichtig" soll nicht weiter
-     oben stehen als eine offene normale Aufgabe. */
-  liste.sort((a, b) => {
-    if (a.wichtig !== b.wichtig) return a.wichtig ? -1 : 1;
-    return a.start.localeCompare(b.start);
-  });
+     Bis zum 02.10.2026 stand Wichtiges innerhalb einer Zeitgruppe oben.
+     Das sah durcheinander aus: unter "Nächste Woche" kam Samstag vor
+     Dienstag, nur weil am Samstag ein Stern war. Der Stern bleibt als
+     Markierung, die Reihenfolge macht der Kalender.
+
+     Bei gleichem Zeitpunkt entscheidet der Text, damit die Folge bei
+     jedem Neuzeichnen dieselbe ist. */
+  liste.sort((a, b) => a.start.localeCompare(b.start) || String(a.text).localeCompare(String(b.text), "de"));
   return liste;
 }
 
@@ -3356,21 +3357,8 @@ function todosZeichnen() {
   const stuecke = [];
   const faecher = nachZeitgruppen(offen, new Date());
 
-  /* Der Kopf: wie viel offen ist, und als Balken, wie es sich auf die
-     Zeitgruppen verteilt. Ein langer roter Anteil vorn sagt mehr als die
-     Zahl darüber. */
-  const verteilung = ZEITGRUPPEN.filter(g => faecher[g.schluessel].length > 0)
-    .map(g => ({ g, n: faecher[g.schluessel].length }));
-  const kopfInhalt = offen.length === 0 ? "" : `
-    <div class="todo-verteilung" role="img"
-         aria-label="${sicher(verteilung.map(v => v.g.titel + " " + v.n).join(", "))}">
-      ${verteilung.map(v => `<span class="todo-anteil todo-anteil-${v.g.schluessel}"
-                                  style="flex-grow:${v.n}" title="${sicher(v.g.titel)}: ${v.n}"></span>`).join("")}
-    </div>
-    <div class="todo-legende">
-      ${verteilung.map(v => `<span class="todo-leg todo-leg-${v.g.schluessel}">${sicher(v.g.titel)} ${v.n}</span>`).join("")}
-    </div>`;
-
+  /* Der Kopf zeigt nur noch die Zahlen. Den Verteilungsbalken darunter
+     gab es vom 24.09. bis 02.10.2026; er kam wieder raus. */
   stuecke.push(bereichKarte({
     titel: "Meine To-dos",
     symbol: "todos", farbe: "gruen",
@@ -3380,7 +3368,6 @@ function todosZeichnen() {
     rechts: seite === "todos" && offeneNotiz && offeneNotiz.indexOf("neu:") === 0 ? "" : `
       <button type="button" class="knopf-schlicht start-klein"
               data-aufgabe-neu="${sicher(tagesSchluessel(new Date()))}">+ Neues To-do</button>`,
-    inhalt: kopfInhalt,
     klasse: "bereich-kopf",
   }));
 
@@ -4217,12 +4204,13 @@ function trainingZeichnen() {
     </div>
     <div class="training-leise training-balken-fuss">Trainings pro Kalenderwoche</div>`));
 
-  // --- Muskelgruppen ---------------------------------------------------
-  if (a.muskeln.length) {
-    karten.push(trainingKarte("Muskelgruppen zuletzt", a.muskeln.map(m => `
+  // --- Die letzten Trainings: nur die Art, dazu der Tag -----------------
+  const letzte = gymbroEinheiten(training.daten).slice(0, 6);
+  if (letzte.length) {
+    karten.push(trainingKarte("Letzte Trainings", letzte.map(e => `
       <div class="training-reihe">
-        <span>${sicher(trainingWort(m.name))}</span>
-        <span class="training-leise">${sicher(tageHer(m.datum, jetzt))}</span>
+        <span>${sicher(e.typ ? trainingWort(e.typ) : "Training")}</span>
+        <span class="training-leise">${sicher(tageHer(e.start, jetzt))}</span>
       </div>`).join("")));
   }
 
@@ -4345,7 +4333,7 @@ function trainingVerlaufZeichnen(daten, jetzt) {
 const TRAINING_KARTEN_SYMBOL = {
   "Letztes Training": ["training", "lila"],
   "Die letzten 8 Wochen": ["balken", "blau"],
-  "Muskelgruppen zuletzt": ["muskel", "gruen"],
+  "Letzte Trainings": ["training", "gruen"],
   "Gewicht": ["gewicht", "gelb"],
   "Neueste Bestleistungen": ["pokal", "gelb"],
   "Pausen diesen Monat": ["pause", "grau"],
