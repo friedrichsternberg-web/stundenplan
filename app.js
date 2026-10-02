@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "d75089fb";
+const GEBAUTE_VERSION = "d7b4a1bd";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -709,6 +709,9 @@ const SYMBOLE = {
   pokal: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7"/>',
   pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
   phasen: '<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.5c3 2.2 8 2.2 11 0v-4.5M21.5 9.5v5"/>',
+  verlauf: '<path d="M3 17l5.5-5.5 4 4L21 7"/><path d="M15 7h6v6"/>',
+  uhr: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  aufteilung: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 2.5A7 7 0 0 1 21.5 9H15z"/>',
 };
 
 function symbol(name) {
@@ -3956,6 +3959,103 @@ function tageHer(datum, jetzt) {
 
 /* --- Auswerten -------------------------------------------------------- */
 
+/* Trainingsarten, die keine Kraft sind. Sie zählen bei der Dauer nicht mit. */
+const AUSDAUER_TYPEN = ["cardio", "run", "running", "laufen", "cycling", "swim"];
+
+const MONATSNAMEN_KURZ = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+                          "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+
+/* Die letzten sechs Monate (aber nicht vor dem ersten Training): wie oft,
+   und wie lang ein Krafttraining im Schnitt war. Daran sieht man die
+   Entwicklung über das Halbjahr, die acht Wochen reichen dafür nicht. */
+function trainingMonate(alle, jetzt, istKraft, dauerVon) {
+  if (!alle.length) return [];
+  const erstes = alle[alle.length - 1].start;
+  const monate = [];
+  for (let i = 5; i >= 0; i--) {
+    const anfang = new Date(jetzt.getFullYear(), jetzt.getMonth() - i, 1);
+    const ende = new Date(anfang.getFullYear(), anfang.getMonth() + 1, 1);
+    if (ende <= new Date(erstes.getFullYear(), erstes.getMonth(), 1)) continue;
+    const drin = alle.filter(s => s.start >= anfang && s.start < ende);
+    const dauern = drin.filter(istKraft).map(dauerVon).filter(m => m !== null);
+    monate.push({
+      anfang,
+      name: MONATSNAMEN_KURZ[anfang.getMonth()],
+      anzahl: drin.length,
+      dauer: dauern.length ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : null,
+      laeuft: i === 0,
+      // Im ersten Monat ging es erst mittendrin los: weniger Trainings
+      // heißt dann nicht weniger Fleiß.
+      abTag: erstes >= anfang && erstes < ende && erstes.getDate() > 1 ? erstes : null,
+    });
+  }
+  return monate;
+}
+
+/* Wie sich die Trainings auf Push, Pull, Beine usw. verteilen, häufigste
+   zuerst. */
+function trainingAufteilung(alle) {
+  const zaehler = new Map();
+  for (const s of alle) {
+    const typ = String(s.typ || "").toLowerCase();
+    zaehler.set(typ, (zaehler.get(typ) || 0) + 1);
+  }
+  return [...zaehler.entries()]
+    .map(([typ, anzahl]) => ({ typ, anzahl, anteil: anzahl / alle.length }))
+    .sort((a, b) => b.anzahl - a.anzahl || a.typ.localeCompare(b.typ));
+}
+
+/* An welchen Wochentagen (Montag zuerst) und zu welcher Tageszeit. */
+function trainingWochentage(alle) {
+  const tage = [0, 0, 0, 0, 0, 0, 0];
+  const zeiten = { morgens: 0, mittags: 0, abends: 0 };
+  for (const s of alle) {
+    tage[(s.start.getDay() + 6) % 7]++;
+    const stunde = s.start.getHours();
+    zeiten[stunde < 12 ? "morgens" : stunde < 17 ? "mittags" : "abends"]++;
+  }
+  const meist = Object.keys(zeiten).sort((a, b) => zeiten[b] - zeiten[a])[0];
+  return { tage, zeiten, meist: alle.length ? meist : "", meistAnzahl: zeiten[meist] };
+}
+
+/* Bestwerte über die ganze Zeit. */
+function trainingBestwerte(alle, jetzt, dauerVon) {
+  let minuten = 0;
+  let laengstes = null;
+  for (const s of alle) {
+    const d = dauerVon(s);
+    if (d === null) continue;
+    minuten += d;
+    if (!laengstes || d > laengstes.minuten) laengstes = { minuten: Math.round(d), datum: s.start };
+  }
+
+  // Trainings je Woche, nach Montag
+  const proWoche = new Map();
+  for (const s of alle) {
+    const schluessel = tagesSchluessel(montagDerWoche(s.start));
+    proWoche.set(schluessel, (proWoche.get(schluessel) || 0) + 1);
+  }
+  let besteWoche = null;
+  for (const [schluessel, anzahl] of proWoche) {
+    if (!besteWoche || anzahl > besteWoche.anzahl) {
+      besteWoche = { anzahl, montag: alsDatum(schluessel + "T12:00") };
+    }
+  }
+
+  // Längste Serie: Wochen in Folge mit mindestens einem Training
+  let laengsteSerie = 0;
+  if (alle.length) {
+    let lauf = 0;
+    const bis = montagDerWoche(jetzt);
+    for (let m = montagDerWoche(alle[alle.length - 1].start); m <= bis; m = tageDazu(m, 7)) {
+      lauf = proWoche.has(tagesSchluessel(m)) ? lauf + 1 : 0;
+      laengsteSerie = Math.max(laengsteSerie, lauf);
+    }
+  }
+
+  return { stunden: Math.round(minuten / 60), laengstes, besteWoche, laengsteSerie };
+}
+
 /* Alles, was die Anzeige braucht, an einer Stelle ausgerechnet. Getrennt
    vom Zeichnen, damit die Tests es mit festem Datum prüfen können. */
 function trainingAuswerten(daten, jetzt) {
@@ -3965,12 +4065,25 @@ function trainingAuswerten(daten, jetzt) {
   const monatsanfang = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
   const diesenMonat = alle.filter(s => s.start >= monatsanfang).length;
 
-  /* Die letzten acht Wochen, älteste zuerst, für das Balkenbild. */
+  /* Ab wann es überhaupt Daten gibt: der Montag der Woche des ersten
+     Trainings. Wochen davor sind keine Wochen ohne Training, sondern
+     Wochen ohne Gymbro – sie dürfen keinen Schnitt nach unten ziehen. */
+  const ersterMontag = alle.length ? montagDerWoche(alle[alle.length - 1].start) : null;
+
+  /* Neun Wochen, älteste zuerst, für das Balkenbild: die acht
+     abgeschlossenen, die der Trend vergleicht, und die laufende. So
+     stimmt, was man sieht, mit dem überein, was darunter ausgerechnet
+     wird. */
   const wochen = [];
-  for (let i = 7; i >= 0; i--) {
+  for (let i = 8; i >= 0; i--) {
     const von = tageDazu(montag, -7 * i);
     const bis = tageDazu(von, 7);
-    wochen.push({ montag: von, anzahl: alle.filter(s => s.start >= von && s.start < bis).length });
+    wochen.push({
+      montag: von,
+      anzahl: alle.filter(s => s.start >= von && s.start < bis).length,
+      vorBeginn: !ersterMontag || von < ersterMontag,
+      teil: i === 0 ? "jetzt" : i <= 4 ? "neu" : "alt",
+    });
   }
 
   /* Serie: Wochen in Folge mit mindestens einem Training. Die laufende
@@ -3999,36 +4112,41 @@ function trainingAuswerten(daten, jetzt) {
     .sort((a, b) => a.datum - b.datum);
 
   /* Dauer: nur, wo beides da ist und es plausibel ist (unter 6 Stunden;
-     wer vergisst, sich auszuchecken, soll den Schnitt nicht verderben). */
+     wer vergisst, sich auszuchecken, soll den Schnitt nicht verderben).
+     Cardio und Laufen zählen nicht mit: 25 Minuten auf dem Laufband neben
+     80 Minuten Push ergäben einen Schnitt, der zu keinem Training passt. */
   const vor30 = tageDazu(jetzt, -30);
+  const dauerVon = s => (s.ende && s.ende > s.start && s.ende - s.start < 6 * 3600000)
+    ? (s.ende - s.start) / 60000 : null;
+  const istKraft = s => AUSDAUER_TYPEN.indexOf(String(s.typ).toLowerCase()) < 0;
   const dauern = alle
-    .filter(s => s.start >= vor30 && s.ende && s.ende > s.start)
-    .map(s => (s.ende - s.start) / 60000)
-    .filter(min => min < 360);
+    .filter(s => s.start >= vor30 && istKraft(s))
+    .map(dauerVon)
+    .filter(min => min !== null);
   const dauerSchnitt = dauern.length
     ? Math.round(dauern.reduce((a, b) => a + b, 0) / dauern.length) : null;
 
   /* Der Trend: Trainings pro Woche in den letzten vier abgeschlossenen
      Wochen gegen die vier davor. Die laufende Woche zählt nicht mit – am
-     Montag stünde sonst jede Woche "weniger". Unter einer Viertel-Einheit
-     pro Woche Unterschied heißt es "gleich", sonst schwankt die Aussage
-     mit jedem einzelnen Training hin und her. */
-  const proWoche = versatz => {
-    const von = tageDazu(montag, -7 * versatz);
-    const bis = tageDazu(von, 7);
-    return alle.filter(s => s.start >= von && s.start < bis).length;
+     Montag stünde sonst jede Woche "weniger". Wochen vor dem ersten
+     Training zählen ebenfalls nicht: wer seit drei Wochen Gymbro nutzt,
+     hat davor nicht nichts gemacht, er hat es nur nicht eingetragen.
+     Unter einer Viertel-Einheit pro Woche Unterschied heißt es "gleich",
+     sonst schwankt die Aussage mit jedem einzelnen Training hin und her. */
+  const schnitt = liste => {
+    const gezaehlt = liste.filter(w => !w.vorBeginn);
+    if (!gezaehlt.length) return null;
+    return gezaehlt.reduce((summe, w) => summe + w.anzahl, 0) / gezaehlt.length;
   };
-  const schnitt = (von, bis) => {
-    let summe = 0;
-    for (let i = von; i <= bis; i++) summe += proWoche(i);
-    return summe / (bis - von + 1);
-  };
-  const trendJetzt = schnitt(1, 4);
-  const trendVorher = schnitt(5, 8);
+  const trendJetzt = schnitt(wochen.filter(w => w.teil === "neu"));
+  const trendVorher = schnitt(wochen.filter(w => w.teil === "alt"));
   const trend = {
     jetzt: trendJetzt,
     vorher: trendVorher,
-    richtung: trendJetzt === 0 && trendVorher === 0 ? "keine"
+    wochenJetzt: wochen.filter(w => w.teil === "neu" && !w.vorBeginn).length,
+    wochenVorher: wochen.filter(w => w.teil === "alt" && !w.vorBeginn).length,
+    richtung: !alle.length || (trendJetzt === 0 && trendVorher === 0) ? "keine"
+      : trendJetzt === null || trendVorher === null ? "neu"
       : Math.abs(trendJetzt - trendVorher) < 0.25 ? "gleich"
       : trendJetzt > trendVorher ? "hoch" : "runter",
   };
@@ -4047,9 +4165,14 @@ function trainingAuswerten(daten, jetzt) {
     letzte: alle[0] || null,
     erstes: alle[alle.length - 1] || null,
     dieseWoche, diesenMonat, wochen, serie, muskeln, dauerSchnitt, trend,
-    gewicht: gewicht.filter(w => w.datum >= tageDazu(jetzt, -90)),
+    gewicht,
+    gewichtErstes: gewicht.length > 1 ? gewicht[0] : null,
     gewichtAktuell: aktuell,
     gewichtVorher: vorher,
+    monate: trainingMonate(alle, jetzt, istKraft, dauerVon),
+    aufteilung: trainingAufteilung(alle),
+    wochentage: trainingWochentage(alle),
+    bestwerte: trainingBestwerte(alle, jetzt, dauerVon),
     bestleistungen: gymbroBestleistungen(daten).slice(0, 5),
     plaene: gymbroPlaene(daten),
     absagenMonat: gymbroAbsagen(daten).filter(c => c.datum >= monatsanfang),
@@ -4075,7 +4198,7 @@ function gewichtsLinie(punkte) {
     (i ? "L" : "M") + x(zeiten[i]).toFixed(1) + " " + y(werte[i]).toFixed(1)).join(" ");
   return `
     <svg class="training-linie" viewBox="0 0 ${breite} ${hoehe}" preserveAspectRatio="none"
-         role="img" aria-label="Gewichtsverlauf der letzten 90 Tage">
+         role="img" aria-label="Gewichtsverlauf seit der ersten Messung">
       <path d="${pfad}" fill="none" stroke="currentColor" stroke-width="2"
             vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>`;
@@ -4173,7 +4296,7 @@ function trainingZeichnen() {
       <span class="start-zahl-name">${a.serie === 1 ? "Woche" : "Wochen"} in Folge</span></div>
     <div class="start-zahl"><span class="start-zahl-wert">${
       a.dauerSchnitt === null ? "–" : a.dauerSchnitt}</span>
-      <span class="start-zahl-name">Min. im Schnitt (30 Tage)</span></div>
+      <span class="start-zahl-name">Min. pro Krafttraining (30 Tage)</span></div>
   </div>`);
 
   const karten = [];
@@ -4191,18 +4314,22 @@ function trainingZeichnen() {
       }</div>` : ""}`));
   }
 
-  // --- Acht Wochen als Balken ------------------------------------------
+  // --- Neun Wochen als Balken, darunter der Schnitt ----------------------
   const hoechste = Math.max(1, ...a.wochen.map(w => w.anzahl));
-  karten.push(trainingKarte("Die letzten 8 Wochen", `
-    <div class="training-balken">${a.wochen.map((w, i) => `
-      <div class="training-balken-spalte" title="KW ${kalenderwoche(w.montag)}: ${w.anzahl}">
+  const schnitt = trendSchnittText(a.trend);
+  karten.push(trainingKarte("Pro Woche", `
+    <div class="training-balken">${a.wochen.map(w => `
+      <div class="training-balken-spalte training-balken-${w.teil}${w.vorBeginn ? " training-balken-leer" : ""}"
+           title="KW ${kalenderwoche(w.montag)}: ${w.vorBeginn ? "noch keine Daten" : w.anzahl}">
         <span class="training-balken-zahl">${w.anzahl || ""}</span>
-        <span class="training-balken-saeule${i === a.wochen.length - 1 ? " training-balken-jetzt" : ""}"
-              style="height:${Math.round(w.anzahl / hoechste * 100)}%"></span>
+        <span class="training-balken-saeule" style="height:${Math.round(w.anzahl / hoechste * 100)}%"></span>
         <span class="training-balken-name">${kalenderwoche(w.montag)}</span>
       </div>`).join("")}
     </div>
-    <div class="training-leise training-balken-fuss">Trainings pro Kalenderwoche</div>`));
+    <div class="training-balken-legende">
+      <span>4 Wochen davor</span><span>letzte 4 Wochen</span><span>jetzt</span>
+    </div>
+    ${schnitt ? `<div class="training-zeile training-balken-fuss">${sicher(schnitt)}</div>` : ""}`));
 
   // --- Die letzten Trainings: nur die Art, dazu der Tag -----------------
   const letzte = gymbroEinheiten(training.daten).slice(0, 6);
@@ -4214,17 +4341,88 @@ function trainingZeichnen() {
       </div>`).join("")));
   }
 
+  // --- Entwicklung über die Monate --------------------------------------
+  if (a.monate.length > 1) {
+    const meiste = Math.max(1, ...a.monate.map(m => m.anzahl));
+    karten.push(trainingKarte("Entwicklung", `
+      <div class="training-balken training-monate">${a.monate.map(m => `
+        <div class="training-balken-spalte${m.laeuft ? " training-balken-jetzt" : ""}"
+             title="${sicher(m.name)}: ${m.anzahl} ${m.anzahl === 1 ? "Training" : "Trainings"}${m.dauer ? ", Ø " + m.dauer + " Min." : ""}">
+          <span class="training-balken-zahl">${m.anzahl || ""}</span>
+          <span class="training-balken-saeule" style="height:${Math.round(m.anzahl / meiste * 100)}%"></span>
+          <span class="training-balken-name">${sicher(m.name)}</span>
+          <span class="training-balken-name training-monat-dauer">${m.dauer ? m.dauer + "′" : "–"}</span>
+        </div>`).join("")}
+      </div>
+      <div class="training-leise training-balken-fuss">Trainings pro Monat, darunter Ø Minuten pro Krafttraining${
+        a.monate[0].abTag ? ". " + sicher(a.monate[0].name) + " erst ab " + sicher(datumKurz(a.monate[0].abTag)) : ""}${
+        a.monate[a.monate.length - 1].laeuft ? ", " + sicher(a.monate[a.monate.length - 1].name) + " läuft noch" : ""}</div>`));
+  }
+
+  // --- Aufteilung nach Art ---------------------------------------------
+  if (a.aufteilung.length) {
+    const groesste = a.aufteilung[0].anzahl;
+    karten.push(trainingKarte("Aufteilung", a.aufteilung.map(t => `
+      <div class="training-anteil">
+        <span class="training-anteil-name">${sicher(t.typ ? trainingWort(t.typ) : "Ohne Art")}</span>
+        <span class="training-anteil-spur"><span class="training-anteil-balken training-art-${
+          sicher(t.typ || "ohne")}" style="width:${Math.round(t.anzahl / groesste * 100)}%"></span></span>
+        <span class="training-anteil-zahl">${t.anzahl}<span class="training-leise"> · ${
+          Math.round(t.anteil * 100)} %</span></span>
+      </div>`).join("")));
+  }
+
+  // --- Wann ------------------------------------------------------------
+  if (a.anzahl >= 3) {
+    const w = a.wochentage;
+    const meisteTag = Math.max(1, ...w.tage);
+    karten.push(trainingKarte("Wann du trainierst", `
+      <div class="training-balken training-wochentage">${w.tage.map((n, i) => `
+        <div class="training-balken-spalte${n === meisteTag && w.tage.filter(x => x === meisteTag).length < 3 ? " training-balken-jetzt" : ""}">
+          <span class="training-balken-zahl">${n || ""}</span>
+          <span class="training-balken-saeule" style="height:${Math.round(n / meisteTag * 100)}%"></span>
+          <span class="training-balken-name">${["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][i]}</span>
+        </div>`).join("")}
+      </div>
+      <div class="training-zeile training-balken-fuss">Meist ${sicher(w.meist)}
+        <span class="training-leise">(${w.meistAnzahl} von ${a.anzahl}${
+          w.meist === "abends" ? ", ab 17 Uhr" : w.meist === "morgens" ? ", vor 12 Uhr" : ", 12 bis 17 Uhr"})</span></div>`));
+  }
+
   // --- Gewicht ---------------------------------------------------------
   if (a.gewichtAktuell) {
-    const diff = a.gewichtVorher ? a.gewichtAktuell.wert - a.gewichtVorher.wert : null;
-    const diffText = diff === null ? ""
-      : (diff > 0 ? "+" : diff < 0 ? "−" : "±") + kgLesbar(Math.abs(diff))
-        + " seit " + datumKurz(a.gewichtVorher.datum);
+    const veraenderung = (von, bis) => {
+      const diff = bis.wert - von.wert;
+      return (diff > 0 ? "+" : diff < 0 ? "−" : "±") + kgLesbar(Math.abs(diff)) + " seit " + datumKurz(von.datum);
+    };
+    const zeilen = [];
+    if (a.gewichtVorher) zeilen.push(veraenderung(a.gewichtVorher, a.gewichtAktuell));
+    if (a.gewichtErstes && a.gewichtErstes !== a.gewichtVorher) {
+      zeilen.push(veraenderung(a.gewichtErstes, a.gewichtAktuell) + " (Beginn)");
+    }
     karten.push(trainingKarte("Gewicht", `
       <div class="training-gross">${sicher(kgLesbar(a.gewichtAktuell.wert))}
         <span class="training-leise">${sicher(tageHer(a.gewichtAktuell.datum, jetzt))}</span></div>
-      ${diffText ? `<div class="training-zeile">${sicher(diffText)}</div>` : ""}
-      ${gewichtsLinie(a.gewicht)}`));
+      ${zeilen.map(z => `<div class="training-zeile">${sicher(z)}</div>`).join("")}
+      ${gewichtsLinie(a.gewicht)}
+      ${a.gewicht.length > 1 ? `<div class="training-leise">${a.gewicht.length} Messungen seit ${
+        sicher(datumKurz(a.gewicht[0].datum))}</div>` : ""}`));
+  }
+
+  // --- Bestwerte -------------------------------------------------------
+  const b = a.bestwerte;
+  if (a.anzahl > 0) {
+    const reihe = (name, wert, zusatz) => `
+      <div class="training-reihe">
+        <span>${sicher(name)}</span>
+        <span><strong>${sicher(wert)}</strong>${zusatz ? ` <span class="training-leise">${sicher(zusatz)}</span>` : ""}</span>
+      </div>`;
+    karten.push(trainingKarte("Bestwerte", [
+      reihe("Trainings insgesamt", String(a.anzahl), b.stunden ? "· " + b.stunden + " Std." : ""),
+      b.besteWoche ? reihe("Meiste in einer Woche", String(b.besteWoche.anzahl), "KW " + kalenderwoche(b.besteWoche.montag)) : "",
+      reihe("Längste Serie", b.laengsteSerie + (b.laengsteSerie === 1 ? " Woche" : " Wochen"), ""),
+      b.laengstes ? reihe("Längstes Training", b.laengstes.minuten + " Min.", datumKurz(b.laengstes.datum)) : "",
+    ].join("")));
   }
 
   // --- Bestleistungen --------------------------------------------------
@@ -4332,9 +4530,13 @@ function trainingVerlaufZeichnen(daten, jetzt) {
    Nach dem Titel, damit die Aufrufe oben kurz bleiben. */
 const TRAINING_KARTEN_SYMBOL = {
   "Letztes Training": ["training", "lila"],
-  "Die letzten 8 Wochen": ["balken", "blau"],
+  "Pro Woche": ["balken", "blau"],
   "Letzte Trainings": ["training", "gruen"],
+  "Entwicklung": ["verlauf", "gruen"],
+  "Aufteilung": ["aufteilung", "lila"],
+  "Wann du trainierst": ["uhr", "blau"],
   "Gewicht": ["gewicht", "gelb"],
+  "Bestwerte": ["pokal", "gelb"],
   "Neueste Bestleistungen": ["pokal", "gelb"],
   "Pausen diesen Monat": ["pause", "grau"],
 };
@@ -4348,37 +4550,58 @@ function trainingKarte(titel, inhalt) {
    der Trend geht. Mehr nicht – der Rest steht im Reiter. Leer, solange es
    nichts zu zeigen gibt, auf fremden Dashboards also immer. */
 const TREND_TEXT = {
-  hoch: ["↗", "Mehr als im Monat davor"],
-  gleich: ["→", "So regelmäßig wie im Monat davor"],
-  runter: ["↘", "Weniger als im Monat davor"],
-  keine: ["", "In den letzten zwei Monaten kein Training"],
+  hoch: ["↗", "Mehr als in den 4 Wochen davor"],
+  gleich: ["→", "So oft wie in den 4 Wochen davor"],
+  runter: ["↘", "Weniger als in den 4 Wochen davor"],
+  neu: ["", "Für einen Vergleich noch zu kurz dabei"],
+  keine: ["", "In den letzten acht Wochen kein Training"],
 };
 
 function zahlLesbar(wert) {
   return String(Math.round(wert * 10) / 10).replace(".", ",");
 }
 
+/* Die Zeile unter dem Trend: der Schnitt, und womit verglichen wird. Sind
+   weniger als vier Wochen mit Daten im Fenster, steht dabei, über wie
+   viele gerechnet wurde. */
+function trendSchnittText(t) {
+  if (t.richtung === "keine" || t.jetzt === null) return "";
+  const ueber = n => n < 4 ? ` (${n} ${n === 1 ? "Woche" : "Wochen"})` : "";
+  const jetztText = "Ø " + zahlLesbar(t.jetzt) + " pro Woche" + ueber(t.wochenJetzt);
+  if (t.vorher === null) return jetztText;
+  if (t.richtung === "gleich" && zahlLesbar(t.jetzt) === zahlLesbar(t.vorher)) return jetztText + ", davor genauso";
+  return jetztText + ", davor " + zahlLesbar(t.vorher) + ueber(t.wochenVorher);
+}
+
+/* Die neun Wochensäulen: links die vier Vergleichswochen, dann die vier
+   jüngsten, ganz rechts die laufende. Wochen vor dem ersten Training
+   bleiben als blasser Strich stehen, damit die Lage der Säulen gleich
+   bleibt. */
+function wochenSaeulen(wochen, klasse) {
+  const hoechste = Math.max(1, ...wochen.map(w => w.anzahl));
+  return wochen.map(w => `
+    <span class="${klasse} ${klasse}-${w.teil}${w.vorBeginn ? ` ${klasse}-leer` : ""}"
+          style="height:${Math.max(6, Math.round(w.anzahl / hoechste * 100))}%"
+          title="KW ${kalenderwoche(w.montag)}: ${w.vorBeginn ? "noch keine Daten" : w.anzahl}"></span>`).join("");
+}
+
 function trainingStartKarte(jetzt) {
   if (!trainingSichtbar() || !training) return "";
   const a = trainingAuswerten(training.daten, jetzt);
-  const hoechste = Math.max(1, ...a.wochen.map(w => w.anzahl));
   const [pfeil, satz] = TREND_TEXT[a.trend.richtung];
+  const schnitt = trendSchnittText(a.trend);
   const inhalt = `
     <div class="tw-oben">
       <div class="tw-zahl">${a.dieseWoche}</div>
       <div class="tw-zahl-text">${a.dieseWoche === 1 ? "Training" : "Trainings"}<br>diese Woche</div>
       <div class="tw-balken" role="img"
-           aria-label="Trainings pro Woche, die letzten acht Wochen: ${a.wochen.map(w => w.anzahl).join(", ")}">
-        ${a.wochen.map((w, i) => `
-          <span class="tw-saeule${i === a.wochen.length - 1 ? " tw-saeule-jetzt" : ""}"
-                style="height:${Math.max(6, Math.round(w.anzahl / hoechste * 100))}%"
-                title="KW ${kalenderwoche(w.montag)}: ${w.anzahl}"></span>`).join("")}
+           aria-label="Trainings pro Woche, älteste zuerst, zuletzt diese Woche: ${a.wochen.map(w => w.anzahl).join(", ")}">
+        ${wochenSaeulen(a.wochen, "tw-saeule")}
       </div>
     </div>
     <div class="tw-trend tw-trend-${a.trend.richtung}">
       ${pfeil ? `<span class="tw-pfeil">${pfeil}</span>` : ""}
-      <span>${sicher(satz)}${a.trend.richtung === "keine" ? "" : `<span class="tw-schnitt">Ø ${
-        zahlLesbar(a.trend.jetzt)} statt ${zahlLesbar(a.trend.vorher)} pro Woche</span>`}</span>
+      <span>${sicher(satz)}${schnitt ? `<span class="tw-schnitt">${sicher(schnitt)}</span>` : ""}</span>
     </div>`;
   return startKarte("Training", "training", "Mehr", inhalt,
                     { symbol: "training", farbe: "lila", klasse: "start-karte-training" });

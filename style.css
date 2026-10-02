@@ -2448,7 +2448,7 @@ a.knopf-schlicht {
   background: var(--notiz-flaeche-hell);
 }
 
-.training-balken-jetzt { background: var(--akzent); }
+.training-balken-saeule.training-balken-jetzt { background: var(--akzent); }
 .training-balken-zahl { font-size: 11px; font-weight: 600; }
 .training-balken-name { font-size: 10px; color: var(--schrift-leise); }
 .training-balken-fuss { margin-top: 6px; }
@@ -3579,3 +3579,93 @@ textarea, select,
   /* Der große Titel soll auf dem Handy einzeilig bleiben. */
   h1 { font-size: 22px; }
 }
+
+
+/* =========================================================================
+   TRAINING: Wochenvergleich und Entwicklung (02.10.2026)
+
+   Die Wochensäulen zeigen genau, was der Schnitt darunter vergleicht:
+   blass die vier Wochen davor, kräftiger die letzten vier, voll die
+   laufende. Wochen vor dem ersten Training sind nur ein gestrichelter
+   Platzhalter, sie zählen nicht mit.
+   ========================================================================= */
+.tw-saeule-alt { background: var(--notiz-flaeche-hell); }
+.tw-saeule-neu { background: color-mix(in srgb, var(--notiz-rand) 50%, transparent); }
+.tw-saeule-jetzt { background: var(--notiz-rand); }
+.tw-saeule-alt + .tw-saeule-neu,
+.tw-saeule-neu + .tw-saeule-jetzt { margin-left: 4px; }
+.tw-saeule-leer {
+  background: transparent;
+  border: 1px dashed var(--schrift-leise);
+  opacity: .45;
+}
+
+.training-balken-alt .training-balken-saeule { background: var(--notiz-flaeche-hell); }
+.training-balken-neu .training-balken-saeule {
+  background: color-mix(in srgb, var(--akzent) 50%, transparent);
+}
+.training-balken-jetzt .training-balken-saeule,
+.training-balken-saeule.training-balken-jetzt { background: var(--akzent); }
+.training-balken-leer .training-balken-saeule {
+  background: transparent;
+  border: 1px dashed var(--schrift-leise);
+  opacity: .45;
+}
+
+/* Die Beschriftung unter den neun Säulen: dasselbe Raster, damit
+   "letzte 4 Wochen" genau unter seinen vier Säulen steht. */
+.training-balken-legende {
+  display: grid;
+  grid-template-columns: 4fr 4fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--schrift-leise);
+  text-align: center;
+}
+.training-balken-legende span {
+  border-top: 2px solid var(--glas-linie, var(--linie));
+  padding-top: 3px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.training-balken-legende span:nth-child(2) { border-top-color: color-mix(in srgb, var(--akzent) 50%, transparent); }
+.training-balken-legende span:nth-child(3) { border-top-color: var(--akzent); }
+
+.training-monate, .training-wochentage { height: 120px; }
+.training-monat-dauer { font-variant-numeric: tabular-nums; }
+
+/* Aufteilung: Name, Balken, Zahl in einer Zeile. */
+.training-anteil {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+.training-anteil-spur {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--flaeche-gedaempft);
+  overflow: hidden;
+}
+.training-anteil-balken {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--schrift-leise);
+}
+.training-art-push { background: var(--akzent); }
+.training-art-pull { background: var(--notiz-rand); }
+.training-art-legs { background: var(--neu); }
+.training-art-cardio, .training-art-run { background: var(--geaendert); }
+.training-anteil-zahl { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.training-monate .training-balken-saeule,
+.training-wochentage .training-balken-saeule {
+  background: color-mix(in srgb, var(--akzent) 45%, transparent);
+}
+.training-monate .training-balken-jetzt .training-balken-saeule,
+.training-wochentage .training-balken-jetzt .training-balken-saeule { background: var(--akzent); }
