@@ -895,8 +895,14 @@ pruefe("das letzte Training ist das vom Dienstag",
 pruefe("diese Woche: eins", a.dieseWoche === 1);
 pruefe("diesen Monat: vier", a.diesenMonat === 4);
 pruefe("Serie: KW 39 und 38, KW 37 ist leer - also 2", a.serie === 2);
-pruefe("acht Wochen im Balkenbild, die jüngste mit 1",
-       a.wochen.length === 8 && a.wochen[7].anzahl === 1);
+pruefe("neun Wochen im Balkenbild, die laufende mit 1",
+       a.wochen.length === 9 && a.wochen[8].anzahl === 1 && a.wochen[8].teil === "jetzt");
+pruefe("vier alte, vier neue Vergleichswochen",
+       a.wochen.filter(w => w.teil === "alt").length === 4 && a.wochen.filter(w => w.teil === "neu").length === 4);
+pruefe("Wochen vor dem ersten Training (02.09.) sind markiert",
+       a.wochen.filter(w => w.vorBeginn).length === 5 && !a.wochen[5].vorBeginn);
+pruefe("erst seit drei Wochen dabei: kein Vergleich, Schnitt über drei Wochen",
+       a.trend.richtung === "neu" && a.trend.jetzt === 1 && a.trend.wochenJetzt === 3 && a.trend.vorher === null);
 pruefe("Dauer: 75 und 60 Minuten, die zehn Stunden fliegen raus",
        a.dauerSchnitt === 68);
 pruefe("Muskelgruppen: am längsten her zuerst",
@@ -942,6 +948,45 @@ pruefe("und die Bestleistung übersetzt", tr.indexOf("Bankdrücken") >= 0);
 pruefe("kein undefined", tr.indexOf("undefined") < 0);
 pruefe("kein NaN", tr.indexOf("NaN") < 0);
 pruefe("kein [object Object]", tr.indexOf("[object Object]") < 0);
+pruefe("Wochenkarte heißt Pro Woche, mit Legende", tr.indexOf("Pro Woche") >= 0 && tr.indexOf("letzte 4 Wochen") >= 0);
+pruefe("Aufteilung, Wann und Bestwerte sind da",
+       tr.indexOf("Aufteilung") >= 0 && tr.indexOf("Wann du trainierst") >= 0 && tr.indexOf("Bestwerte") >= 0);
+
+/* Die Auswertung über längere Zeit, mit einem eigenen kleinen Bestand.
+   Bezug: Freitag, 02.10.2026. Erstes Training am Mi 20.05. */
+const lang = { sessions: [
+  { arrivedAt: "2026-05-20T16:00:00.000Z", leftAt: "2026-05-20T17:00:00.000Z", trainingType: "push" },
+  { arrivedAt: "2026-06-03T16:00:00.000Z", leftAt: "2026-06-03T17:30:00.000Z", trainingType: "pull" },
+  { arrivedAt: "2026-06-10T16:00:00.000Z", leftAt: "2026-06-10T18:00:00.000Z", trainingType: "pull" },
+  { arrivedAt: "2026-06-17T06:00:00.000Z", leftAt: "2026-06-17T06:25:00.000Z", trainingType: "cardio" },
+  { arrivedAt: "2026-09-21T16:00:00.000Z", leftAt: "2026-09-21T17:10:00.000Z", trainingType: "legs" },
+  { arrivedAt: "2026-09-22T16:00:00.000Z", leftAt: "2026-09-22T17:20:00.000Z", trainingType: "push" },
+  // Laufband, 20 Minuten: zählt beim Schnitt der Dauer nicht mit
+  { arrivedAt: "2026-09-23T05:00:00.000Z", leftAt: "2026-09-23T05:20:00.000Z", trainingType: "run" },
+  { arrivedAt: "2026-10-01T11:00:00.000Z", leftAt: "2026-10-01T12:00:00.000Z", trainingType: "pull" },
+], weights: [
+  { date: "2026-05-21", weight: 92.7 }, { date: "2026-08-01", weight: 87 }, { date: "2026-09-29", weight: 89.8 },
+] };
+const lj = new Date(2026, 9, 2, 9, 0);
+let l = werkzeug.trainingAuswerten(lang, lj);
+pruefe("Dauer: nur Krafttraining der letzten 30 Tage (70, 80, 60)", l.dauerSchnitt === 70);
+pruefe("sechs Monate, Mai bis Oktober", l.monate.length === 6 && l.monate[0].name === "Mai" && l.monate[5].laeuft);
+pruefe("Mai erst ab dem 20.", l.monate[0].abTag && l.monate[0].abTag.getDate() === 20 && !l.monate[1].abTag);
+pruefe("Juni: 3 Trainings, Ø 105 Min. ohne Cardio",
+       l.monate[1].anzahl === 3 && l.monate[1].dauer === 105);
+pruefe("Juli und August leer, ohne Dauer", l.monate[2].anzahl === 0 && l.monate[2].dauer === null);
+pruefe("Aufteilung: Pull vorn mit 3", l.aufteilung[0].typ === "pull" && l.aufteilung[0].anzahl === 3);
+pruefe("Anteile ergeben zusammen 1",
+       Math.abs(l.aufteilung.reduce((x, t) => x + t.anteil, 0) - 1) < 1e-9);
+pruefe("Wochentage: Mittwoch vorn (5)", l.wochentage.tage[2] === 5 && l.wochentage.tage[0] === 1);
+pruefe("meist abends (5 von 8)", l.wochentage.meist === "abends" && l.wochentage.meistAnzahl === 5);
+pruefe("beste Woche: KW 39 mit 3", l.bestwerte.besteWoche.anzahl === 3);
+pruefe("längste Serie: 3 Wochen im Juni, nicht die 2 jetzt", l.bestwerte.laengsteSerie === 3);
+pruefe("längstes Training: 120 Min. am 10.06.",
+       l.bestwerte.laengstes.minuten === 120 && l.bestwerte.laengstes.datum.getDate() === 10);
+pruefe("Gewicht: alle Messungen, der erste Wert als Beginn",
+       l.gewicht.length === 3 && l.gewichtErstes.wert === 92.7 && l.gewichtVorher.wert === 87);
+werkzeug.trainingSetzen({ abgerufenAm: "2026-10-02T06:00:00.000Z", daten: lang });
 
 /* Fremde Geräte: ohne Freigabe weder Reiter noch Karte auf der Übersicht,
    auch wenn (warum auch immer) Daten im Speicher lägen. */
@@ -1089,10 +1134,20 @@ let trend = trendBei([].concat(trainingsWoche("2026-08-25", 2), trainingsWoche("
 pruefe("mehr trainiert: Trend hoch", trend.richtung === "hoch" && trend.jetzt === 2.5 && trend.vorher === 0.5);
 trend = trendBei([].concat(trainingsWoche("2026-08-04", 3), trainingsWoche("2026-08-11", 3), trainingsWoche("2026-09-15", 1)));
 pruefe("weniger trainiert: Trend runter", trend.richtung === "runter");
-trend = trendBei([].concat(trainingsWoche("2026-09-15", 2), trainingsWoche("2026-08-11", 2)));
-pruefe("gleich viel: Trend gleich", trend.richtung === "gleich");
+trend = trendBei([].concat(trainingsWoche("2026-07-28", 1), trainingsWoche("2026-08-11", 1),
+                            trainingsWoche("2026-09-01", 1), trainingsWoche("2026-09-15", 1)));
+pruefe("gleich viel: Trend gleich", trend.richtung === "gleich" && trend.jetzt === 0.5 && trend.vorher === 0.5);
 trend = trendBei(trainingsWoche("2026-09-22", 3));
-pruefe("nur diese Woche trainiert: kein Trend, sie ist nicht vorbei", trend.richtung === "keine");
+pruefe("nur diese Woche trainiert: noch kein Vergleich, sie ist nicht vorbei",
+       trend.richtung === "neu" && trend.jetzt === null);
+/* Der Fehler vom 02.10.2026: Wochen vor dem ersten Training zählten als
+   Nullwochen. Wer in der Woche ab 17.08. angefangen hat und seitdem jede
+   Woche zweimal geht, hätte "mehr als davor" mit Ø 0,5 davor gesehen. */
+trend = trendBei([].concat(trainingsWoche("2026-08-18", 2), trainingsWoche("2026-08-25", 2), trainingsWoche("2026-09-01", 2),
+                            trainingsWoche("2026-09-08", 2), trainingsWoche("2026-09-15", 2)));
+pruefe("Wochen vor dem ersten Training ziehen den Schnitt nicht runter",
+       trend.richtung === "gleich" && trend.vorher === 2 && trend.wochenVorher === 1);
+pruefe("nichts in acht Wochen: keine", trendBei(trainingsWoche("2026-06-02", 2)).richtung === "keine");
 
 
 /* ====================================================================== */

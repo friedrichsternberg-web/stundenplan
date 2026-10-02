@@ -154,11 +154,22 @@ gebaut und kennt den Uni-Plan nicht.
 Gymbro (gymbro.tyl3r.de) ist die Web-App, in der Friedrich und seine
 Freunde ihre Trainings eintragen. Der Reiter **Training** zeigt daraus:
 Trainings diese Woche und diesen Monat, wie viele Wochen in Folge, die
-durchschnittliche Dauer, das letzte Training mit Muskelgruppen, die
-letzten acht Wochen als Balken, wann welche Muskelgruppe zuletzt dran
-war (am längsten her zuerst), Gewicht mit Verlauf, die neuesten
-Bestleistungen, Pläne und Ruhetage. Auf der Übersicht steht eine kurze
-Karte davon.
+durchschnittliche Dauer eines Krafttrainings (Cardio und Laufen zählen
+dort nicht mit), das letzte Training, die letzten Trainings nach Art,
+neun Wochen als Balken mit dem Schnitt darunter, die Entwicklung über
+sechs Monate (Anzahl und Dauer), die Aufteilung auf Push, Pull, Beine
+usw., an welchen Wochentagen und zu welcher Tageszeit, das Gewicht seit
+der ersten Messung, Bestwerte, Bestleistungen, Pläne und Ruhetage. Auf
+der Übersicht steht eine kurze Karte davon.
+
+**Der Wochenschnitt.** Verglichen werden die letzten vier
+abgeschlossenen Wochen mit den vier davor; die laufende Woche zählt
+nicht mit. Wochen vor dem ersten Training zählen ebenfalls nicht, sie
+sind keine Wochen ohne Training, sondern Wochen ohne Gymbro. Bis
+02.10.2026 zählten sie als Nullwochen, dadurch stand am Anfang
+fälschlich „mehr als davor“. Die neun Säulen zeigen genau die Wochen,
+mit denen gerechnet wird: blass die vier davor, kräftiger die letzten
+vier, voll die laufende.
 
 **Wie die Daten ankommen.** Die Seite fragt die Edge Function `training`
 bei Supabase, und die holt mit dem Gymbro-Schlüssel `/api/v1/export` ab.
