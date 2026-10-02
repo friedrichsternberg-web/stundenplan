@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-10-02T17:02",
+ "geprueftAm": "2026-10-02T21:52",
  "fensterVon": "2026-09-28T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -1172,6 +1172,17 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1218671",
+   "start": "2026-10-21T12:15",
+   "ende": "2026-10-21T13:15",
+   "art": "Klausur",
+   "titel": "Nationales und internationales Hotelmanagement I",
+   "dozent": "also for Incomings DLM 1, Nastansky",
+   "raum": "CL: 6B.277/278 (FB4)",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1217498",
    "start": "2026-10-22T08:30",
    "ende": "2026-10-22T10:00",
@@ -1211,8 +1222,8 @@ const STUNDENPLAN = {
    "art": "Klausur",
    "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
    "dozent": "Hüper",
-   "raum": "",
-   "anmerkung": "Uhrzeit noch nicht bestätigt",
+   "raum": "CL: 5.0002",
+   "anmerkung": "",
    "gruppe": ""
   },
   {
@@ -1224,6 +1235,28 @@ const STUNDENPLAN = {
    "dozent": "Buchanan, Casselle",
    "raum": "CL: 6B.453",
    "anmerkung": "konkrete Termine erfahren Sie von Ihrer Dozentin",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1218679",
+   "start": "2026-10-26T10:00",
+   "ende": "2026-10-26T11:00",
+   "art": "Klausur",
+   "titel": "4 - Management",
+   "dozent": "Knoll, Martina Hesse",
+   "raum": "CL: 1.Audimax vorn",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1218680",
+   "start": "2026-10-26T10:00",
+   "ende": "2026-10-26T11:30",
+   "art": "Klausur",
+   "titel": "4 - Management",
+   "dozent": "Bleis, Roxin",
+   "raum": "CL: 1.Audimax hinten",
+   "anmerkung": "",
    "gruppe": ""
   },
   {
@@ -1249,6 +1282,28 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
+   "id": "sked.de1218685",
+   "start": "2026-10-27T11:00",
+   "ende": "2026-10-27T12:30",
+   "art": "Klausur",
+   "titel": "WPF - Wirtschaftspsychologie (Die)",
+   "dozent": "Schlesinger, Wildebrand",
+   "raum": "CL: 1.Audimax vorn",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
+   "id": "sked.de1218691",
+   "start": "2026-10-28T14:00",
+   "ende": "2026-10-28T15:00",
+   "art": "Klausur",
+   "titel": "Nationale und internationale Leistungsanbieter I",
+   "dozent": "Nabialek",
+   "raum": "CL: 5.0002",
+   "anmerkung": "",
+   "gruppe": ""
+  },
+  {
    "id": "sked.de1217403",
    "start": "2026-10-29T08:30",
    "ende": "2026-10-29T10:00",
@@ -1266,7 +1321,7 @@ const STUNDENPLAN = {
    "art": "Klausur",
    "titel": "WPF - Wirtschaftspsychologie (Do) Kurs 1",
    "dozent": "Kirch",
-   "raum": "",
+   "raum": "CL: 5.0002",
    "anmerkung": "Klausur",
    "gruppe": ""
   },
@@ -1282,18 +1337,176 @@ const STUNDENPLAN = {
    "gruppe": ""
   },
   {
-   "id": "sked.de1215471",
-   "start": "2026-10-30T08:00",
-   "ende": "2026-10-30T18:00",
-   "art": "I",
-   "titel": "Dialogforum Digitalisierung",
-   "dozent": "",
-   "raum": "",
+   "id": "sked.de1218695",
+   "start": "2026-10-29T14:00",
+   "ende": "2026-10-29T16:00",
+   "art": "Klausur",
+   "titel": "WPF - IRFS Rechnungslegung",
+   "dozent": "Schlösser, Yollu-Tok",
+   "raum": "CL: 1.Audimax vorn",
    "anmerkung": "",
    "gruppe": ""
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-10-02T21:52",
+   "anzahl": 9,
+   "eintraege": [
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218671",
+      "start": "2026-10-21T12:15",
+      "ende": "2026-10-21T13:15",
+      "art": "Klausur",
+      "titel": "Nationales und internationales Hotelmanagement I",
+      "dozent": "also for Incomings DLM 1, Nastansky",
+      "raum": "CL: 6B.277/278 (FB4)",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1214222",
+      "start": "2026-10-22T10:00",
+      "ende": "2026-10-22T11:00",
+      "art": "Klausur",
+      "titel": "WPF - Ethik in Wirtschaft und Gesellschaft",
+      "dozent": "Hüper",
+      "raum": "CL: 5.0002",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 5.0002"
+      },
+      {
+       "feld": "Anmerkung",
+       "vorher": "Uhrzeit noch nicht bestätigt",
+       "nachher": ""
+      }
+     ]
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218679",
+      "start": "2026-10-26T10:00",
+      "ende": "2026-10-26T11:00",
+      "art": "Klausur",
+      "titel": "4 - Management",
+      "dozent": "Knoll, Martina Hesse",
+      "raum": "CL: 1.Audimax vorn",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218680",
+      "start": "2026-10-26T10:00",
+      "ende": "2026-10-26T11:30",
+      "art": "Klausur",
+      "titel": "4 - Management",
+      "dozent": "Bleis, Roxin",
+      "raum": "CL: 1.Audimax hinten",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218685",
+      "start": "2026-10-27T11:00",
+      "ende": "2026-10-27T12:30",
+      "art": "Klausur",
+      "titel": "WPF - Wirtschaftspsychologie (Die)",
+      "dozent": "Schlesinger, Wildebrand",
+      "raum": "CL: 1.Audimax vorn",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218691",
+      "start": "2026-10-28T14:00",
+      "ende": "2026-10-28T15:00",
+      "art": "Klausur",
+      "titel": "Nationale und internationale Leistungsanbieter I",
+      "dozent": "Nabialek",
+      "raum": "CL: 5.0002",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1208519",
+      "start": "2026-10-29T09:00",
+      "ende": "2026-10-29T10:30",
+      "art": "Klausur",
+      "titel": "WPF - Wirtschaftspsychologie (Do) Kurs 1",
+      "dozent": "Kirch",
+      "raum": "CL: 5.0002",
+      "anmerkung": "Klausur",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Raum",
+       "vorher": "",
+       "nachher": "CL: 5.0002"
+      }
+     ]
+    },
+    {
+     "typ": "neu",
+     "termin": {
+      "id": "sked.de1218695",
+      "start": "2026-10-29T14:00",
+      "ende": "2026-10-29T16:00",
+      "art": "Klausur",
+      "titel": "WPF - IRFS Rechnungslegung",
+      "dozent": "Schlösser, Yollu-Tok",
+      "raum": "CL: 1.Audimax vorn",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    },
+    {
+     "typ": "entfallen",
+     "termin": {
+      "id": "sked.de1215471",
+      "start": "2026-10-30T08:00",
+      "ende": "2026-10-30T18:00",
+      "art": "I",
+      "titel": "Dialogforum Digitalisierung",
+      "dozent": "",
+      "raum": "",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": []
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-09-24T00:07",
    "anzahl": 1,
