@@ -22,6 +22,24 @@ An „To-dos" steht eine Zahl, sobald dort etwas offen ist. Einen Reiter
 abhaken. Die ganze Liste steht im ⚙-Fenster unter **Änderungen am
 Stundenplan**.
 
+## Liquid Glass (seit 02.10.2026)
+
+Das Aussehen folgt den aktuellen Apple-Apps. Alles dazu steht als ein
+Block am Ende von `style.css` („LIQUID GLASS“) und lässt sich dort in einem
+Stück ändern oder zurücknehmen.
+
+- Hintergrund reines Weiß (hell) bzw. Schwarz (dunkel), auf Wunsch ohne
+  Farbverlauf. Darauf Karten aus mattem Glas: leicht durchscheinend, mit
+  Unschärfe dahinter (`backdrop-filter`), feiner Kante und weichem
+  Schatten. Hell sind sie ein Hauch grau, sonst verschwänden sie auf Weiß.
+- Auf dem Handy schwebt die Reiterleiste unten als Glas-Kapsel mit
+  Symbolen, am Rechner sitzt sie oben. Fenster sind Glas-Blätter mit
+  Griff, Knöpfe Glas-Kapseln, Akzent ist das System-Blau.
+- Unschärfe nur auf Karten, Leisten und Fenstern, nicht auf den vielen
+  Kalenderkästchen, sonst wird das iPhone träge. Wo der Browser keine
+  Unschärfe kann oder „Transparenz reduzieren“ an ist, werden die Flächen
+  deckend.
+
 ## Ohne Erklärtexte, ohne Zoom-Versehen
 
 Seit dem 26.09.2026 stehen in der App keine Platzhalter in Eingabefeldern
@@ -276,6 +294,9 @@ Notizen bleiben dort draußen: sie gelten für alle Termine des Fachs und
 stünden sonst unter jeder einzelnen Vorlesung — bei zwanzig Terminen
 zwanzigmal derselbe Text. Im Fenster eines angetippten Termins stehen sie
 dagegen mit dabei, dort wiederholt sich nichts.
+
+Innerhalb jeder Zeitgruppe stehen sie **streng nach Datum und Uhrzeit**;
+ein Stern zieht nichts mehr nach vorn (seit 02.10.2026).
 
 **Gesammelt** werden sie im Reiter **To-dos**, und zwar nach Zeit sortiert
 in Fächern:

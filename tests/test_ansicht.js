@@ -349,7 +349,7 @@ pruefe("und der Eintrag ist untergekommen", untergekommen === 1);
 
 
 /* ====================================================================== */
-abschnitt("6. Die Reihenfolge bleibt: Wichtiges zuerst, dann nach Datum");
+abschnitt("6. Die Reihenfolge ist streng nach Datum, auch fuer Wichtiges");
 
 werkzeug.filterLeeren();
 werkzeug.setzen({}, [
@@ -364,11 +364,30 @@ werkzeug.setzen({}, [
 const sortiert = werkzeug.aufgabenSammeln();
 const inWoche = werkzeug.nachZeitgruppen(sortiert, MONTAG).woche;
 pruefe("alle drei liegen in derselben Woche", inWoche.length === 3);
-pruefe("das Wichtige steht im Fach oben",
-       inWoche[0] && inWoche[0].text === "spaet und wichtig");
-pruefe("danach nach Datum",
-       inWoche[1] && inWoche[1].text === "frueh und normal"
-       && inWoche[2] && inWoche[2].text === "spaet und normal");
+pruefe("das Frueheste steht oben", inWoche[0] && inWoche[0].text === "frueh und normal");
+pruefe("das Wichtige steht an seinem Tag, nicht vorgezogen",
+       inWoche[1] && inWoche[1].text === "spaet und normal"
+       && inWoche[2] && inWoche[2].text === "spaet und wichtig");
+
+/* Der Fall aus dem Screenshot vom 02.10.2026: To-dos an Terminen mit
+   Uhrzeit und freie To-dos nur mit Tag, gemischt. */
+STUNDENPLAN.termine = [
+  { id: "t.sa", start: tagOffset(12) + "T11:15", ende: tagOffset(12) + "T12:45", titel: "Management",
+    art: "SU", dozent: "", raum: "", anmerkung: "", gruppe: "" },
+  { id: "t.di", start: tagOffset(8) + "T08:45", ende: tagOffset(8) + "T13:15", titel: "Social Innovation",
+    art: "SU", dozent: "", raum: "", anmerkung: "", gruppe: "" },
+  { id: "t.do", start: tagOffset(10) + "T08:45", ende: tagOffset(10) + "T13:15", titel: "Nachhaltig",
+    art: "SU", dozent: "", raum: "", anmerkung: "", gruppe: "" },
+];
+werkzeug.setzen({
+  "t.sa": { text: "Praesi Management", erledigt: false, wichtig: true, geaendert: 1 },
+  "t.di": { text: "Praesi SI", erledigt: false, wichtig: false, geaendert: 1 },
+  "t.do": { text: "Praesi NW", erledigt: false, wichtig: false, geaendert: 1 },
+}, [{ id: "eigen-abg", text: "Abgabe Praesi", datum: tagOffset(10), erledigt: false, wichtig: false, geaendert: 1 }]);
+const gemischt = werkzeug.aufgabenSammeln().map(a => a.text).join(" | ");
+pruefe("Di vor Do vor Sa, das Tages-To-do vor dem Termin am selben Tag",
+       gemischt === "Praesi SI | Abgabe Praesi | Praesi NW | Praesi Management");
+STUNDENPLAN.termine = [];
 
 
 /* ====================================================================== */

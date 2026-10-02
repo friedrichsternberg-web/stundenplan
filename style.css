@@ -2945,32 +2945,6 @@ a.knopf-schlicht {
 
 /* --- To-dos -------------------------------------------------------------- */
 
-.todo-verteilung {
-  display: flex;
-  gap: 3px;
-  height: 12px;
-  margin: 6px 0 8px;
-}
-.todo-anteil { display: block; min-width: 6px; border-radius: 4px; }
-.todo-anteil-ueberfaellig, .todo-leg-ueberfaellig::before { background: var(--wichtig); }
-.todo-anteil-heute, .todo-leg-heute::before { background: var(--geaendert); }
-.todo-anteil-morgen, .todo-leg-morgen::before { background: var(--akzent); }
-.todo-anteil-woche, .todo-leg-woche::before { background: var(--theorie); opacity: .6; }
-.todo-anteil-naechste, .todo-leg-naechste::before { background: var(--notiz-rand); }
-.todo-anteil-spaeter, .todo-leg-spaeter::before { background: var(--schrift-leise); }
-.todo-anteil-ohne, .todo-leg-ohne::before { background: var(--linie); }
-
-.todo-legende { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--schrift-leise); }
-.todo-leg::before {
-  content: "";
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-  margin-right: 5px;
-  vertical-align: -1px;
-}
-
 /* Die Zeitgruppen als Karten. Der Kopf ist keine klebende Zeile mehr,
    sondern der Kopf der Karte. */
 .gruppen-karte .todo-gruppe {
@@ -3302,3 +3276,306 @@ html, body, * { touch-action: manipulation; }
 .termin-todo .todo-haken { margin-top: 2px; }
 .termin-todo-erledigt .todo-haken { background: var(--neu); border-color: var(--neu); color: #fff; }
 .termin-todo-erledigt .termin-todo-text { text-decoration: line-through; color: var(--schrift-leise); }
+
+
+/* =========================================================================
+   LIQUID GLASS (02.10.2026)
+
+   Das Designkonzept im Stil der aktuellen Apple-Apps:
+   - Ein ruhiger, farbiger Verlauf als Hintergrund, fest stehend.
+   - Darüber Karten aus mattem Glas: halbdurchsichtig, mit Unschärfe
+     dahinter, einer hellen Lichtkante oben und weichem Schatten.
+   - Auf dem Handy schwebt die Reiterleiste unten als Glas-Kapsel mit
+     Symbolen, am Rechner sitzt sie oben.
+   - Fenster sind Glas-Blätter, Knöpfe Glas-Kapseln, Akzent ist das
+     System-Blau von Apple.
+
+   Unschärfe (backdrop-filter) kostet Rechenzeit. Sie liegt deshalb nur auf
+   Karten, Leisten und Fenstern, nie auf den vielen kleinen Kästchen im
+   Kalender oder einzelnen Zeilen. Wo der Browser keine Unschärfe kann
+   oder jemand "Transparenz reduzieren" eingeschaltet hat, werden die
+   Flächen deckend - siehe ganz unten.
+   ========================================================================= */
+
+:root {
+  --akzent: #007aff;
+  --akzent-flaeche: rgba(0, 122, 255, .12);
+  --hintergrund: #ffffff;
+  /* Auf reinem Weiß wäre weißes Glas unsichtbar. Die Karten sind deshalb
+     ein Hauch grau, mit feiner dunkler Kante - wie die Karten in iOS. */
+  --glas: rgba(242, 242, 247, .78);
+  --glas-stark: rgba(248, 248, 250, .88);
+  --glas-rand: rgba(0, 0, 0, .06);
+  --glas-linie: rgba(60, 60, 67, .12);
+  --glas-licht: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 .5px rgba(255, 255, 255, .5);
+  --glas-schatten: 0 10px 30px rgba(28, 42, 92, .10), 0 1px 2px rgba(28, 42, 92, .06);
+  --glas-unschaerfe: blur(22px) saturate(180%);
+  --feld: rgba(255, 255, 255, .7);
+  --linie: rgba(60, 60, 67, .14);
+  --rundung: 14px;
+  --rundung-gross: 22px;
+  /* Hinter den Widgets reines Weiß bzw. Schwarz, kein Farbverlauf
+     (Wunsch vom 02.10.2026). Die Ebene bleibt, falls er zurückkommt. */
+  --verlauf: #ffffff;
+}
+
+:root[data-thema="dunkel"] {
+  --akzent: #0a84ff;
+  --akzent-flaeche: rgba(10, 132, 255, .18);
+  --hintergrund: #000000;
+  --glas: rgba(28, 28, 30, .78);
+  --glas-stark: rgba(38, 38, 42, .88);
+  --glas-rand: rgba(255, 255, 255, .09);
+  --glas-linie: rgba(255, 255, 255, .09);
+  --glas-licht: inset 0 1px 0 rgba(255, 255, 255, .10), inset 0 0 0 .5px rgba(255, 255, 255, .06);
+  --glas-schatten: 0 12px 34px rgba(0, 0, 0, .45), 0 1px 2px rgba(0, 0, 0, .3);
+  --feld: rgba(255, 255, 255, .07);
+  --linie: rgba(255, 255, 255, .10);
+  --verlauf: #000000;
+}
+
+/* Der Verlauf liegt auf einer festen Ebene hinter allem. Am Body selbst
+   mit "background-attachment: fixed" ginge es auf dem iPhone nicht -
+   Safari ignoriert das dort. */
+body { background: var(--hintergrund); }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--verlauf);
+  pointer-events: none;
+}
+
+/* --- Schrift: große Titel wie in iOS, gerundete Ziffern ------------------ */
+
+h1 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+.kopf-stand { font-size: 13px; }
+.start-zahl-wert, .tw-zahl, .tag-kachel strong, .heute-zeit,
+.woche-wert, .training-gross {
+  font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+}
+
+/* --- Die Glasflächen ---------------------------------------------------- */
+
+.start-karte,
+.tag,
+.zettel-karte,
+.kalender-rahmen,
+.start-zahl,
+.training-alle,
+.start-geaendert,
+.vergangene-knopf,
+.knopf-schlicht,
+.knopf-pfeil,
+.schalter,
+.reiter {
+  background: var(--glas);
+  -webkit-backdrop-filter: var(--glas-unschaerfe);
+  backdrop-filter: var(--glas-unschaerfe);
+  border: 1px solid var(--glas-rand);
+  box-shadow: var(--glas-licht), var(--glas-schatten);
+}
+
+.start-karte, .tag, .zettel-karte, .kalender-rahmen, .start-geaendert {
+  border-radius: var(--rundung-gross);
+}
+.start-zahl, .training-alle { border-radius: 18px; }
+
+.start-karte-kopf, .tag-kopf { border-bottom-color: var(--glas-linie); background: transparent; }
+.termin, .tag-leer, .start-todo, .einkauf-posten, .training-reihe,
+.training-eintrag, .start-zettel, .up-eintrag + .up-eintrag { border-top-color: var(--glas-linie); }
+
+.tag-heute { border: 1.5px solid var(--akzent); }
+
+/* Die Symbole in den Kartenköpfen etwas runder, wie App-Symbole. */
+.start-symbol { border-radius: 9px; }
+
+/* --- Knöpfe: Glas-Kapseln ----------------------------------------------- */
+
+.knopf-schlicht, .knopf-pfeil { border-radius: 999px; }
+.knopf-schlicht:hover, .knopf-pfeil:hover { background: var(--glas-stark); }
+.knopf-schlicht:active, .knopf-pfeil:active { transform: scale(.97); }
+
+.knopf-betont,
+.knopf-aktiv {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--akzent) 88%, white), var(--akzent));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 6px 16px color-mix(in srgb, var(--akzent) 35%, transparent);
+}
+.knopf-betont:hover, .knopf-aktiv:hover { background: var(--akzent); }
+
+.knopf-gefahr { color: var(--entfallen); }
+
+/* Umschalter Liste/Kalender und Hell/Dunkel: eine Glas-Kapsel, darin eine
+   hellere Kapsel für die Auswahl. */
+.schalter { border-radius: 999px; padding: 3px; }
+.schalter button { border-radius: 999px; }
+.schalter .schalter-aktiv {
+  background: var(--glas-stark);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .6);
+  color: var(--schrift);
+}
+
+/* --- Eingabefelder ----------------------------------------------------- */
+
+input[type="text"], input[type="search"], input[type="date"], input[type="time"],
+textarea, select,
+.form-feld input, .form-feld textarea, .form-feld select,
+.einkauf-neu input, .zettel-leiste input[type="search"] {
+  background: var(--feld);
+  border: 1px solid var(--glas-linie);
+  border-radius: 12px;
+}
+
+/* --- "Als Nächstes": getöntes Glas --------------------------------------- */
+
+.naechster-karte {
+  background: linear-gradient(135deg, rgba(0, 122, 255, .92), rgba(94, 92, 230, .9));
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: var(--rundung-gross);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 14px 34px rgba(0, 92, 230, .30);
+  color: #fff;
+}
+
+/* --- Reiterleiste ------------------------------------------------------- */
+
+.reiter {
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+  margin: 0 auto 20px;
+  border-bottom: 1px solid var(--glas-rand);
+}
+.reiter button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  gap: 7px;
+  color: var(--schrift-leise);
+}
+.reiter .reiter-aktiv {
+  background: var(--akzent-flaeche);
+  color: var(--akzent);
+  border-bottom: 0;
+}
+.reiter-symbol { width: 18px; height: 18px; flex: 0 0 auto; }
+
+/* Auf dem Handy: schwebende Glas-Leiste unten, Symbol über der Schrift. */
+@media (max-width: 700px) {
+  .reiter {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 9;
+    max-width: none;
+    margin: 0;
+    padding: 5px;
+    overflow: visible;
+    background: var(--glas-stark);
+  }
+  .reiter button {
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 0 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    position: relative;
+    min-width: 0;
+  }
+  .reiter-symbol { width: 22px; height: 22px; }
+  .reiter-text { white-space: nowrap; }
+  .reiter .reiter-zahl {
+    position: absolute;
+    top: 2px;
+    left: calc(50% + 6px);
+    min-width: 16px;
+    line-height: 16px;
+    font-size: 10px;
+    padding: 0 4px;
+  }
+  /* Platz unten, damit die Leiste nichts verdeckt. */
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
+/* --- Fenster: Glas-Blätter ---------------------------------------------- */
+
+.filter-hintergrund {
+  background: rgba(10, 14, 30, .28);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.filter-fenster {
+  background: var(--glas-stark);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--glas-rand);
+  border-radius: 26px;
+  box-shadow: var(--glas-licht), 0 24px 60px rgba(0, 0, 0, .25);
+}
+.filter-kopf { background: transparent; }
+@media (max-width: 520px) {
+  .filter-fenster { border-radius: 26px 26px 0 0; padding-top: 14px; }
+  /* Der Griff oben am Blatt, wie bei iOS-Sheets. */
+  .filter-fenster::before {
+    content: "";
+    display: block;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 5px;
+    margin: 0 auto 10px;
+    border-radius: 999px;
+    background: var(--glas-linie);
+  }
+}
+
+/* Einstellungen: die Blöcke als feineres Glas im Glas. */
+#geraeteHintergrund .filter-fenster > div:not(.filter-kopf) {
+  background: var(--feld);
+  border-color: var(--glas-linie);
+  border-radius: 18px;
+}
+
+/* --- Kalender ----------------------------------------------------------- */
+
+.kalender-tagkopf, .kalender-ecke, .kalender-ganztag-ecke, .kalender-zeitachse {
+  background: var(--glas-stark);
+}
+/* Heute bleibt blau hinterlegt - die Glasregel darüber hätte es sonst
+   überdeckt, und die weiße Schrift stand unsichtbar auf hellem Glas. */
+.kalender-tagkopf.kalender-tagkopf-heute { background: var(--akzent); }
+.kalender-tagkopf-heute .kalender-tagname,
+.kalender-tagkopf-heute .kalender-tagzahl { color: #fff; }
+.kalender-termin {
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+
+/* --- Kleinigkeiten ------------------------------------------------------ */
+
+.todo-haken { border-radius: 8px; border-color: var(--glas-linie); background: var(--feld); }
+.tag-kachel, .start-symbol, .gruppen-punkt { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
+.heute-marke, .up-marke { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+
+/* --- Rückfall: deckend statt Glas --------------------------------------- */
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  :root, :root[data-thema="dunkel"] {
+    --glas: var(--flaeche);
+    --glas-stark: var(--flaeche);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-thema="dunkel"] {
+    --glas: var(--flaeche);
+    --glas-stark: var(--flaeche);
+    --verlauf: var(--hintergrund);
+  }
+}
+@media (max-width: 520px) {
+  /* Der große Titel soll auf dem Handy einzeilig bleiben. */
+  h1 { font-size: 22px; }
+}
