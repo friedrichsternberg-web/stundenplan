@@ -1,4 +1,7 @@
-# Uni-Dashboard
+# Planer
+
+So heißt die App seit 05.10.2026, vorher „Uni-Dashboard“. Oben steht
+„Planer“, darunter Studiengang und Semester, darunter der Stand.
 
 Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
 
@@ -220,6 +223,23 @@ Wenn du den Ordner verschiebst, danach einmal
 merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
+
+**Ganztägiges im Kalender (seit 05.10.2026).** Die Ganztagszeile ist ein
+eigenes kleines Raster über den Tagesspalten. Ein mehrtägiger Termin ist
+ein einziger Balken über seine Tage (Urlaub, Prüfungszeitraum), mit Titel
+in bis zu zwei Zeilen (Handy: drei) und darunter Zeitspanne bzw. Ort.
+Was nicht nebeneinander passt, liegt in Bahnen übereinander: erst die
+längsten Termine, dann eintägige, dann To-dos. Geht ein Termin über den
+Wochenrand hinaus, fehlt dort die Rundung. `ganztagsZeileBauen()` baut die
+Zeile, Abschnitt 18 in `tests/test_ansicht.js` prüft die Bahnen.
+
+**Alles auf einen Blick.** Die Stundenhöhe ist nicht mehr fest. Nach dem
+Zeichnen misst `kalenderHoeheAnpassen()`, wo das Zeitraster anfängt (also
+nach Kopf, Wochenleiste und der je nach Woche verschieden hohen
+Ganztagszeile) und wo unten die Reiterleiste beginnt, und teilt den Rest
+durch die Stunden. Grenzen: Handy 30 bis 48, Rechner 34 bis 64 Bildpunkte
+pro Stunde. Wird das Fenster höher oder niedriger, zeichnet der Kalender
+neu.
 
 Im **Kalender** öffnet ein Tippen auf einen Tag (oben im Kopf oder in der
 Ganztagszeile) das Tagesfenster. Darin steht genau die Karte, die die Liste

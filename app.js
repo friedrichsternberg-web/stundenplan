@@ -1042,6 +1042,12 @@ function wocheZeichnen() {
   document.getElementById("tage").innerHTML =
     ansicht === "kalender" ? kalenderBauen(tage) : listeBauen(tage);
 
+  // Erst zeichnen, dann messen, wie viel Platz bleibt, und mit der
+  // passenden Stundenhöhe ein zweites Mal zeichnen.
+  if (ansicht === "kalender" && kalenderHoeheAnpassen()) {
+    document.getElementById("tage").innerHTML = kalenderBauen(tage);
+  }
+
   if (ansicht === "kalender") kalenderTexteAnpassen();
 
   // Alles, was die Woche neu zeichnet, zeichnet auch das offene Tagesfenster.
@@ -2742,6 +2748,7 @@ const STUNDE_HOEHE_HANDY = 40;
 const SCHMALER_BILDSCHIRM = window.matchMedia("(max-width: 520px)");
 
 function stundenHoehe() {
+  if (gemesseneStundeHoehe) return gemesseneStundeHoehe;
   return SCHMALER_BILDSCHIRM.matches ? STUNDE_HOEHE_HANDY : STUNDE_HOEHE_GROSS;
 }
 
@@ -2810,6 +2817,152 @@ function spaltenVerteilen(termine) {
   return ergebnis;
 }
 
+/* Die Ganztagszeile als eigenes kleines Raster über allen Tagen.
+
+   Vorher hatte jeder Tag sein eigenes Kästchen, und ein Urlaub über fünf
+   Tage stand fünfmal da, jedes Mal nach zwölf Zeichen abgeschnitten. Jetzt
+   ist ein mehrtägiger Termin EIN Balken über seine Tage, wie im Kalender
+   auf dem iPhone. Dadurch hat er Platz für den ganzen Titel.
+
+   Die Balken liegen in Bahnen übereinander. Jeder Eintrag kommt in die
+   oberste Bahn, die an all seinen Tagen noch frei ist. Erst die
+   mehrtägigen (die längsten zuerst), dann die eintägigen, dann die
+   To-dos. So liegen lange Balken oben durchgehend und die kurzen darunter. */
+function ganztagsZeileBauen(tage) {
+  const anzahl = tage.length;
+  const eintraege = [];
+
+  const gesehen = new Map();
+  tage.forEach((tag, spalte) => {
+    for (const termin of tag.ganztags || []) {
+      if (gesehen.has(termin.id)) {
+        gesehen.get(termin.id).bis = spalte;
+      } else {
+        const e = { art: "termin", termin, von: spalte, bis: spalte };
+        gesehen.set(termin.id, e);
+        eintraege.push(e);
+      }
+    }
+  });
+  eintraege.sort((a, b) => (b.bis - b.von) - (a.bis - a.von) || a.von - b.von);
+  tage.forEach((tag, spalte) => {
+    for (const aufgabe of tag.aufgaben) {
+      eintraege.push({ art: "aufgabe", aufgabe, schluessel: tag.schluessel, von: spalte, bis: spalte });
+    }
+  });
+  if (!eintraege.length) return "";
+
+  // Bahnen vergeben: belegt[bahn][spalte] = true
+  const belegt = [];
+  for (const e of eintraege) {
+    let bahn = 0;
+    for (;; bahn++) {
+      if (!belegt[bahn]) belegt[bahn] = [];
+      let frei = true;
+      for (let s = e.von; s <= e.bis; s++) if (belegt[bahn][s]) frei = false;
+      if (frei) break;
+    }
+    for (let s = e.von; s <= e.bis; s++) belegt[bahn][s] = true;
+    e.bahn = bahn;
+  }
+  const bahnen = belegt.length;
+
+  const ersterTag = tage[0].schluessel;
+  const letzterTag = tage[anzahl - 1].schluessel;
+
+  const kacheln = eintraege.map(e => {
+    const lage = `grid-column:${e.von + 1} / ${e.bis + 2}; grid-row:${e.bahn + 1}`;
+    if (e.art === "termin") {
+      const t = e.termin;
+      const zusatz = [t.ort, t.notiz].filter(Boolean).join(" · ");
+      // Läuft der Termin über den Wochenrand, fehlt dort die runde Ecke:
+      // man sieht, dass es weitergeht.
+      const vorher = t.start.slice(0, 10) < ersterTag;
+      const nachher = (t.ende || t.start).slice(0, 10) > letzterTag;
+      const spanne = (t.ende || t.start).slice(0, 10) > t.start.slice(0, 10)
+        ? datumKurz(alsDatum(t.start.slice(0, 10) + "T12:00")) + " – "
+          + datumKurz(alsDatum((t.ende || t.start).slice(0, 10) + "T12:00"))
+        : "";
+      return `
+        <div class="kalender-ganztag-balken${t.urlaub ? " kalender-ganztag-urlaub" : ""}${
+               t.wichtig ? " kalender-aufgabe-wichtig" : ""}${
+               vorher ? " kalender-ganztag-weiter-links" : ""}${
+               nachher ? " kalender-ganztag-weiter-rechts" : ""}"
+             style="${lage}" data-termin-bearbeiten="${sicher(t.id)}" role="button" tabindex="0"
+             title="${sicher([t.titel, spanne, zusatz].filter(Boolean).join(" · "))}">
+          <div class="kalender-ganztag-titel">${t.wichtig ? "★ " : ""}${sicher(t.titel)}</div>
+          ${zusatz || (spanne && e.bis > e.von)
+            ? `<div class="kalender-ganztag-zusatz">${sicher(
+                [e.bis > e.von ? spanne : "", zusatz].filter(Boolean).join(" · "))}</div>`
+            : ""}
+        </div>`;
+    }
+    const a = e.aufgabe;
+    return `
+      <div class="kalender-ganztag-balken kalender-ganztag-todo${
+             a.erledigt ? " kalender-aufgabe-erledigt" : ""}${
+             a.wichtig && !a.erledigt ? " kalender-aufgabe-wichtig" : ""}"
+           style="${lage}" data-tag-oeffnen="${sicher(e.schluessel)}"
+           data-tag-bearbeiten="${sicher(a.id)}" title="${sicher(a.text)}">
+        <div class="kalender-ganztag-titel">${a.wichtig ? "★ " : ""}${a.erledigt ? "✓ " : "○ "}${sicher(a.text)}</div>
+      </div>`;
+  }).join("");
+
+  // Darunter die leeren Tagesfelder: Linien, der heutige Tag getönt, und
+  // ein Tippen auf freie Fläche öffnet den Tag.
+  const felder = tage.map((tag, spalte) => `
+    <div class="kalender-ganztag ${tag.istHeute ? "kalender-ganztag-heute" : ""}"
+         style="grid-column:${spalte + 1}; grid-row:1 / -1"
+         data-tag-oeffnen="${sicher(tag.schluessel)}"></div>`).join("");
+
+  return `
+    <div class="kalender-ganztag-ecke">Ganz&shy;tags</div>
+    <div class="kalender-ganztag-flaeche"
+         style="grid-template-columns:repeat(${anzahl}, minmax(0, 1fr)); grid-template-rows:repeat(${bahnen}, auto)">
+      ${felder}
+      ${kacheln}
+    </div>`;
+}
+
+/* Wie hoch eine Stunde sein darf, damit der ganze Tag ohne Scrollen auf
+   den Bildschirm passt. Gemessen wird, wo das Raster anfängt (darüber
+   stehen Kopf, Wochenleiste und die Ganztagszeile, die je nach Woche
+   verschieden hoch ist) und wo unten Schluss ist (auf dem Handy liegt
+   dort die Reiterleiste). Der Rest geteilt durch die Stunden.
+
+   Nach unten gibt es eine Grenze: kleiner als 30 Bildpunkte pro Stunde
+   wird ein 45-Minuten-Termin unlesbar, dann lieber scrollen. Nach oben
+   auch: auf einem großen Bildschirm sähen 90 Bildpunkte aufgeblasen aus.
+
+   Liefert true, wenn sich der Wert geändert hat und neu gezeichnet
+   werden muss. */
+let gemesseneStundeHoehe = 0;
+
+function kalenderHoeheAnpassen() {
+  if (typeof window.innerHeight !== "number") return false;
+  const achse = document.querySelector("#tage .kalender-zeitachse");
+  if (!achse || !achse.getBoundingClientRect) return false;
+  const rahmen = achse.getBoundingClientRect();
+  if (!rahmen.height) return false;   // gerade nicht sichtbar
+
+  const stunden = Number(achse.getAttribute("data-stunden")) || (STANDARD_BIS - STANDARD_VON);
+  const oben = rahmen.top + (window.scrollY || 0);
+
+  let unten = 16;
+  const leiste = document.querySelector(".reiter");
+  if (leiste && getComputedStyle(leiste).position === "fixed") {
+    const l = leiste.getBoundingClientRect();
+    if (l.top > window.innerHeight / 2) unten = window.innerHeight - l.top + 10;
+  }
+
+  const schmal = SCHMALER_BILDSCHIRM.matches;
+  const frei = window.innerHeight - oben - unten;
+  const neu = Math.max(schmal ? 30 : 34, Math.min(schmal ? 48 : 64, Math.floor(frei / stunden)));
+  if (neu === stundenHoehe()) return false;
+  gemesseneStundeHoehe = neu;
+  return true;
+}
+
 function kalenderBauen(tage) {
   const alleTermine = tage.reduce((liste, t) => liste.concat(t.termine), []);
   const stundeHoehe = stundenHoehe();
@@ -2862,44 +3015,7 @@ function kalenderBauen(tage) {
      gelogen. Echte Kalender lösen das mit einem schmalen Streifen über dem
      Raster, und genau das ist das hier. Die Zeile erscheint nur, wenn in
      dieser Woche überhaupt eine Aufgabe liegt; sonst kostet sie nur Höhe. */
-  const gibtAufgaben = tage.some(
-    eintrag => eintrag.aufgaben.length > 0 || (eintrag.ganztags || []).length > 0);
-
-  const ganztagsZeile = !gibtAufgaben ? "" : `
-    <div class="kalender-ganztag-ecke">Ganz&shy;tags</div>
-    ${tage.map(eintrag => `
-      <div class="kalender-ganztag ${eintrag.istHeute ? "kalender-ganztag-heute" : ""}"
-           data-tag-oeffnen="${sicher(eintrag.schluessel)}">
-        ${(eintrag.ganztags || []).map(termin => {
-          /* Ort und Notiz standen bisher nur im Bearbeiten-Fenster. Ein
-             ganztaegiger Termin hat aber keine Uhrzeit, die ihn erklaert -
-             ohne Zusatz steht da nur ein Wort. Die zweite Zeile ist auch
-             der Grund, warum der Streifen hoeher geworden ist. */
-          const zusatz = [termin.ort, termin.notiz].filter(Boolean).join(" · ");
-          return `
-          <div class="kalender-aufgabe kalender-ganztagstermin${
-                 termin.wichtig ? " kalender-aufgabe-wichtig" : ""}"
-               data-termin-bearbeiten="${sicher(termin.id)}"
-               title="${sicher(termin.titel + (zusatz ? " · " + zusatz : ""))}">
-            <div class="kalender-ganztag-titel">${
-              termin.wichtig ? "★ " : ""}${sicher(termin.titel)}</div>
-            ${zusatz
-              ? `<div class="kalender-ganztag-zusatz">${sicher(zusatz)}</div>`
-              : ""}
-          </div>`;
-        }).join("")}
-        ${eintrag.aufgaben.map(aufgabe => {
-          const klassen = "kalender-aufgabe"
-            + (aufgabe.erledigt ? " kalender-aufgabe-erledigt" : "")
-            + (aufgabe.wichtig && !aufgabe.erledigt ? " kalender-aufgabe-wichtig" : "");
-          return `
-            <div class="${klassen}" data-tag-oeffnen="${sicher(eintrag.schluessel)}"
-                 data-tag-bearbeiten="${sicher(aufgabe.id)}"
-                 title="${sicher(aufgabe.text)}">
-              ${aufgabe.wichtig ? "★ " : ""}${aufgabe.erledigt ? "✓ " : ""}${sicher(aufgabe.text)}
-            </div>`;
-        }).join("")}
-      </div>`).join("")}`;
+  const ganztagsZeile = ganztagsZeileBauen(tage);
 
   const tagSpalten = tage.map(eintrag => {
     const istHeuteSpalte = tagesSchluessel(eintrag.datum) === heuteSchluessel;
@@ -3014,7 +3130,7 @@ function kalenderBauen(tage) {
         <div class="kalender-ecke"></div>
         ${kopfSpalten}
         ${ganztagsZeile}
-        <div class="kalender-zeitachse" style="height:${hoehe}px">
+        <div class="kalender-zeitachse" style="height:${hoehe}px" data-stunden="${bisStunde - vonStunde}">
           ${stundenBeschriftung.join("")}
         </div>
         ${tagSpalten}
@@ -6822,8 +6938,9 @@ function kopfZeichnen() {
                          + STUNDENPLAN.fachrichtung.slice(1);
   const semesterZahl = STUNDENPLAN.semester.replace("semester", "");
 
-  document.getElementById("planName").textContent =
-    grossgeschrieben + " · Semester " + semesterZahl;
+  /* Oben steht der Name der App. Welcher Studiengang und welches
+     Semester, rückt in die kleine Zeile darunter. */
+  const studiengang = grossgeschrieben + " · Semester " + semesterZahl;
 
   /* Wie alt der angezeigte Stand ist.
 
@@ -6840,6 +6957,7 @@ function kopfZeichnen() {
   else alter = "vor " + Math.round(stundenHer / 24) + " Tagen geprüft";
 
   const anzeige = document.getElementById("planStand");
+  document.getElementById("planStudiengang").textContent = studiengang;
   anzeige.textContent = alter + " · " + sichtbareTermine().length + " Termine";
   anzeige.classList.toggle("kopf-stand-alt", stundenHer >= 12);
   anzeige.title = "Zuletzt geprüft: " + zeitpunktLesbar(STUNDENPLAN.geprueftAm);
@@ -7168,7 +7286,12 @@ function knoepfeVerbinden() {
   window.addEventListener("resize", () => {
     if (ansicht !== "kalender" || seite !== "plan") return;
     if (messmarke) clearTimeout(messmarke);
-    messmarke = setTimeout(kalenderTexteAnpassen, 150);
+    // Ist das Fenster höher oder niedriger geworden, passt die
+    // Stundenhöhe nicht mehr: neu zeichnen. Sonst reicht neu messen.
+    messmarke = setTimeout(() => {
+      if (kalenderHoeheAnpassen()) wocheZeichnen();
+      else kalenderTexteAnpassen();
+    }, 150);
   });
 
   for (const knopf of document.querySelectorAll("[data-ansicht]")) {

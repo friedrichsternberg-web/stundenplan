@@ -1277,6 +1277,45 @@ STUNDENPLAN.termine = [];
 
 
 /* ====================================================================== */
+abschnitt("18. Ganztags: ein Balken ueber mehrere Tage, Bahnen uebereinander");
+
+/* Woche ab Mo 05.10.2026. Urlaub vom 01.10. bis Mi 07.10. (laeuft also
+   ueber den linken Wochenrand), ein Geburtstag am Di, ein To-do am Do. */
+const u18 = { id: "u18", titel: "Urlaub an der Ostsee", start: "2026-10-01T00:00",
+              ende: "2026-10-07T00:00", ganztags: true, urlaub: true };
+const g18 = { id: "g18", titel: "Geburtstag", start: "2026-10-06T00:00",
+              ende: "2026-10-06T00:00", ganztags: true, ort: "Rostock" };
+const tage18 = [];
+for (let i = 0; i < 7; i++) {
+  const d = new Date(2026, 9, 5 + i);
+  const s18 = "2026-10-" + String(5 + i).padStart(2, "0");
+  tage18.push({
+    datum: d, schluessel: s18, termine: [], istHeute: false,
+    ganztags: [u18, g18].filter(t => t.start.slice(0, 10) <= s18 && t.ende.slice(0, 10) >= s18),
+    aufgaben: i === 3 ? [{ id: "a18", text: "Praesentation", erledigt: false, wichtig: false }] : [],
+  });
+}
+const k18 = werkzeug.kalenderBauen(tage18);
+function anzahl18(text, teil) { return text.split(teil).length - 1; }
+pruefe("der Urlaub steht einmal da, nicht dreimal", anzahl18(k18, 'data-termin-bearbeiten="u18"') === 1);
+pruefe("und reicht von Montag bis Mittwoch (Spalte 1 bis 3)",
+       /data-termin-bearbeiten="u18"/.test(k18)
+       && k18.indexOf("grid-column:1 / 4; grid-row:1") >= 0);
+pruefe("er geht links ueber den Wochenrand hinaus", k18.indexOf("kalender-ganztag-weiter-links") >= 0);
+pruefe("aber nicht rechts", k18.indexOf("kalender-ganztag-weiter-rechts") < 0);
+pruefe("mit Zeitspanne", k18.indexOf("01.10. – 07.10.") >= 0);
+pruefe("der Geburtstag liegt am Dienstag in der zweiten Bahn",
+       k18.indexOf("grid-column:2 / 3; grid-row:2") >= 0);
+pruefe("das To-do am Donnerstag passt in die erste Bahn",
+       k18.indexOf("grid-column:4 / 5; grid-row:1") >= 0 && k18.indexOf('data-tag-bearbeiten="a18"') >= 0);
+pruefe("zwei Bahnen", k18.indexOf("grid-template-rows:repeat(2, auto)") >= 0);
+pruefe("sieben Tagesfelder zum Antippen", anzahl18(k18, 'class="kalender-ganztag ') === 7);
+pruefe("Ort beim Geburtstag", k18.indexOf("Rostock") >= 0);
+const leer18 = werkzeug.kalenderBauen(tage18.map(t => Object.assign({}, t, { ganztags: [], aufgaben: [] })));
+pruefe("ohne Ganztagiges keine Zeile", leer18.indexOf("kalender-ganztag-flaeche") < 0);
+
+
+/* ====================================================================== */
 console.log("");
 if (fehler.length) {
   console.log("FEHLGESCHLAGEN (" + fehler.length + "):");
