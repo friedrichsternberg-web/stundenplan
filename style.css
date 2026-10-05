@@ -2773,49 +2773,6 @@ a.knopf-schlicht {
 .up-fortschritt-theorie span { background: var(--theorie); }
 .up-fortschritt-praxis span { background: var(--praxis); }
 
-/* Die Leiste bis zum Studienende: Phasen als farbige Stücke, Fristen als
-   Striche darüber. */
-.up-leiste {
-  position: relative;
-  height: 18px;
-  border-radius: 6px;
-  background: var(--flaeche-gedaempft);
-  overflow: hidden;
-}
-.up-stueck { position: absolute; top: 0; bottom: 0; }
-.up-stueck + .up-stueck { box-shadow: inset 2px 0 0 var(--flaeche); }
-.up-stueck-theorie { background: var(--theorie); opacity: .85; }
-.up-stueck-praxis { background: var(--praxis); opacity: .85; }
-.up-strich {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 3px;
-  margin-left: -1.5px;
-  background: var(--geaendert);
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px var(--flaeche);
-}
-
-.up-achse { position: relative; height: 18px; margin-top: 3px; font-size: 11px; color: var(--schrift-leise); }
-.up-achse > span:first-child { position: absolute; left: 0; }
-.up-jahr { position: absolute; transform: translateX(-50%); }
-.up-achse-ende { position: absolute; right: 0; }
-
-.up-legende { display: flex; gap: 14px; font-size: 12px; color: var(--schrift-leise); margin: 2px 0 8px; }
-.up-leg::before {
-  content: "";
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  margin-right: 5px;
-  vertical-align: -1px;
-}
-.up-leg-theorie::before { background: var(--theorie); }
-.up-leg-praxis::before { background: var(--praxis); }
-.up-leg-frist::before { width: 3px; background: var(--geaendert); }
-
 .up-liste { border-top: 1px solid var(--linie); padding-top: 4px; }
 .up-eintrag { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
 .up-eintrag + .up-eintrag { border-top: 1px solid var(--linie); }
