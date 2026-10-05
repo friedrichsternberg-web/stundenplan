@@ -5018,23 +5018,6 @@ function uniplanStartKarte(jetzt) {
       <span style="width:${Math.round(a.aktuell.anteil * 100)}%"></span>
     </div>` : `<p class="start-leer">Das Studium beginnt am ${datumMitJahr(UNI_PLAN.phasen[0].von)}.</p>`;
 
-  /* Die Leiste: von heute bis zum Ende des Studiums, jede Phase so breit,
-     wie sie dauert. */
-  const spanne = Math.max(1, tageBis(heute, ende));
-  const pos = tag => Math.max(0, Math.min(100, tageBis(heute, tag) / spanne * 100));
-  const stuecke = UNI_PLAN.phasen.filter(p => p.bis >= heute).map(p => {
-    const links = pos(p.von < heute ? heute : p.von);
-    const breite = pos(p.bis) - links;
-    return `<span class="up-stueck up-stueck-${p.art}" style="left:${links.toFixed(2)}%;width:${breite.toFixed(2)}%"
-                  title="${PHASEN_NAME[p.art]} ${datumMitJahr(p.von)} – ${datumMitJahr(p.bis)}"></span>`;
-  }).join("");
-  const striche = UNI_PLAN.fristen.filter(f => f.von >= heute).map(f =>
-    `<span class="up-strich" style="left:${pos(f.von).toFixed(2)}%" title="${sicher(f.titel)}"></span>`).join("");
-  const jahre = [];
-  for (let j = Number(heute.slice(0, 4)) + 1; j <= Number(ende.slice(0, 4)); j++) {
-    jahre.push(`<span class="up-jahr" style="left:${pos(j + "-01-01").toFixed(2)}%">${j}</span>`);
-  }
-
   const liste = a.eintraege.slice(0, 5).map(e => `
     <div class="up-eintrag up-eintrag-${e.art}">
       <span class="up-punkt"></span>
@@ -5048,11 +5031,6 @@ function uniplanStartKarte(jetzt) {
 
   return startKarte("Studienphasen", "uniplan", "Uni-Plan", `
     ${oben}
-    <div class="up-leiste" role="img" aria-label="Phasen bis zum Ende des Studiums am ${datumMitJahr(ende)}">
-      ${stuecke}${striche}
-    </div>
-    <div class="up-achse"><span>heute</span>${jahre.join("")}<span class="up-achse-ende">${datumKurz(new Date(ende + "T12:00:00"))}${ende.slice(0, 4)}</span></div>
-    <div class="up-legende"><span class="up-leg up-leg-theorie">Theorie</span><span class="up-leg up-leg-praxis">Praxis</span><span class="up-leg up-leg-frist">Frist</span></div>
     ${liste ? `<div class="up-liste">${liste}</div>` : ""}`,
     { symbol: "phasen", farbe: "gruen", breit: true, klasse: "start-karte-phasen" });
 }

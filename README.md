@@ -145,9 +145,10 @@ dasselbe zeigen. Solange nie etwas geändert wurde, wird nichts
 mitgeschickt.
 
 **Widget „Studienphasen“.** Auf der Übersicht: die laufende Phase mit
-„Woche 7 von 12“ und Fortschrittsbalken, eine Leiste von heute bis zum
-Studienende (Theorie blau, Praxis grün, Fristen als Striche) und die
-nächsten fünf Stationen mit „in 6 Wochen“. Vergangenes steht dort nicht.
+„Woche 7 von 12“ und Fortschrittsbalken, darunter die nächsten fünf
+Stationen mit „in 6 Wochen“. Vergangenes steht dort nicht. Die bunte
+Leiste bis zum Studienende ist am 05.10.2026 auf Friedrichs Wunsch
+rausgeflogen.
 
 Nicht im Apple-Kalender-Feed: die Arbeit. Der Feed wird auf dem Server
 gebaut und kennt den Uni-Plan nicht.
