@@ -30,13 +30,13 @@ Damit nichts langsamer wird oder im Weg steht:
 
 **Was dauerhaft lebt:** vor dem Datum auf der Übersicht eine Sonne mit
 langsam drehenden Strahlen (6 bis 19 Uhr) oder ein Mond mit zwei
-funkelnden Sternen; am laufenden Termin ein Fortschrittsbalken mit
-wanderndem Glanzlicht und ein atmendes „läuft“; am nächsten Termin
+funkelnden Sternen; am laufenden Termin ein Fortschrittsbalken und
+ein atmendes „läuft“; am nächsten Termin
 „in 25 Min.“, jede Minute neu; im Kalender eine Jetzt-Linie mit Punkt und
 Wellenring, die jede Minute weiterwandert (`jetztLinieVerschieben()`,
-ohne Neuzeichnen); ein Glanzlicht über dem Fortschritt der Studienphase;
-die Säule der laufenden Woche im Trainings-Widget atmet; über die
-Reiterleiste zieht alle neun Sekunden ein Lichtschimmer.
+ohne Neuzeichnen); die Säule der laufenden Woche im Trainings-Widget
+atmet. Die Glanzlichter, die ab und zu über die Balken und die
+Reiterleiste zogen, sind auf Wunsch wieder raus.
 
 **Flüssiger seit 05.10.2026:**
 - `allesZeichnen()` zeichnet nur den sichtbaren Bereich und merkt sich die
