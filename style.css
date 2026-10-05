@@ -3669,3 +3669,107 @@ textarea, select,
 }
 .training-monate .training-balken-jetzt .training-balken-saeule,
 .training-wochentage .training-balken-jetzt .training-balken-saeule { background: var(--akzent); }
+
+
+/* =========================================================================
+   KALENDER: Ganztagszeile mit durchgehenden Balken (05.10.2026)
+
+   Ein eigenes kleines Raster über den Tagesspalten. Mehrtägige Termine
+   sind ein Balken über ihre Tage, Titel dürfen umbrechen. Die leeren
+   Tagesfelder liegen darunter und geben Linien und die Tönung für heute.
+   ========================================================================= */
+.kalender-ganztag-flaeche {
+  grid-column: 2 / -1;
+  display: grid;
+  min-width: 0;
+  min-height: 34px;
+  border-bottom: 1px solid var(--glas-linie, var(--linie));
+}
+.kalender-ganztag-flaeche > .kalender-ganztag {
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.kalender-ganztag-balken {
+  position: relative;
+  min-width: 0;
+  margin: 3px 3px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: var(--eigen);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.25;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.kalender-ganztag-balken .kalender-ganztag-titel {
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+.kalender-ganztag-balken .kalender-ganztag-zusatz {
+  font-size: 10.5px;
+  opacity: .9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kalender-ganztag-urlaub { background: var(--geaendert); }
+.kalender-ganztag-todo { background: var(--notiz-rand); }
+.kalender-ganztag-todo .kalender-ganztag-titel { font-weight: 500; }
+.kalender-ganztag-balken.kalender-aufgabe-wichtig { background: var(--wichtig); }
+.kalender-ganztag-balken.kalender-aufgabe-erledigt {
+  background: transparent;
+  color: var(--schrift-leise);
+  box-shadow: none;
+  text-decoration: line-through;
+}
+
+/* Geht der Termin über den Wochenrand hinaus, fehlt dort die Rundung. */
+.kalender-ganztag-weiter-links {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.kalender-ganztag-weiter-rechts {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+@media (max-width: 520px) {
+  .kalender-ganztag-flaeche { min-height: 30px; }
+  .kalender-ganztag-balken {
+    margin: 2px 1.5px;
+    padding: 3px 4px;
+    border-radius: 5px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .kalender-ganztag-balken .kalender-ganztag-titel { -webkit-line-clamp: 3; line-clamp: 3; }
+  .kalender-ganztag-balken .kalender-ganztag-zusatz { font-size: 9px; }
+}
+
+/* Unter dem Namen der App: Studiengang und Semester, darunter der Stand. */
+.kopf-studiengang {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--schrift);
+}
+.kopf-studiengang + .kopf-stand { margin-top: 0; }
+
+/* Die unterste Rasterlinie ragte einen Bildpunkt über den Rahmen. Weil
+   der Rahmen seitlich scrollen darf, wurde daraus ein senkrechter
+   Scrollbalken für diesen einen Bildpunkt. Senkrecht scrollt hier nichts. */
+.kalender-rahmen { overflow-y: hidden; }

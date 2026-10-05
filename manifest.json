@@ -1,6 +1,6 @@
 {
-  "name": "Uni-Dashboard",
-  "short_name": "Uni",
+  "name": "Planer",
+  "short_name": "Planer",
   "description": "Stundenplan, Notizen und Aufgaben – HWR Berlin, Tourismus",
   "lang": "de",
   "start_url": "./",
