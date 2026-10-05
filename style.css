@@ -3775,3 +3775,165 @@ textarea, select,
 
 /* Heute bleibt am blauen Rahmen zu erkennen, zusätzlich etwas kräftiger. */
 #tage .tag-heute { border: 2px solid var(--akzent); }
+
+
+/* Ein Schalter wie in den iOS-Einstellungen: Beschriftung links,
+   Kippschalter rechts. Darunter liegt ein echtes Kontrollkästchen, damit
+   Tastatur und Bildschirmleser es wie gewohnt bedienen. */
+.schalter-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+  cursor: pointer;
+}
+.schalter-zeile input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 0 0 auto;
+  position: relative;
+  width: 51px;
+  height: 31px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--flaeche-gedaempft);
+  box-shadow: inset 0 0 0 1px var(--glas-rand, var(--linie));
+  transition: background-color .25s ease;
+  cursor: pointer;
+}
+.schalter-zeile input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  transition: transform .25s cubic-bezier(.3, 1.4, .5, 1);
+}
+.schalter-zeile input[type="checkbox"]:checked { background: #34c759; }
+.schalter-zeile input[type="checkbox"]:checked::after { transform: translateX(20px); }
+.schalter-zeile input[type="checkbox"]:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+
+/* =========================================================================
+   BEWEGUNG (05.10.2026)
+
+   Grundsätze, damit nichts langsamer wird oder im Weg steht:
+   - Animiert werden nur opacity und transform/scale. Die rechnet die
+     Grafikkarte, ohne dass die Seite neu angeordnet werden muss.
+   - Kurz: 0,2 bis 0,45 Sekunden. Alles bleibt währenddessen bedienbar.
+   - Seitenwechsel und Wochenwechsel laufen über eine Klasse, die app.js
+     nur bei einer Handlung setzt (einblenden()), nicht bei jedem
+     Neuzeichnen durch den Abgleich.
+   - "Bewegung reduzieren" in den Bedienungshilfen schaltet alles ab.
+   ========================================================================= */
+@media (prefers-reduced-motion: no-preference) {
+
+  /* Bereich wechseln: die Karten gleiten nacheinander herein. */
+  @keyframes bewegt-rein {
+    from { opacity: 0; transform: translateY(14px) scale(.985); }
+  }
+  @keyframes bewegt-vor {
+    from { opacity: 0; transform: translateX(32px); }
+  }
+  @keyframes bewegt-zurueck {
+    from { opacity: 0; transform: translateX(-32px); }
+  }
+  .bewegt-rein > *,
+  .bewegt-vor > *,
+  .bewegt-zurueck > * {
+    --staffel: 45ms;
+    animation: bewegt-rein .42s cubic-bezier(.2, .8, .2, 1) both;
+    animation-delay: calc(min(var(--i, 1), 8) * var(--staffel) - var(--staffel));
+    animation-delay: calc(min(sibling-index(), 8) * var(--staffel) - var(--staffel));
+  }
+  .bewegt-vor > * { animation-name: bewegt-vor; }
+  .bewegt-zurueck > * { animation-name: bewegt-zurueck; }
+
+  /* Säulen und Balken wachsen beim Hereinkommen aus ihrer Grundlinie. */
+  @keyframes wachsen-hoch { from { transform: scaleY(0); } }
+  @keyframes wachsen-breit { from { transform: scaleX(0); } }
+  .bewegt-rein .tw-saeule,
+  .bewegt-rein .training-balken-saeule {
+    transform-origin: 50% 100%;
+    animation: wachsen-hoch .6s cubic-bezier(.2, .9, .3, 1.15) both;
+    animation-delay: .12s;
+  }
+  .bewegt-rein .up-fortschritt span,
+  .bewegt-rein .training-anteil-balken {
+    transform-origin: 0 50%;
+    animation: wachsen-breit .7s cubic-bezier(.2, .8, .2, 1) both;
+    animation-delay: .15s;
+  }
+
+  /* Fenster und Blätter: der Hintergrund blendet ein, das Fenster gleitet
+     hoch. Beim Schließen blendet es aus und lässt sofort durchtippen. */
+  .filter-hintergrund {
+    transition: opacity .25s ease, display .25s;
+    transition-behavior: allow-discrete;
+  }
+  .filter-hintergrund[hidden] { opacity: 0; pointer-events: none; }
+  @starting-style {
+    .filter-hintergrund:not([hidden]) { opacity: 0; }
+  }
+  .filter-hintergrund .filter-fenster {
+    transition: transform .42s cubic-bezier(.2, .9, .25, 1), opacity .3s ease;
+  }
+  .filter-hintergrund[hidden] .filter-fenster { transform: translateY(24px); opacity: 0; }
+  @starting-style {
+    .filter-hintergrund:not([hidden]) .filter-fenster { transform: translateY(36px) scale(.98); opacity: 0; }
+  }
+  @media (max-width: 520px) {
+    @starting-style {
+      .filter-hintergrund:not([hidden]) .filter-fenster { transform: translateY(100%); opacity: 1; }
+    }
+    .filter-hintergrund[hidden] .filter-fenster { transform: translateY(100%); }
+  }
+
+  /* Reiterleiste: das Symbol des gewählten Bereichs hüpft kurz. */
+  @keyframes hupf {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2) translateY(-2px); }
+    100% { transform: scale(1); }
+  }
+  .reiter-aktiv .reiter-symbol { animation: hupf .45s cubic-bezier(.3, 1.5, .5, 1); }
+  .reiter button { transition: background-color .25s ease, color .25s ease; }
+
+  /* Abhaken: der Haken springt, die Zeile tritt zurück. */
+  @keyframes haken-pop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .haken-pop {
+    animation: haken-pop .3s cubic-bezier(.3, 1.6, .5, 1);
+    background: var(--neu) !important;
+    border-color: var(--neu) !important;
+  }
+  .todo-weg {
+    transition: opacity .26s ease, transform .26s ease;
+    opacity: .4;
+    transform: translateX(8px);
+  }
+
+  /* Der Punkt am Termin, der gerade läuft, atmet leise. */
+  @keyframes puls {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+  .heute-jetzt .heute-punkt::after { animation: puls 2.4s ease-in-out infinite; }
+
+  /* Der Schalter "Liste / Kalender" und andere Kapseln gleiten weich. */
+  .schalter button { transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+}
+
+/* Drücken fühlt sich nach Drücken an: ein Hauch kleiner, solange der
+   Finger draufliegt. Ohne Übergang, damit nichts nachzieht. */
+button:active:not(:disabled),
+.start-todo-text:active { scale: .96; }
+.todo-haken:active { scale: .88; }

@@ -135,6 +135,7 @@ const werkzeug = eval(
      pruefen, stehen in test_ansicht.js. */
   "  arbeitAus: function () { uniplan.arbeit = false; }," +
   "  uniplanRoh: function (u) { if (u) uniplan = u; return uniplan; }," +
+  "  abendRoh: function (w) { if (w) abend = w; return abend; }," +
   "  UNIPLAN_VORGABE: UNIPLAN_VORGABE" +
   "})");
 werkzeug.arbeitAus();
@@ -483,6 +484,26 @@ werkzeug.uniplanRoh(Object.assign({}, werkzeug.UNIPLAN_VORGABE));
 pruefe("eine nie geaenderte Einstellung wird nicht mitgeschickt",
        !werkzeug.sammeln().eintraege["einstellung-uniplan"]);
 werkzeug.arbeitAus();
+
+
+/* ====================================================================== */
+abschnitt("Abendübersicht: aus bleibt aus, auf allen Geraeten");
+
+// Der Server liest genau diesen Eintrag: "an" = "nein" heisst keine Meldung.
+werkzeug.setzen({}, [], [], {});
+werkzeug.abendRoh({ an: false, geaendert: 88 });
+const mitAbend = werkzeug.sammeln();
+pruefe("ausgeschaltet wird als \"nein\" mitgeschickt",
+       mitAbend.eintraege["einstellung-abend"]
+       && mitAbend.eintraege["einstellung-abend"].an === "nein"
+       && mitAbend.eintraege["einstellung-abend"].art === "einstellung");
+werkzeug.abendRoh({ an: true, geaendert: 0 });
+werkzeug.uebernehmen(mitAbend);
+pruefe("und kommt auf dem anderen Geraet als aus an",
+       werkzeug.abendRoh().an === false && werkzeug.abendRoh().geaendert === 88);
+werkzeug.abendRoh({ an: true, geaendert: 0 });
+pruefe("nie geaendert: nichts mitschicken, der Server nimmt dann an",
+       !werkzeug.sammeln().eintraege["einstellung-abend"]);
 
 
 /* ====================================================================== */

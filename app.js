@@ -2663,9 +2663,20 @@ function notizKlick(ereignis) {
   // Abhaken im To-do-Bereich – für beide Sorten.
   const zuHaken = ziel.getAttribute("data-todo-haken");
   if (zuHaken) {
-    if (zuHaken.indexOf("eigen-") === 0) aufgabeErledigtUmschalten(zuHaken);
-    else erledigtUmschalten(zuHaken);
-    allesZeichnen();
+    const umschalten = () => {
+      if (zuHaken.indexOf("eigen-") === 0) aufgabeErledigtUmschalten(zuHaken);
+      else erledigtUmschalten(zuHaken);
+      allesZeichnen();
+    };
+    /* Erst ein kurzer Haken-Hüpfer, dann verschwindet die Zeile. Die
+       Viertelsekunde blockiert nichts: alles andere bleibt antippbar.
+       Ein zweites Tippen auf denselben Haken in der Zeit zählt nicht,
+       sonst wäre er gleich wieder ab. */
+    if (BEWEGUNG_REDUZIERT.matches || !ziel.classList) { umschalten(); return; }
+    if (ziel.classList.contains("haken-pop")) return;
+    ziel.classList.add("haken-pop");
+    if (ziel.parentElement && ziel.parentElement.classList) ziel.parentElement.classList.add("todo-weg");
+    setTimeout(umschalten, 260);
     return;
   }
 
@@ -4824,6 +4835,34 @@ function uniplanLaden() {
   }
 }
 
+/* Die Abendübersicht um 20 Uhr: an oder aus. Wie der Uni-Plan ein
+   abgeglichener Eintrag mit fester Kennung, denn verschickt wird sie vom
+   Server, und der liest den Raum, nicht ein einzelnes Gerät. Steht nichts
+   im Raum, gilt "an" - Friedrich wollte sie ausdrücklich automatisch. */
+const ABEND_KENNUNG = "einstellung-abend";
+const SPEICHER_ABEND = "stundenplan.abend";
+let abend = { an: true, geaendert: 0 };
+
+function abendGeraderuecken(roh) {
+  const e = roh && typeof roh === "object" ? roh : {};
+  return {
+    an: e.an === undefined ? true : e.an === true || e.an === "ja",
+    geaendert: Number(e.geaendert) || 0,
+  };
+}
+
+function abendLaden() {
+  try { return abendGeraderuecken(JSON.parse(localStorage.getItem(SPEICHER_ABEND) || "null")); }
+  catch (fehler) { return abendGeraderuecken(null); }
+}
+
+function abendSetzen(an) {
+  abend = { an: Boolean(an), geaendert: Abgleich.jetzt() };
+  try { localStorage.setItem(SPEICHER_ABEND, JSON.stringify(abend)); }
+  catch (fehler) { /* dann gilt es bis zum Neuladen */ }
+  Abgleich.anstossen();
+}
+
 function uniplanSetzen(felder) {
   uniplan = uniplanGeraderuecken(Object.assign({}, uniplan, felder, { geaendert: Abgleich.jetzt() }));
   // Ende vor Anfang ergäbe Kästchen mit negativer Höhe. Dann lieber die Vorgabe.
@@ -6138,6 +6177,14 @@ function abgleichSammeln() {
     };
   }
 
+  if (abend.geaendert) {
+    eintraege[ABEND_KENNUNG] = {
+      art: "einstellung",
+      an: abend.an ? "ja" : "nein",
+      geaendert: abend.geaendert,
+    };
+  }
+
   for (const kennung of Object.keys(unbekannteEintraege)) {
     if (!eintraege[kennung]) eintraege[kennung] = unbekannteEintraege[kennung];
   }
@@ -6172,6 +6219,7 @@ function abgleichUebernehmen(nutzlast) {
   const neueGrabsteine = {};
   const neueUnbekannte = {};
   let neueUniplan = null;
+  let neuerAbend = null;
   const neuerEinkauf = [];
 
   for (const kennung of Object.keys(eintraege)) {
@@ -6208,6 +6256,10 @@ function abgleichUebernehmen(nutzlast) {
        einziger Eintrag mit fester Kennung. */
     if (eintrag.art === "einstellung" && kennung === UNIPLAN_KENNUNG) {
       neueUniplan = uniplanGeraderuecken(eintrag);
+      continue;
+    }
+    if (eintrag.art === "einstellung" && kennung === ABEND_KENNUNG) {
+      neuerAbend = abendGeraderuecken(eintrag);
       continue;
     }
 
@@ -6282,6 +6334,11 @@ function abgleichUebernehmen(nutzlast) {
   if (neueUniplan) {
     uniplan = neueUniplan;
     try { localStorage.setItem(SPEICHER_UNIPLAN, JSON.stringify(uniplan)); }
+    catch (fehler) { /* siehe unten */ }
+  }
+  if (neuerAbend) {
+    abend = neuerAbend;
+    try { localStorage.setItem(SPEICHER_ABEND, JSON.stringify(abend)); }
     catch (fehler) { /* siehe unten */ }
   }
 
@@ -6449,6 +6506,10 @@ function meldenZeichnen(meldung) {
       <p class="abgleich-stand abgleich-gut">
         Eingeschaltet auf diesem Gerät${anzahl > 1 ? ` · ${anzahl} Geräte insgesamt` : ""}
       </p>
+      <label class="schalter-zeile">
+        <span>Abendübersicht um 20 Uhr</span>
+        <input type="checkbox" id="abendSchalter" role="switch"${abend.an ? " checked" : ""}>
+      </label>
       <div class="filter-knoepfe">
         <button type="button" class="knopf-schlicht" id="meldenProbe">Probe schicken</button>
         <button type="button" class="knopf-schlicht knopf-gefahr" id="meldenAus">Ausschalten</button>
@@ -6791,6 +6852,11 @@ function geraeteVerbinden() {
      eigenen Kasten stehen, der unabhängig neu gezeichnet wird. */
   const meldenBereich = document.getElementById("meldenBereich");
   if (meldenBereich) {
+    meldenBereich.addEventListener("change", ereignis => {
+      if (ereignis.target && ereignis.target.id === "abendSchalter") {
+        abendSetzen(ereignis.target.checked);
+      }
+    });
     meldenBereich.addEventListener("click", async ereignis => {
       const ziel = ereignis.target;
       if (!ziel || !ziel.id) return;
@@ -6866,6 +6932,50 @@ function allesZeichnen() {
 /* Wechselt den Bereich. Die drei Abschnitte liegen alle in der Seite und
    werden nur ein- und ausgeblendet – so bleibt der Wechsel sofort da, ohne
    Nachladen. */
+/* --- Bewegung ------------------------------------------------------------
+
+   Kleine Animationen, die sagen, was gerade passiert: ein neuer Bereich
+   gleitet herein, die nächste Woche kommt von rechts, die vorige von
+   links. Bewegt werden nur Deckkraft und Lage (transform), das rechnet
+   die Grafikkarte, nicht der Prozessor; auf dem iPhone bleibt es flüssig.
+
+   Ausgelöst wird nur bei einer Handlung: Reiter, Woche, Ansicht. NICHT
+   beim Neuzeichnen nach einem Abgleich, der alle 90 Sekunden kommt -
+   sonst würde die Liste ständig neu hereinflattern. Deshalb eine Klasse,
+   die nach knapp einer Sekunde wieder verschwindet, statt Animationen,
+   die jedes neu gezeichnete Element von selbst abspielt.
+
+   Wer in den Bedienungshilfen "Bewegung reduzieren" eingeschaltet hat,
+   bekommt nichts davon. */
+const BEWEGUNG_REDUZIERT = (typeof window !== "undefined" && window.matchMedia)
+  ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+
+/* sibling-index() zählt die Geschwister selbst (Safari 26.2, Chrome 138).
+   Ältere Browser bekommen die Nummer als --i an jedes Kind geschrieben. */
+const STAFFEL_NATIV = typeof CSS !== "undefined" && typeof CSS.supports === "function"
+  && CSS.supports("animation-delay: calc(sibling-index() * 1ms)");
+
+function einblenden(element, art) {
+  if (!element || !element.classList || BEWEGUNG_REDUZIERT.matches) return;
+  const klasse = "bewegt-" + (art || "rein");
+  element.classList.remove("bewegt-rein", "bewegt-vor", "bewegt-zurueck");
+  if (!STAFFEL_NATIV) {
+    Array.prototype.forEach.call(element.children || [], (kind, i) => {
+      if (kind.style) kind.style.setProperty("--i", i + 1);
+    });
+  }
+  // Einmal messen lassen, damit dieselbe Klasse die Animation neu startet.
+  void element.offsetWidth;
+  element.classList.add(klasse);
+  clearTimeout(element.bewegtUhr);
+  element.bewegtUhr = setTimeout(() => element.classList.remove(klasse), 900);
+}
+
+const SEITEN_INHALT = {
+  start: "startInhalt", plan: "tage", training: "trainingInhalt",
+  zettel: "seiteZettel", todos: "todoInhalt",
+};
+
 function seiteSetzen(neueSeite) {
   seite = neueSeite;
   try {
@@ -6895,6 +7005,7 @@ function seiteSetzen(neueSeite) {
   if (seite === "training" || seite === "start") trainingAbholen(false);
 
   allesZeichnen();
+  einblenden(document.getElementById(SEITEN_INHALT[seite]));
 }
 
 /* Schaltet die Notiz-Knöpfe im Plan ein und aus. */
@@ -6954,6 +7065,7 @@ function ansichtSetzen(neueAnsicht) {
   }
 
   wocheZeichnen();
+  einblenden(document.getElementById("tage"));
 }
 
 /* Hängt alles an, was zum Notizbuch gehört.
@@ -7281,11 +7393,13 @@ function knoepfeVerbinden() {
   document.getElementById("wocheZurueck").addEventListener("click", () => {
     angezeigterMontag = tageDazu(angezeigterMontag, -7);
     wocheZeichnen();
+    einblenden(document.getElementById("tage"), "zurueck");
   });
 
   document.getElementById("wocheVor").addEventListener("click", () => {
     angezeigterMontag = tageDazu(angezeigterMontag, 7);
     wocheZeichnen();
+    einblenden(document.getElementById("tage"), "vor");
   });
 
   document.getElementById("wocheHeute").addEventListener("click", () => {
@@ -7294,6 +7408,7 @@ function knoepfeVerbinden() {
        vergangenen Tage vorhin aufgeklappt hatte. */
     vergangeneOffenFuer = "";
     wocheZeichnen();
+    einblenden(document.getElementById("tage"), "rein");
   });
 
   const fenster = document.getElementById("filterHintergrund");
@@ -7460,6 +7575,7 @@ function starten() {
   training = trainingLaden();
   if (training) trainingZustand = "ok";
   uniplan = uniplanLaden();
+  abend = abendLaden();
 
   /* Das Thema steht schon am <html>, gesetzt vom kurzen Skript im Kopf der
      index.html. Hier wird es nur noch in die Variable geholt, damit der

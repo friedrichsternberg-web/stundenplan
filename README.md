@@ -3,6 +3,31 @@
 So heißt die App seit 05.10.2026, vorher „Uni-Dashboard“. Oben steht
 „Planer“, darunter Studiengang und Semester, darunter der Stand.
 
+**Das Symbol** (`symbol.png`, 512 × 512, Vorlage `symbol.svg`): ein
+Planerblatt mit zwei Ringen und rotem Kopf auf blau-violettem Verlauf,
+darauf drei Einträge mit den Streifenfarben von Montag, Dienstag und
+Mittwoch aus der Liste. Randlos, weil iOS die Ecken selbst abrundet.
+Neu gerendert wird es mit `qlmanage -t -s 1024 -o . symbol.svg` und
+`sips -z 512 512`.
+
+## Bewegung (seit 05.10.2026)
+
+Bereichs-, Wochen- und Ansichtswechsel blenden die Karten gestaffelt ein
+(die nächste Woche von rechts, die vorige von links). Fenster gleiten von
+unten herein und wieder hinaus, das Symbol des gewählten Reiters hüpft,
+ein abgehakter Haken springt kurz, Säulen und Fortschrittsbalken wachsen
+beim Hereinkommen, der Punkt am laufenden Termin atmet, Knöpfe geben
+beim Drücken nach.
+
+Damit nichts langsamer wird oder im Weg steht:
+- nur `opacity` und `transform`, 0,2 bis 0,45 Sekunden
+- ausgelöst nur bei einer Handlung (`einblenden()` setzt eine Klasse,
+  die nach 0,9 s wieder verschwindet), nicht beim Neuzeichnen durch den
+  Abgleich alle 90 Sekunden
+- ein schließendes Fenster lässt sofort durchtippen (`pointer-events: none`)
+- das Abhaken wartet 0,26 s für den Hüpfer, blockiert aber nichts
+- „Bewegung reduzieren“ in den Bedienungshilfen schaltet alles ab
+
 Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
 
 Übersichts-App zum Studium: HWR-Stundenplan (Tourismus, Semester 5, Kurs),
@@ -927,6 +952,40 @@ lesen sie:
 Die Abfrage ist bewusst öffentlich — sie verrät nichts außer der Zahl der
 Sekunden. Wäre sie geschützt, könnte die App sie nicht anzeigen, und genau
 dort gehört sie hin.
+
+## Abendübersicht um 20 Uhr (seit 05.10.2026)
+
+Jeden Abend beim ersten Lauf ab 20:00 kommt eine Benachrichtigung
+„Morgen und übermorgen“, etwa:
+
+```
+Morgen, Di 06.10.: 08:45 WPF - Social Innovation (6A.014)
+Übermorgen, Mi 07.10.: 18:00 Besprechung Symbio
+Noch offen: 1 To-do
+```
+
+Je Tag: Ganztägiges, HWR-Termine und eigene Termine nach Uhrzeit
+(aufeinanderfolgende Blöcke desselben Fachs zusammengezogen), To-dos des
+Tages, höchstens fünf Dinge, dann „+n weitere“. Darunter, wie viele
+To-dos von heute und früher noch offen sind.
+
+Verschickt wird sie von der Edge Function `erinnern`, die ohnehin alle
+fünf Minuten läuft. Den HWR-Plan holt sie aus `daten/plan.js` auf GitHub
+Pages (ohne nicht belegte Fächer und Gruppen), Termine und To-dos aus dem
+Raum. Ein Vermerk `abendvorschau` je Tag in `sync.erinnerung_gesendet`
+sorgt dafür, dass sie nur einmal kommt. Nach 22:00 wird nichts mehr
+nachgeholt. Ist `plan.js` nicht erreichbar, wird nichts geschickt und
+fünf Minuten später neu versucht, sonst stünde „frei“ an einem
+Vorlesungstag.
+
+**Abschalten** unter ⚙ → Benachrichtigungen → „Abendübersicht um 20 Uhr“.
+Der Schalter ist der abgeglichene Eintrag `einstellung-abend`
+(`an: "ja"/"nein"`), gilt also für alle Geräte. Fehlt er, ist sie an.
+Probelauf ohne Versand: `erinnern` mit `probe: "ja"`, `abend: "probe"`
+und `raum_anfang` aufrufen.
+
+Die Arbeit aus dem Uni-Plan steht nicht darin: der Server kennt den
+Uni-Plan nicht.
 
 ## Hell oder dunkel
 
