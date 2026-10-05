@@ -1,7 +1,7 @@
 # Planer
 
 So heißt die App seit 05.10.2026, vorher „Uni-Dashboard“. Oben steht
-„Planer“, darunter Studiengang und Semester, darunter der Stand.
+„Planer“, darunter der Stand (seit 05.10.2026 ohne die Zeile „Tourismus · Semester 5“).
 
 **Das Symbol** (`symbol.png`, 512 × 512, Vorlage `symbol.svg`): ein
 Planerblatt mit zwei Ringen und rotem Kopf auf blau-violettem Verlauf,
@@ -27,6 +27,25 @@ Damit nichts langsamer wird oder im Weg steht:
 - ein schließendes Fenster lässt sofort durchtippen (`pointer-events: none`)
 - das Abhaken wartet 0,26 s für den Hüpfer, blockiert aber nichts
 - „Bewegung reduzieren“ in den Bedienungshilfen schaltet alles ab
+
+**Was dauerhaft lebt:** vor dem Datum auf der Übersicht eine Sonne mit
+langsam drehenden Strahlen (6 bis 19 Uhr) oder ein Mond mit zwei
+funkelnden Sternen; am laufenden Termin ein Fortschrittsbalken mit
+wanderndem Glanzlicht und ein atmendes „läuft“; am nächsten Termin
+„in 25 Min.“, jede Minute neu; im Kalender eine Jetzt-Linie mit Punkt und
+Wellenring, die jede Minute weiterwandert (`jetztLinieVerschieben()`,
+ohne Neuzeichnen); ein Glanzlicht über dem Fortschritt der Studienphase;
+die Säule der laufenden Woche im Trainings-Widget atmet; über die
+Reiterleiste zieht alle neun Sekunden ein Lichtschimmer.
+
+**Flüssiger seit 05.10.2026:**
+- `allesZeichnen()` zeichnet nur den sichtbaren Bereich und merkt sich die
+  anderen in `veralteteSeiten`; `seiteSetzen()` holt sie beim Hinwechseln
+  nach. Übersicht und Plan werden beim Hinwechseln immer frisch
+  gezeichnet (Zeitangaben, Kalender-Vermessung).
+- Karten und Knöpfe haben keine Unschärfe mehr. Hinter ihnen liegt reines
+  Schwarz oder Weiß, dort sieht man sie nicht, aber das iPhone rechnet sie
+  bei jedem Scrollschritt. Reiterleiste und Fenster behalten sie.
 
 Stundenplan der HWR, eigene Termine, To-dos und Notizen in einem – auf dem Handy, dem Laptop und im Apple Kalender.
 

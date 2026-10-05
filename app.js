@@ -720,6 +720,27 @@ function symbol(name) {
                stroke-linejoin="round">${SYMBOLE[name] || ""}</svg>`;
 }
 
+/* Ein kleines Himmelssymbol vor dem Datum: tagsüber eine Sonne, deren
+   Strahlen sich langsam drehen, abends ein Mond mit zwei funkelnden
+   Sternen. Die Bewegung macht das CSS (.himmel-*), hier steht nur, was
+   gezeichnet wird. */
+function himmelSymbol(jetzt) {
+  const stunde = jetzt.getHours();
+  if (stunde >= 6 && stunde < 19) {
+    return `<svg class="himmel himmel-tag" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="himmel-strahlen" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/>
+      </g>
+      <circle cx="12" cy="12" r="4.6" fill="currentColor"/>
+    </svg>`;
+  }
+  return `<svg class="himmel himmel-nacht" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M15.5 3.5a8.5 8.5 0 1 0 5 13.8A7 7 0 0 1 15.5 3.5z" fill="currentColor"/>
+    <path class="himmel-stern" d="M19 3l.6 1.4L21 5l-1.4.6L19 7l-.6-1.4L17 5l1.4-.6z" fill="currentColor"/>
+    <path class="himmel-stern himmel-stern-2" d="M21.5 9l.4.9.9.4-.9.4-.4.9-.4-.9-.9-.4.9-.4z" fill="currentColor"/>
+  </svg>`;
+}
+
 function startZeichnen() {
   const bereich = document.getElementById("startInhalt");
   if (!bereich) return;
@@ -727,9 +748,9 @@ function startZeichnen() {
 
   const datumsZeile = document.getElementById("startDatum");
   if (datumsZeile) {
-    datumsZeile.textContent = WOCHENTAGE[jetzt.getDay()] + ", "
+    datumsZeile.innerHTML = himmelSymbol(jetzt) + `<span>${sicher(WOCHENTAGE[jetzt.getDay()] + ", "
       + jetzt.toLocaleDateString("de-DE", { day: "numeric", month: "long" })
-      + " · KW " + kalenderwoche(jetzt);
+      + " · KW " + kalenderwoche(jetzt))}</span>`;
   }
 
   const todos = startTodos(jetzt);
@@ -781,8 +802,21 @@ function startZeichnen() {
      auf einer senkrechten Linie, rechts Titel und Raum. Die feste Breite
      ist der Grund, warum die Uhrzeiten jetzt genau untereinander stehen –
      vorher schob der Balken am laufenden Termin sie zur Seite. */
+  /* Der nächste Termin, der noch nicht läuft: bekommt "in 25 Min.",
+     wenn er innerhalb der nächsten drei Stunden beginnt. Die Übersicht
+     wird jede Minute neu gezeichnet, die Zahl zählt also mit. */
+  const naechsterKommt = h.termine.find(t => alsDatum(t.start) > jetzt);
   const termine = h.termine.map(t => {
     const laeuft = alsDatum(t.start) <= jetzt;
+    // Wie weit der laufende Termin ist, als Anteil von 0 bis 1.
+    const anteil = laeuft
+      ? Math.max(0, Math.min(1, (jetzt - alsDatum(t.start)) / Math.max(1, alsDatum(t.ende) - alsDatum(t.start))))
+      : 0;
+    const minutenBis = t === naechsterKommt ? Math.round((alsDatum(t.start) - jetzt) / 60000) : -1;
+    const bald = minutenBis >= 0 && minutenBis <= 180
+      ? (minutenBis < 60 ? "in " + Math.max(1, minutenBis) + " Min."
+         : "in " + Math.floor(minutenBis / 60) + " Std." + (minutenBis % 60 ? " " + (minutenBis % 60) + " Min." : ""))
+      : "";
     const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
     return `
       <button type="button" class="heute-termin${laeuft ? " heute-jetzt" : ""}${
@@ -791,11 +825,13 @@ function startZeichnen() {
         <span class="heute-punkt" aria-hidden="true"></span>
         <span class="heute-text">
           <span class="heute-titel">${t.wichtig || istWichtig(t.id) ? "★ " : ""}${
-            sicher(kurzerTitel(t.titel))}${laeuft ? ` <span class="heute-marke">läuft</span>` : ""}</span>
+            sicher(kurzerTitel(t.titel))}${laeuft ? ` <span class="heute-marke">läuft</span>` : ""}${
+            bald ? ` <span class="heute-bald">${bald}</span>` : ""}</span>
           <span class="heute-ort">${sicher([t.raum ? t.raum.replace(/^CL:\s*/, "") : "",
                                              t.eigen ? "eigener Termin" : "",
                                              t.arbeit ? "im Betrieb" : ""].filter(Boolean).join(" · "))}</span>
           ${notiz ? `<span class="heute-notiz">✎ ${sicher(notiz)}</span>` : ""}
+          ${laeuft ? `<span class="heute-fortschritt" aria-hidden="true"><span style="transform:scaleX(${anteil.toFixed(3)})"></span></span>` : ""}
         </span>
       </button>`;
   }).join("");
@@ -3123,7 +3159,9 @@ function kalenderBauen(tage) {
       <div class="kalender-spalte ${istHeuteSpalte ? "kalender-spalte-heute" : ""}">
         ${rasterLinien.join("")}
         ${istHeuteSpalte && jetztSichtbar
-          ? `<div class="kalender-jetzt" style="top:${jetztOben}px"></div>` : ""}
+          ? `<div class="kalender-jetzt" style="top:${jetztOben}px"
+                 data-start-minute="${startMinute}" data-pro-minute="${proMinute}"
+                 data-ende-minute="${bisStunde * 60}"></div>` : ""}
         ${kaesten}
       </div>`;
   }).join("");
@@ -3147,6 +3185,22 @@ function kalenderBauen(tage) {
         ${tagSpalten}
       </div>
     </div>`;
+}
+
+
+/* Die rote Jetzt-Linie wandert jede Minute ein Stück weiter, ohne dass
+   der Kalender neu gezeichnet wird. Wie weit, steht an der Linie selbst. */
+function jetztLinieVerschieben() {
+  const linie = document.querySelector("#tage .kalender-jetzt");
+  if (!linie) return;
+  const jetzt = new Date();
+  const minute = jetzt.getHours() * 60 + jetzt.getMinutes();
+  const start = Number(linie.getAttribute("data-start-minute"));
+  const ende = Number(linie.getAttribute("data-ende-minute"));
+  const proMinute = Number(linie.getAttribute("data-pro-minute"));
+  if (!isFinite(start) || !isFinite(proMinute)) return;
+  linie.hidden = minute < start || minute > ende;
+  linie.style.top = ((minute - start) * proMinute) + "px";
 }
 
 
@@ -6918,16 +6972,34 @@ function geraeteVerbinden() {
 
 /* Zeichnet alles neu, was gerade zu sehen sein könnte. Die Reiterzahlen
    immer, denn die stehen über allen Bereichen. */
+/* Gezeichnet wird nur der Bereich, der gerade zu sehen ist.
+
+   Vorher baute jede Änderung und jeder Reiterwechsel alle fünf Bereiche
+   neu auf, auch den Kalender mit seinem Nachmessen jedes Kästchens -
+   obwohl man immer nur einen davon sieht. Jetzt merkt sich die App, welche
+   versteckten Bereiche veraltet sind, und zeichnet sie erst, wenn man
+   hinwechselt. */
+const SEITEN_ZEICHNER = {
+  start: () => { naechstenZeichnen(); startZeichnen(); },
+  plan: () => wocheZeichnen(),
+  training: () => trainingZeichnen(),
+  zettel: () => zettelZeichnen(),
+  todos: () => todosZeichnen(),
+};
+// Am Anfang ist noch keiner gezeichnet, also sind alle veraltet.
+const veralteteSeiten = new Set(["start", "plan", "training", "zettel", "todos"]);
+
 function allesZeichnen() {
-  naechstenZeichnen();
-  startZeichnen();
-  trainingZeichnen();
-  wocheZeichnen();
-  zettelZeichnen();
-  todosZeichnen();
+  for (const name of Object.keys(SEITEN_ZEICHNER)) {
+    if (name === seite) { SEITEN_ZEICHNER[name](); veralteteSeiten.delete(name); }
+    else veralteteSeiten.add(name);
+  }
+  // Das Tagesfenster kann über jedem Bereich offen sein.
+  if (seite !== "plan" && tagesFensterSchluessel) tagesFensterZeichnen();
   verlaufZeichnen();
   reiterZahlenSetzen();
 }
+
 
 /* Wechselt den Bereich. Die drei Abschnitte liegen alle in der Seite und
    werden nur ein- und ausgeblendet – so bleibt der Wechsel sofort da, ohne
@@ -7004,7 +7076,18 @@ function seiteSetzen(neueSeite) {
   // Beim Öffnen nachfragen – trainingAbholen() lässt es, wenn der Stand frisch ist.
   if (seite === "training" || seite === "start") trainingAbholen(false);
 
-  allesZeichnen();
+  /* Nur den Bereich zeichnen, der jetzt erscheint - und auch den nur,
+     wenn sich seit dem letzten Mal etwas geändert hat. Die Zeitangaben
+     auf der Übersicht ("läuft", "in 20 Min.") veralten von selbst, die
+     wird deshalb immer frisch gezeichnet. */
+  /* Der Plan wird ebenfalls immer frisch gezeichnet: war er versteckt,
+     konnte der Kalender nicht messen, wie viel Platz er hat. */
+  if (veralteteSeiten.has(seite) || seite === "start" || seite === "plan") {
+    veralteteSeiten.delete(seite);
+    if (SEITEN_ZEICHNER[seite]) SEITEN_ZEICHNER[seite]();
+  }
+  verlaufZeichnen();
+  reiterZahlenSetzen();
   einblenden(document.getElementById(SEITEN_INHALT[seite]));
 }
 
@@ -7023,13 +7106,7 @@ function bearbeitenUmschalten() {
 }
 
 function kopfZeichnen() {
-  const grossgeschrieben = STUNDENPLAN.fachrichtung.charAt(0).toUpperCase()
-                         + STUNDENPLAN.fachrichtung.slice(1);
-  const semesterZahl = STUNDENPLAN.semester.replace("semester", "");
 
-  /* Oben steht der Name der App. Welcher Studiengang und welches
-     Semester, rückt in die kleine Zeile darunter. */
-  const studiengang = grossgeschrieben + " · Semester " + semesterZahl;
 
   /* Wie alt der angezeigte Stand ist.
 
@@ -7046,7 +7123,6 @@ function kopfZeichnen() {
   else alter = "vor " + Math.round(stundenHer / 24) + " Tagen geprüft";
 
   const anzeige = document.getElementById("planStand");
-  document.getElementById("planStudiengang").textContent = studiengang;
   anzeige.textContent = alter + " · " + sichtbareTermine().length + " Termine";
   anzeige.classList.toggle("kopf-stand-alt", stundenHer >= 12);
   anzeige.title = "Zuletzt geprüft: " + zeitpunktLesbar(STUNDENPLAN.geprueftAm);
@@ -7324,6 +7400,7 @@ function knoepfeVerbinden() {
      den Fall ohne Abgleich hängt hier ein eigener Zuhörer. */
   function uebersichtAuffrischen() {
     if (document.visibilityState === "hidden") return;
+    jetztLinieVerschieben();
     if (seite === "start" || seite === "training") trainingAbholen(false);
     if (seite !== "start") return;
     naechstenZeichnen();

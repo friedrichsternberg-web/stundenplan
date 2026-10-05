@@ -156,7 +156,10 @@ const werkzeug = eval(
   "  alleAngezeigten: alleAngezeigtenTermine," +
   "  uniplanWert: function () { return uniplan; }," +
   "  UNIPLAN_VORGABE: UNIPLAN_VORGABE," +
-  "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }" +
+  "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }," +
+  "  allesZeichnen: allesZeichnen," +
+  "  veraltet: function () { return Array.from(veralteteSeiten).sort(); }," +
+  "  seiteRoh: function (n) { seite = n; }" +
   "})");
 
 
@@ -822,7 +825,9 @@ pruefe("die Zahlen fuehren in ihre Bereiche",
        start.indexOf('data-start-seite="todos"') >= 0
        && start.indexOf('data-start-seite="plan"') >= 0);
 pruefe("die Datumszeile nennt die Woche",
-       /KW \d+/.test(document.getElementById("startDatum").textContent));
+       /KW \d+/.test(document.getElementById("startDatum").innerHTML));
+pruefe("und hat ein Himmelssymbol davor (Sonne oder Mond)",
+       /class="himmel himmel-(tag|nacht)"/.test(document.getElementById("startDatum").innerHTML));
 werkzeug.notizbuch([]);
 werkzeug.eigene([]);
 werkzeug.setzen({}, []);
@@ -1316,6 +1321,18 @@ pruefe("in der Liste traegt jeder Tag seine Wochentagsfarbe (Mo = 1, So = 0)",
        liste18.indexOf("tag tag-wt-1") >= 0 && liste18.indexOf("tag tag-wt-0") >= 0);
 const leer18 = werkzeug.kalenderBauen(tage18.map(t => Object.assign({}, t, { ganztags: [], aufgaben: [] })));
 pruefe("ohne Ganztagiges keine Zeile", leer18.indexOf("kalender-ganztag-flaeche") < 0);
+
+
+/* ====================================================================== */
+abschnitt("19. Gezeichnet wird nur, was zu sehen ist");
+
+werkzeug.seiteRoh("todos");
+werkzeug.allesZeichnen();
+const veraltet19 = werkzeug.veraltet();
+pruefe("die To-do-Seite ist frisch", veraltet19.indexOf("todos") < 0);
+pruefe("die anderen vier warten, bis man hinwechselt",
+       ["plan", "start", "training", "zettel"].every(n => veraltet19.indexOf(n) >= 0));
+werkzeug.seiteRoh("start");
 
 
 /* ====================================================================== */

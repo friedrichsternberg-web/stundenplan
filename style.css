@@ -3717,15 +3717,6 @@ textarea, select,
   .kalender-ganztag-balken .kalender-ganztag-zusatz { font-size: 9px; }
 }
 
-/* Unter dem Namen der App: Studiengang und Semester, darunter der Stand. */
-.kopf-studiengang {
-  margin: 2px 0 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--schrift);
-}
-.kopf-studiengang + .kopf-stand { margin-top: 0; }
-
 /* Die unterste Rasterlinie ragte einen Bildpunkt über den Rahmen. Weil
    der Rahmen seitlich scrollen darf, wurde daraus ein senkrechter
    Scrollbalken für diesen einen Bildpunkt. Senkrecht scrollt hier nichts. */
@@ -3937,3 +3928,178 @@ textarea, select,
 button:active:not(:disabled),
 .start-todo-text:active { scale: .96; }
 .todo-haken:active { scale: .88; }
+
+
+/* =========================================================================
+   FLÜSSIGER (05.10.2026)
+
+   Die Unschärfe hinter den Karten fällt weg. Seit der App-Hintergrund
+   reines Weiß bzw. Schwarz ist, liegt hinter jeder Karte eine einfarbige
+   Fläche, und eine verwischte einfarbige Fläche sieht genauso aus wie
+   eine scharfe. Gerechnet hat das iPhone sie trotzdem, bei jedem
+   Scrollschritt für jede Karte. Behalten haben sie nur die Teile, unter
+   denen wirklich Inhalt durchscheint: die schwebende Reiterleiste und
+   die Fenster.
+   ========================================================================= */
+.start-karte,
+.tag,
+.zettel-karte,
+.kalender-rahmen,
+.start-zahl,
+.training-alle,
+.start-geaendert,
+.vergangene-knopf,
+.knopf-schlicht,
+.knopf-pfeil,
+.schalter {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+
+/* =========================================================================
+   DAUERHAFTE BEWEGUNG (05.10.2026)
+
+   Was ständig leise lebt. Jede Animation bewegt nur transform oder
+   opacity (die Reiterleiste ein Glanzlicht über background-position auf
+   einer kleinen Fläche) und läuft langsam. Ein Browser im Hintergrund
+   hält sie ohnehin an. "Bewegung reduzieren" schaltet alles ab.
+   ========================================================================= */
+
+/* Das Datum mit Himmel davor. */
+.start-datum { display: flex; align-items: center; gap: 7px; }
+.himmel { width: 18px; height: 18px; flex: 0 0 auto; overflow: visible; }
+.himmel-tag { color: #ffb020; }
+.himmel-nacht { color: #a9b4ff; }
+
+/* Der laufende Termin: ein dünner Balken, wie weit er schon ist. */
+.heute-fortschritt {
+  display: block;
+  position: relative;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--flaeche-gedaempft);
+  overflow: hidden;
+}
+.heute-fortschritt > span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--akzent);
+  transform-origin: 0 50%;
+  overflow: hidden;
+}
+.heute-arbeit .heute-fortschritt > span { background: var(--arbeit); }
+.heute-eigen .heute-fortschritt > span { background: var(--neu); }
+
+/* "in 25 Min." neben dem nächsten Termin. */
+.heute-bald {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--akzent);
+  background: var(--akzent-flaeche);
+  vertical-align: 1px;
+}
+
+/* Die Jetzt-Linie bekommt vorn einen Punkt. */
+.kalender-jetzt::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--entfallen);
+}
+.kalender-jetzt::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--entfallen);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Sonne dreht ihre Strahlen, einmal pro halbe Minute. */
+  @keyframes drehen { to { transform: rotate(360deg); } }
+  .himmel-strahlen {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: drehen 30s linear infinite;
+  }
+  /* Sterne funkeln versetzt. */
+  @keyframes funkeln {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .25; transform: scale(.6); }
+  }
+  .himmel-stern {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: funkeln 2.8s ease-in-out infinite;
+  }
+  .himmel-stern-2 { animation-delay: 1.4s; animation-duration: 3.6s; }
+
+  /* Ein Glanzlicht wandert über Fortschrittsbalken. */
+  @keyframes glanz {
+    0% { transform: translateX(-100%); }
+    55%, 100% { transform: translateX(220%); }
+  }
+  .heute-fortschritt > span::after,
+  .up-fortschritt > span::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+    animation: glanz 3.2s ease-in-out infinite;
+  }
+  .up-fortschritt > span { position: relative; overflow: hidden; }
+
+  /* "läuft" atmet. */
+  @keyframes atmen { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+  .heute-jetzt .heute-marke { animation: atmen 2.4s ease-in-out infinite; }
+
+  /* Die Jetzt-Linie im Kalender: ein Ring breitet sich vom Punkt aus. */
+  @keyframes welle {
+    0% { opacity: .6; transform: scale(1); }
+    100% { opacity: 0; transform: scale(3); }
+  }
+  .kalender-jetzt::after { animation: welle 2s ease-out infinite; }
+
+  /* Die Säule der laufenden Woche im Trainings-Widget atmet. */
+  .tw-saeule-jetzt { animation: atmen 3s ease-in-out infinite; }
+
+  /* Über die Reiterleiste zieht alle paar Sekunden ein Lichtschimmer,
+     wie über echtes Glas. */
+  /* Auf dem Handy ist die Leiste fest angeheftet (position: fixed) und
+     damit schon Bezugsrahmen für das Glanzlicht. Am Rechner braucht sie
+     dafür relative. */
+  @media (min-width: 701px) { .reiter { position: relative; } }
+  .reiter::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .16) 50%, transparent 65%);
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    animation: schimmer 9s ease-in-out infinite;
+  }
+  @keyframes schimmer {
+    0%, 70% { background-position: 150% 0; }
+    100% { background-position: -50% 0; }
+  }
+}
