@@ -225,6 +225,13 @@ merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
 
+**Wochentagsfarben in der Liste (seit 05.10.2026).** Jeder Wochentag hat
+eine feste Farbe: Mo blau, Di lila, Mi grün, Do orange, Fr pink, Sa
+türkis, So indigo. Sie färbt den Streifen links an der Tageskarte, den
+Kopf (getönt) und die Datumskachel. Heute erkennt man zusätzlich am
+blauen Rahmen. Die Klasse `tag-wt-N` (N wie `getDay()`) setzt
+`tagKarteBauen()`.
+
 **Ganztägiges im Kalender (seit 05.10.2026).** Die Ganztagszeile ist ein
 eigenes kleines Raster über den Tagesspalten. Ein mehrtägiger Termin ist
 ein einziger Balken über seine Tage (Urlaub, Prüfungszeitraum), mit Titel

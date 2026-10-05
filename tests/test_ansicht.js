@@ -1311,6 +1311,9 @@ pruefe("das To-do am Donnerstag passt in die erste Bahn",
 pruefe("zwei Bahnen", k18.indexOf("grid-template-rows:repeat(2, auto)") >= 0);
 pruefe("sieben Tagesfelder zum Antippen", anzahl18(k18, 'class="kalender-ganztag ') === 7);
 pruefe("Ort beim Geburtstag", k18.indexOf("Rostock") >= 0);
+const liste18 = werkzeug.listeBauen(tage18);
+pruefe("in der Liste traegt jeder Tag seine Wochentagsfarbe (Mo = 1, So = 0)",
+       liste18.indexOf("tag tag-wt-1") >= 0 && liste18.indexOf("tag tag-wt-0") >= 0);
 const leer18 = werkzeug.kalenderBauen(tage18.map(t => Object.assign({}, t, { ganztags: [], aufgaben: [] })));
 pruefe("ohne Ganztagiges keine Zeile", leer18.indexOf("kalender-ganztag-flaeche") < 0);
 

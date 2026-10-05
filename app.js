@@ -1262,7 +1262,7 @@ function tagKarteBauen(eintrag, mitKnoepfen) {
     : "";
 
   return `
-    <div class="tag${istHeute ? " tag-heute" : ""}">
+    <div class="tag tag-wt-${tag.getDay()}${istHeute ? " tag-heute" : ""}">
       <div class="tag-kopf">
         <span class="tag-kachel"><small>${WOCHENTAGE[tag.getDay()].slice(0, 2)}</small><strong>${tag.getDate()}</strong></span>
         <span class="tag-kopf-titel">${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}

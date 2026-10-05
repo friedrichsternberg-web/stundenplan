@@ -3730,3 +3730,48 @@ textarea, select,
    der Rahmen seitlich scrollen darf, wurde daraus ein senkrechter
    Scrollbalken für diesen einen Bildpunkt. Senkrecht scrollt hier nichts. */
 .kalender-rahmen { overflow-y: hidden; }
+
+
+/* =========================================================================
+   LISTE: jeder Wochentag mit eigener Farbe (05.10.2026)
+
+   Die Tageskarten sahen alle gleich aus, beim schnellen Durchscrollen
+   verschwammen die Tage. Jetzt hat jeder Wochentag eine feste Farbe:
+   Streifen links, getönter Kopf, Datumskachel voll in der Farbe. Montag
+   ist also immer blau, man erkennt den Tag, bevor man ihn liest.
+   ========================================================================= */
+.tag-wt-1 { --tagfarbe: #0a84ff; }   /* Mo blau */
+.tag-wt-2 { --tagfarbe: #af52de; }   /* Di lila */
+.tag-wt-3 { --tagfarbe: #30b158; }   /* Mi grün */
+.tag-wt-4 { --tagfarbe: #ff9500; }   /* Do orange */
+.tag-wt-5 { --tagfarbe: #ff375f; }   /* Fr pink */
+.tag-wt-6 { --tagfarbe: #30b0c7; }   /* Sa türkis */
+.tag-wt-0 { --tagfarbe: #5e5ce6; }   /* So indigo */
+
+#tage .tag {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+#tage .tag::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--tagfarbe, var(--akzent));
+}
+#tage .tag-kopf {
+  background: color-mix(in srgb, var(--tagfarbe, var(--akzent)) 16%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--tagfarbe, var(--akzent)) 35%, transparent);
+}
+#tage .tag-kachel,
+#tage .tag-heute .tag-kachel {
+  background: var(--tagfarbe, var(--akzent));
+  color: #fff;
+}
+#tage .tag-kopf-titel { color: var(--schrift); }
+
+/* Heute bleibt am blauen Rahmen zu erkennen, zusätzlich etwas kräftiger. */
+#tage .tag-heute { border: 2px solid var(--akzent); }
