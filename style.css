@@ -3961,9 +3961,11 @@ button:active:not(:disabled),
    DAUERHAFTE BEWEGUNG (05.10.2026)
 
    Was ständig leise lebt. Jede Animation bewegt nur transform oder
-   opacity (die Reiterleiste ein Glanzlicht über background-position auf
-   einer kleinen Fläche) und läuft langsam. Ein Browser im Hintergrund
-   hält sie ohnehin an. "Bewegung reduzieren" schaltet alles ab.
+   opacity und läuft langsam. Ein Browser im Hintergrund hält sie
+   ohnehin an. "Bewegung reduzieren" schaltet alles ab.
+
+   Die Glanzlichter, die ab und zu über Balken und Reiterleiste zogen,
+   sind am 05.10.2026 auf Friedrichs Wunsch wieder raus.
    ========================================================================= */
 
 /* Das Datum mit Himmel davor. */
@@ -4049,24 +4051,6 @@ button:active:not(:disabled),
   }
   .himmel-stern-2 { animation-delay: 1.4s; animation-duration: 3.6s; }
 
-  /* Ein Glanzlicht wandert über Fortschrittsbalken. */
-  @keyframes glanz {
-    0% { transform: translateX(-100%); }
-    55%, 100% { transform: translateX(220%); }
-  }
-  .heute-fortschritt > span::after,
-  .up-fortschritt > span::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 45%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
-    animation: glanz 3.2s ease-in-out infinite;
-  }
-  .up-fortschritt > span { position: relative; overflow: hidden; }
-
   /* "läuft" atmet. */
   @keyframes atmen { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
   .heute-jetzt .heute-marke { animation: atmen 2.4s ease-in-out infinite; }
@@ -4080,26 +4064,4 @@ button:active:not(:disabled),
 
   /* Die Säule der laufenden Woche im Trainings-Widget atmet. */
   .tw-saeule-jetzt { animation: atmen 3s ease-in-out infinite; }
-
-  /* Über die Reiterleiste zieht alle paar Sekunden ein Lichtschimmer,
-     wie über echtes Glas. */
-  /* Auf dem Handy ist die Leiste fest angeheftet (position: fixed) und
-     damit schon Bezugsrahmen für das Glanzlicht. Am Rechner braucht sie
-     dafür relative. */
-  @media (min-width: 701px) { .reiter { position: relative; } }
-  .reiter::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .16) 50%, transparent 65%);
-    background-size: 300% 100%;
-    background-repeat: no-repeat;
-    animation: schimmer 9s ease-in-out infinite;
-  }
-  @keyframes schimmer {
-    0%, 70% { background-position: 150% 0; }
-    100% { background-position: -50% 0; }
-  }
 }
