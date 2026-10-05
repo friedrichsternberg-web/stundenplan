@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "0ba61338";
+const GEBAUTE_VERSION = "5befc525";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -1262,7 +1262,7 @@ function tagKarteBauen(eintrag, mitKnoepfen) {
     : "";
 
   return `
-    <div class="tag${istHeute ? " tag-heute" : ""}">
+    <div class="tag tag-wt-${tag.getDay()}${istHeute ? " tag-heute" : ""}">
       <div class="tag-kopf">
         <span class="tag-kachel"><small>${WOCHENTAGE[tag.getDay()].slice(0, 2)}</small><strong>${tag.getDate()}</strong></span>
         <span class="tag-kopf-titel">${WOCHENTAGE[tag.getDay()]}, ${datumKurz(tag)}${istHeute ? " · heute" : ""}
