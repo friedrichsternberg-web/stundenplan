@@ -2605,7 +2605,10 @@ a.knopf-schlicht {
 
 .heute-termin {
   display: grid;
-  grid-template-columns: 46px 18px minmax(0, 1fr);
+  /* Die mittlere Spalte trägt den Punkt samt Ring (18 px) und dessen
+     leichtes Pulsieren. Mit 18 px stieß der Ring links an die Uhrzeit und
+     rechts an den Titel, das sah abgeschnitten aus (06.10.2026). */
+  grid-template-columns: 48px 28px minmax(0, 1fr);
   align-items: start;
   width: 100%;
   background: none;
@@ -2642,6 +2645,9 @@ a.knopf-schlicht {
 }
 .heute-termin:first-child .heute-punkt::before { top: 8px; }
 .heute-termin:last-child .heute-punkt::before { bottom: auto; height: 12px; }
+/* Steht nur ein Termin da, gibt es keine Linie: sie ragte sonst als
+   kurzer Stummel unter dem Punkt heraus. */
+.heute-termin:only-child .heute-punkt::before { display: none; }
 .heute-punkt::after {
   content: "";
   position: absolute;
@@ -3915,7 +3921,7 @@ textarea, select,
   /* Der Punkt am Termin, der gerade läuft, atmet leise. */
   @keyframes puls {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    50% { transform: scale(1.15); }
   }
   .heute-jetzt .heute-punkt::after { animation: puls 2.4s ease-in-out infinite; }
 
