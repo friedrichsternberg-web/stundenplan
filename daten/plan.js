@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-10-06T17:50",
+ "geprueftAm": "2026-10-06T22:50",
  "fensterVon": "2026-10-05T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -825,7 +825,7 @@ const STUNDENPLAN = {
    "ende": "2026-10-22T10:45",
    "art": "M",
    "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
-   "dozent": "Buchanan",
+   "dozent": "Buchanan, for Incomings L&T",
    "raum": "CL: 6B.369 (L1)",
    "anmerkung": "E-Klausur",
    "gruppe": ""
@@ -957,7 +957,7 @@ const STUNDENPLAN = {
    "ende": "2026-10-29T14:45",
    "art": "M",
    "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
-   "dozent": "Buchanan, Casselle",
+   "dozent": "Buchanan, Casselle, for Incomings L&T",
    "raum": "CL: 6B.468",
    "anmerkung": "Konkrete Termine erfahren Sie von Ihrem Dozenten",
    "gruppe": ""
@@ -975,6 +975,54 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-10-06T22:50",
+   "anzahl": 2,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1217399",
+      "start": "2026-10-22T08:30",
+      "ende": "2026-10-22T10:45",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch C1 (Do)",
+      "dozent": "Buchanan, for Incomings L&T",
+      "raum": "CL: 6B.369 (L1)",
+      "anmerkung": "E-Klausur",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Dozent",
+       "vorher": "Buchanan",
+       "nachher": "Buchanan, for Incomings L&T"
+      }
+     ]
+    },
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1217404",
+      "start": "2026-10-29T10:15",
+      "ende": "2026-10-29T14:45",
+      "art": "M",
+      "titel": "WPF - Wirtschaftsenglisch B2 (Do)",
+      "dozent": "Buchanan, Casselle, for Incomings L&T",
+      "raum": "CL: 6B.468",
+      "anmerkung": "Konkrete Termine erfahren Sie von Ihrem Dozenten",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Dozent",
+       "vorher": "Buchanan, Casselle",
+       "nachher": "Buchanan, Casselle, for Incomings L&T"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-10-05T23:53",
    "anzahl": 1,
