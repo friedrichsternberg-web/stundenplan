@@ -1316,7 +1316,13 @@ pruefe("das To-do am Donnerstag passt in die erste Bahn",
 pruefe("zwei Bahnen", k18.indexOf("grid-template-rows:repeat(2, auto)") >= 0);
 pruefe("sieben Tagesfelder zum Antippen", anzahl18(k18, 'class="kalender-ganztag ') === 7);
 pruefe("Ort beim Geburtstag", k18.indexOf("Rostock") >= 0);
-const liste18 = werkzeug.listeBauen(tage18);
+/* Eine Woche weit in der Zukunft (Mo 07.10.2030): in der laufenden Woche
+   klappt die Liste vergangene Tage ein, dann fehlte der Montag - der Test
+   schlug am 06.10.2026 genau deshalb fehl. */
+const liste18 = werkzeug.listeBauen(tage18.map((t, i) => Object.assign({}, t, {
+  datum: new Date(2030, 9, 7 + i),
+  schluessel: "2030-10-" + String(7 + i).padStart(2, "0"),
+})));
 pruefe("in der Liste traegt jeder Tag seine Wochentagsfarbe (Mo = 1, So = 0)",
        liste18.indexOf("tag tag-wt-1") >= 0 && liste18.indexOf("tag tag-wt-0") >= 0);
 const leer18 = werkzeug.kalenderBauen(tage18.map(t => Object.assign({}, t, { ganztags: [], aufgaben: [] })));
