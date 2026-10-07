@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-10-07T15:45",
+ "geprueftAm": "2026-10-07T21:33",
  "fensterVon": "2026-10-05T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -877,10 +877,10 @@ const STUNDENPLAN = {
   {
    "id": "sked.de1218680",
    "start": "2026-10-26T10:00",
-   "ende": "2026-10-26T11:30",
+   "ende": "2026-10-26T12:00",
    "art": "Klausur",
    "titel": "4 - Management",
-   "dozent": "Bleis, Roxin",
+   "dozent": "Roxin",
    "raum": "CL: 1.Audimax hinten",
    "anmerkung": "",
    "gruppe": ""
@@ -975,6 +975,38 @@ const STUNDENPLAN = {
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-10-07T21:33",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1218680",
+      "start": "2026-10-26T10:00",
+      "ende": "2026-10-26T12:00",
+      "art": "Klausur",
+      "titel": "4 - Management",
+      "dozent": "Roxin",
+      "raum": "CL: 1.Audimax hinten",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Ende",
+       "vorher": "2026-10-26T11:30",
+       "nachher": "2026-10-26T12:00"
+      },
+      {
+       "feld": "Dozent",
+       "vorher": "Bleis, Roxin",
+       "nachher": "Roxin"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-10-06T22:50",
    "anzahl": 2,
