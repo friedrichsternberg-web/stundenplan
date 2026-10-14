@@ -688,6 +688,45 @@ Aus demselben Grund bekommt `sw.js` als einzige Datei **keine Versionsnummer**
 an die Adresse: ein Service Worker wird über seinen Pfad angemeldet, und mit
 wechselndem `?v=…` wäre es bei jeder Veröffentlichung ein anderer.
 
+## Post: wichtige Mails aus Gmail (seit 14.10.2026)
+
+Wichtige Mails (Noten, Fristen, Uni, privat Wichtiges) erscheinen als
+Karte „Post“ auf der Übersicht, gleich unter „Heute“, und Noten sowie
+dringende Fristen melden sich sofort per Benachrichtigung.
+
+```
+Gmail (Uni-Mails per Weiterleitung aus dem HWR-Postfach)
+   ↓  alle 5 Min. gmail/post.gs (Google Apps Script in Friedrichs Konto)
+Claude sortiert: noten · fristen · uni · privat · unwichtig
+   ↓  nur Kopfdaten + Ein-Satz-Zusammenfassung, mit POST_GEHEIMNIS
+Edge Function "post"  → speichert Kopfdaten 30 Tage (sync.post_eintraege)
+   ↓                  → meldet über stundenplan-melden (Zusammenfassung nur hier)
+Planer holt die Liste mit dem Gerätecode (nur Räume in sync.post_zugang)
+```
+
+**Entscheidungen vom 14.10.2026:** Claude sortiert (Betreff, Absender und
+die ersten 1500 Zeichen jeder neuen Mail gehen an Anthropic). Gespeichert
+werden nur Kopfdaten: Absender, Betreff, Datum, Gruppe, Link zu Gmail,
+kein Text, 30 Tage (pg_cron `post-aufraeumen` löscht täglich). Die
+Zusammenfassung steht nur in der Benachrichtigung.
+
+**Geheimnisse:** `ANTHROPIC_API_KEY` und `POST_GEHEIMNIS` liegen in den
+Skripteigenschaften bei Google, `POST_GEHEIMNIS` zusätzlich als
+Supabase-Secret. Nichts davon im Repository. Modell über die
+Skripteigenschaft `MODELL` (Standard `claude-opus-5-5`, etwa 5 bis 10 € im
+Monat bei 30 bis 50 Mails am Tag; `claude-haiku-5-5` etwa 0,25 €).
+
+**Robust:** Scheitert Claude vorübergehend (429/5xx), bleibt alles
+liegen und der nächste Lauf versucht es erneut. Bei einer Ablehnung oder
+ohne Schlüssel sortieren feste Stichwort-Regeln. Beim Einrichten wird
+nichts gemeldet, was schon im Postfach liegt. Doppeltes verhindert die
+Liste `ERLEDIGT` im Skript und der Primärschlüssel in der Datenbank.
+
+**Tests:** `tests/test_post_skript.js` prüft das Skript mit nachgebautem
+Gmail, Claude und Supabase (vor allem: kein Mailtext an Supabase),
+`tests/test_post.py` von außen, dass fremde Codes nichts lesen und
+niemand ohne Geheimnis einliefert.
+
 ## Neue Mail melden
 
 Das HWR-Postfach wird alle fünf Minuten angeschaut. Kommt etwas Neues und

@@ -165,7 +165,10 @@ const werkzeug = eval(
   "  modulnotizenRoh: function (w) { if (w) modulnotizen = w; return modulnotizen; }," +
   "  zettelRoh: function () { return zettel; }," +
   "  offeneModulnotiz: function (w) { offeneModulnotiz = w; }," +
-  "  trainingAbholen: function (z) { trainingLaeuft = false; trainingAbholen(z); trainingLaeuft = false; }" +
+  "  trainingAbholen: function (z) { trainingLaeuft = false; trainingAbholen(z); trainingLaeuft = false; }," +
+  "  postStartKarte: postStartKarte," +
+  "  postSetzen: function (p) { post = p; }," +
+  "  postAlsGesehen: postAlsGesehen" +
   "})");
 
 
@@ -1419,6 +1422,45 @@ pruefe("altes nein ohne Code (von vor dem Update): ebenfalls nachfragen", anfrag
 localStorage.removeItem("stundenplan.trainingZugang");
 localStorage.removeItem("stundenplan.geraetecode");
 fetch = undefined;
+
+
+/* ====================================================================== */
+abschnitt("22. Post: Karte auf der Uebersicht");
+
+const jetzt22 = new Date(2026, 9, 14, 15, 0);
+function mail22(kennung, gruppe, stundenHer, betreff) {
+  return { kennung, gruppe, absender: "Absender " + kennung, betreff,
+           eingegangen: new Date(jetzt22.getTime() - stundenHer * 3600000).toISOString(),
+           link: "https://mail.google.com/mail/u/0/#all/" + kennung };
+}
+werkzeug.postSetzen({ abgerufenAm: jetzt22.toISOString(), mails: [
+  mail22("a", "uni", 1, "Kursinfo"),
+  mail22("b", "privat", 2, "Nebenkosten"),
+  mail22("c", "noten", 30, "Notenbekanntgabe Management"),
+  mail22("d", "uni", 3, "<img src=x onerror=alert(1)>"),
+  mail22("e", "fristen", 200, "Alte Frist"),
+] });
+localStorage.removeItem("stundenplan.postZugang");
+pruefe("ohne Freigabe keine Karte", werkzeug.postStartKarte(jetzt22) === "");
+localStorage.setItem("stundenplan.postZugang", JSON.stringify({ antwort: "ja", am: 1 }));
+let karte22 = werkzeug.postStartKarte(jetzt22);
+pruefe("mit Freigabe gibt es sie", karte22.indexOf("Post") >= 0);
+pruefe("die ungelesene Note steht vorn, vor neueren Uni-Mails",
+       karte22.indexOf("Notenbekanntgabe") < karte22.indexOf("Kursinfo"));
+pruefe("Kacheln je Gruppe: 2 Uni in der Woche",
+       /data-post-filter="uni"[\s\S]*?<strong>2<\/strong>/.test(karte22));
+pruefe("die acht Tage alte Frist zaehlt nicht zur Woche", karte22.indexOf('data-post-filter="fristen"') < 0);
+pruefe("hoechstens vier Zeilen", karte22.split('class="post-zeile').length - 1 === 4);
+pruefe("eingeschleustes HTML im Betreff wird Text", karte22.indexOf("<img src=x") < 0
+       && karte22.indexOf("&lt;img") >= 0);
+pruefe("Unterzeile zaehlt die neuen", karte22.indexOf("4 neu") >= 0);
+werkzeug.postAlsGesehen("c");
+karte22 = werkzeug.postStartKarte(jetzt22);
+pruefe("angetippte Note ist nicht mehr fett", karte22.indexOf('post-zeile post-neu" href="https://mail.google.com/mail/u/0/#all/c"') < 0
+       && karte22.indexOf("3 neu") >= 0);
+localStorage.removeItem("stundenplan.postZugang");
+localStorage.removeItem("stundenplan.postGesehen");
+werkzeug.postSetzen(null);
 
 
 /* ====================================================================== */

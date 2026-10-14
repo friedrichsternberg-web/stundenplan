@@ -58,4 +58,12 @@ echo "== Training: nur Friedrichs Code bekommt Gymbro-Daten =="
 python3 tests/test_training.py
 
 echo
+echo "== Post: Google-Skript schickt nur Kopfdaten =="
+osascript -l JavaScript tests/test_post_skript.js
+
+echo
+echo "== Post: nur Friedrichs Code liest, nur das Skript liefert ein =="
+python3 tests/test_post.py
+
+echo
 echo "ALLE SAMMLUNGEN BESTANDEN"

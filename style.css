@@ -4127,3 +4127,81 @@ button:active:not(:disabled),
 
 /* Gegen das Hineinzoomen beim Tippen auf dem iPhone: mindestens 16 px. */
 @media (pointer: coarse) { .modulnotiz-feld { font-size: 16px; } }
+
+
+/* =========================================================================
+   POST (14.10.2026)
+
+   Oben je Gruppe eine kleine Kachel mit der Zahl der letzten sieben Tage,
+   darunter die Mails als Zeilen. Fett heißt: noch nicht angetippt.
+   ========================================================================= */
+.post-zahlen { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+.post-zahl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--glas-linie, var(--linie));
+  border-radius: 999px;
+  background: var(--flaeche-gedaempft);
+  color: var(--schrift);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.post-zahl strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.post-zahl-neu { border-color: var(--akzent); }
+.post-zahl-neu.post-zahl-noten { border-color: var(--neu); }
+.post-zahl-neu.post-zahl-fristen { border-color: var(--entfallen); }
+
+.post-liste { display: flex; flex-direction: column; }
+.post-zeile {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--glas-linie, var(--linie));
+  color: var(--schrift);
+  text-decoration: none;
+}
+.post-liste > .post-zeile:first-child { border-top: 0; }
+.post-zeichen {
+  flex: 0 0 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: var(--flaeche-gedaempft);
+}
+.post-zeichen-noten { background: var(--neu-flaeche); }
+.post-zeichen-fristen { background: var(--wichtig-flaeche); }
+.post-zeichen-uni { background: var(--akzent-flaeche); }
+.post-zeichen-privat { background: var(--geaendert-flaeche); }
+.post-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.post-betreff {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.post-neu .post-betreff { font-weight: 700; }
+.post-neu .post-zeichen { box-shadow: 0 0 0 2px var(--akzent); }
+.post-unterzeile {
+  font-size: 12px;
+  color: var(--schrift-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.post-tag {
+  margin: 14px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+#postInhalt .training-filterleiste { margin-bottom: 4px; }
