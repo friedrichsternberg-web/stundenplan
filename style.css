@@ -4071,3 +4071,59 @@ button:active:not(:disabled),
   /* Die Säule der laufenden Woche im Trainings-Widget atmet. */
   .tw-saeule-jetzt { animation: atmen 3s ease-in-out infinite; }
 }
+
+
+/* =========================================================================
+   MODULNOTIZEN (14.10.2026)
+
+   Kurze Zeilen zu einem Modul, unter jeder Vorlesung dieses Moduls. Leise
+   gesetzt, damit sie die Vorlesung nicht überdecken, aber in der
+   Notizfarbe, damit man sie als eigene erkennt.
+   ========================================================================= */
+.modulnotizen { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.modulnotiz {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--notiz-rand);
+}
+.modulnotiz-zeichen { flex: 0 0 auto; }
+.modulnotiz-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.modulnotiz-weg {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 22px;
+  margin: -2px 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--schrift-leise);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modulnotiz-weg:hover { background: var(--flaeche-gedaempft); color: var(--entfallen); }
+
+.modulnotiz-neu { display: flex; gap: 8px; margin-top: 6px; }
+.modulnotiz-feld {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--glas-linie, var(--linie));
+  border-radius: 12px;
+  background: var(--feld, var(--flaeche));
+  color: var(--schrift);
+  font: inherit;
+  font-size: 15px;
+}
+.modulnotiz-feld:focus { outline: 2px solid var(--akzent); outline-offset: 0; border-color: transparent; }
+.modulnotiz-plus { flex: 0 0 auto; min-width: 44px; font-size: 18px; padding: 0 14px; }
+
+/* Im Terminfenster ein eigener Abschnitt. */
+.termin-modulnotizen { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.termin-modulnotizen > .knopf-schlicht { align-self: flex-start; }
+
+/* Gegen das Hineinzoomen beim Tippen auf dem iPhone: mindestens 16 px. */
+@media (pointer: coarse) { .modulnotiz-feld { font-size: 16px; } }
