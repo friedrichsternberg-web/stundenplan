@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "7945e584";
+const GEBAUTE_VERSION = "1602e394";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -4044,8 +4044,13 @@ function trainingZugang() {
 
 function trainingZugangMerken(antwort) {
   try {
+    /* Mit dem Code dazu: ein "nein" gilt nur für den Code, mit dem es kam.
+       Am 05.10.2026 bekam Friedrichs Gerät nach einem Codewechsel ein
+       "nein", merkte es sich 24 Stunden und versteckte den Reiter - auch
+       noch, als der neue Code längst freigegeben war. */
     localStorage.setItem(SPEICHER_TRAINING_ZUGANG,
-                         JSON.stringify({ antwort: antwort, am: Date.now() }));
+                         JSON.stringify({ antwort: antwort, am: Date.now(),
+                                          code: typeof Abgleich !== "undefined" ? Abgleich.code() : "" }));
   } catch (fehler) { /* dann wird eben beim nächsten Öffnen wieder gefragt */ }
 }
 
@@ -4065,7 +4070,7 @@ function trainingAbholen(zwingen) {
   if (typeof ABGLEICH_URL === "undefined" || typeof fetch !== "function") return;
 
   const zugang = trainingZugang();
-  if (!zwingen && zugang.antwort === "nein"
+  if (!zwingen && zugang.antwort === "nein" && zugang.code === Abgleich.code()
       && Date.now() - zugang.am < TRAINING_NEIN_MERKEN_MS) return;
   if (!zwingen && training && trainingZustand === "ok"
       && Date.now() - Date.parse(training.abgerufenAm) < TRAINING_FRISCH_MS) return;
@@ -7005,6 +7010,7 @@ function geraeteVerbinden() {
 
     if (ziel.id === "abgleichEin") {
       Abgleich.codeSetzen(Abgleich.codeErzeugen());
+      pushNachziehen();
       geraeteZeichnen("Eingerichtet. Deine Einträge werden gerade hochgeladen.");
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
       meldenZeichnen();
@@ -7018,6 +7024,7 @@ function geraeteVerbinden() {
         return;
       }
       geraeteZeichnen("Übernommen. Wird zusammengeführt …");
+      pushNachziehen();
       Abgleich.sofort().then(() => { geraeteZeichnen(); allesZeichnen(); });
       meldenZeichnen();
       return;
@@ -7909,6 +7916,15 @@ function starten() {
   /* Trainingsdaten erst nach dem Abgleich-Start: ein Gerät, das gerade
      per Link seinen Code bekommen hat, soll schon mit diesem fragen. */
   trainingAbholen(false);
+  pushNachziehen();
+}
+
+/* Benachrichtigungen dem aktuellen Code nachziehen - siehe
+   Melden.nachziehen(). Beim Start und nach jedem Codewechsel. */
+function pushNachziehen() {
+  if (typeof Melden !== "undefined" && Melden.nachziehen) {
+    Melden.nachziehen().catch(() => { /* beim nächsten Start wieder */ });
+  }
 }
 
 /* Lädt daten/plan.js nach und ruft danach starten() auf.
