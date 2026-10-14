@@ -159,7 +159,12 @@ const werkzeug = eval(
   "  trainingSetzen: function (t) { training = t; trainingZustand = t ? 'ok' : ''; }," +
   "  allesZeichnen: allesZeichnen," +
   "  veraltet: function () { return Array.from(veralteteSeiten).sort(); }," +
-  "  seiteRoh: function (n) { seite = n; }" +
+  "  seiteRoh: function (n) { seite = n; }," +
+  "  modulnotizHinzufuegen: modulnotizHinzufuegen," +
+  "  modulnotizEntfernen: modulnotizEntfernen," +
+  "  modulnotizenRoh: function (w) { if (w) modulnotizen = w; return modulnotizen; }," +
+  "  zettelRoh: function () { return zettel; }," +
+  "  offeneModulnotiz: function (w) { offeneModulnotiz = w; }" +
   "})");
 
 
@@ -1247,8 +1252,9 @@ pruefe("im schmalen Kalenderkasten fehlt die Modulnummer",
 let karte16 = werkzeug.tagKarteBauen(tag16, true);
 pruefe("die Tageskarte im Fenster hat + To-do und + Termin",
        karte16.indexOf("data-aufgabe-neu") >= 0 && karte16.indexOf("data-termin-neu") >= 0);
-pruefe("und an jedem Termin + Notiz und + To-do",
-       karte16.indexOf("data-zettel-neu") >= 0 && karte16.indexOf('data-notiz-oeffnen="t.k"') >= 0);
+pruefe("und an jedem Termin + Notiz (Modulnotiz) und + To-do",
+       karte16.indexOf('data-modulnotiz-neu="t.k"') >= 0 && karte16.indexOf('data-notiz-oeffnen="t.k"') >= 0);
+pruefe("+ Notiz legt nichts mehr im Notizbuch an", karte16.indexOf("data-zettel-neu") < 0);
 pruefe("ohne Fenster und ohne Bearbeiten keine Knoepfe",
        werkzeug.tagKarteBauen(tag16, false).indexOf("data-aufgabe-neu") < 0);
 
@@ -1269,7 +1275,10 @@ werkzeug.terminFensterZeigen("t.f");
 let fenster17 = document.getElementById("terminInhalt").innerHTML;
 pruefe("ohne To-do steht dort + To-do", fenster17.indexOf("+ To-do") >= 0
        && fenster17.indexOf('data-notiz-bearbeiten="t.f"') >= 0);
-pruefe("und + Notiz wie in der Liste", fenster17.indexOf('data-zettel-neu="termin:t.f"') >= 0);
+pruefe("und + Notiz wie in der Liste, als Modulnotiz",
+       fenster17.indexOf('data-modulnotiz-neu="fenster:t.f"') >= 0 && fenster17.indexOf("data-zettel-neu") < 0);
+pruefe("nur noch ein + Notiz, kein + Notiz zum Modul", fenster17.indexOf("Notiz zum Modul") < 0
+       && fenster17.split("+ Notiz").length - 1 === 1);
 pruefe("das Wort Kurznotiz kommt nicht mehr vor", fenster17.indexOf("Kurznotiz") < 0);
 werkzeug.setzen({ "t.f": { text: "Aufgabe vorbereiten", erledigt: false, wichtig: false, geaendert: 1 } }, []);
 werkzeug.terminFensterZeigen("t.f");
@@ -1339,6 +1348,52 @@ pruefe("die To-do-Seite ist frisch", veraltet19.indexOf("todos") < 0);
 pruefe("die anderen vier warten, bis man hinwechselt",
        ["plan", "start", "training", "zettel"].every(n => veraltet19.indexOf(n) >= 0));
 werkzeug.seiteRoh("start");
+
+
+/* ====================================================================== */
+abschnitt("20. Modulnotizen: kurz, am Modul, nicht im Notizbuch");
+
+werkzeug.bearbeiten(false);
+werkzeug.modulnotizenRoh([]);
+const zettelVorher20 = werkzeug.zettelRoh().length;
+pruefe("eine Notiz zum Modul anlegen",
+       werkzeug.modulnotizHinzufuegen("4 - Management - Controlling", "  Präsi   am 13.10.  ") === true);
+pruefe("leer geht nicht", werkzeug.modulnotizHinzufuegen("4 - Management - Controlling", "   ") === false);
+pruefe("ohne Modul geht nicht", werkzeug.modulnotizHinzufuegen("", "x") === false);
+pruefe("Leerraum wird geglaettet", werkzeug.modulnotizenRoh()[0].text === "Präsi am 13.10.");
+pruefe("im Notizbuch entsteht nichts", werkzeug.zettelRoh().length === zettelVorher20);
+
+function termin20(id, tag, titel) {
+  return { id: id, start: tag + "T14:00", ende: tag + "T15:30", art: "SU", titel: titel,
+           dozent: "Schlösser", raum: "CL: 6A.201", anmerkung: "", gruppe: "" };
+}
+const tage20 = [0, 1].map(i => {
+  const tag = "2030-10-0" + (7 + i);
+  return { datum: new Date(2030, 9, 7 + i), schluessel: tag, istHeute: false, aufgaben: [], ganztags: [],
+           termine: [termin20("m" + i, tag, "4 - Management - Controlling"),
+                     termin20("x" + i, tag, "WPF - Social Innovation")].map(t => (t.start = t.id[0] === "x" ? tag + "T16:00" : t.start, t.ende = t.id[0] === "x" ? tag + "T17:30" : t.ende, t)) };
+});
+const liste20 = werkzeug.listeBauen(tage20);
+pruefe("in der Liste steht sie an beiden Vorlesungen des Moduls",
+       liste20.split("Präsi am 13.10.").length - 1 === 2);
+pruefe("ohne Bearbeiten ohne ×", liste20.indexOf("data-modulnotiz-weg") < 0);
+werkzeug.bearbeiten(true);
+const bearbeitet20 = werkzeug.listeBauen(tage20);
+pruefe("im Bearbeiten-Modus mit × zum Loeschen", bearbeitet20.indexOf("data-modulnotiz-weg") >= 0);
+werkzeug.offeneModulnotiz("m0");
+const offen20 = werkzeug.listeBauen(tage20);
+pruefe("nach + Notiz steht genau ein Eingabefeld da, am richtigen Modul",
+       offen20.split('class="modulnotiz-feld"').length - 1 === 1
+       && offen20.indexOf('data-modulnotiz-form="4 - Management - Controlling"') >= 0);
+werkzeug.offeneModulnotiz("");
+werkzeug.bearbeiten(false);
+const kalender20 = werkzeug.kalenderBauen(tage20);
+pruefe("im Kalenderkaestchen steht sie auch", kalender20.indexOf("Präsi am 13.10.") >= 0);
+pruefe("aber nicht beim anderen Modul",
+       kalender20.split("Präsi am 13.10.").length - 1 === 4); // 2 Kaestchen, je Zeile + Hinweistext
+werkzeug.modulnotizEntfernen(werkzeug.modulnotizenRoh()[0].id);
+pruefe("loeschen entfernt sie", werkzeug.modulnotizenRoh().length === 0
+       && werkzeug.listeBauen(tage20).indexOf("Präsi") < 0);
 
 
 /* ====================================================================== */

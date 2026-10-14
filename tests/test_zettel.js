@@ -442,8 +442,11 @@ werkzeug.setzen({});
 werkzeug.bearbeiten(true);
 let liste = werkzeug.listeBauen(terminTag(), "2026-09-28");
 
-pruefe("der Notizbuch-Knopf verweist auf den Termin",
-       liste.indexOf('data-zettel-neu="termin:sked.a1"') >= 0);
+/* Seit 14.10.2026 legt "+ Notiz" am Termin eine Modulnotiz an, nicht mehr
+   eine Notiz im Notizbuch (Friedrich wollte sie nicht im Reiter Notizen). */
+pruefe("der Notiz-Knopf legt eine Modulnotiz an, nichts im Notizbuch",
+       liste.indexOf('data-modulnotiz-neu="sked.a1"') >= 0
+       && liste.indexOf("data-zettel-neu") < 0);
 pruefe("und heisst \"+ Notiz\"",
        liste.indexOf("+ Notiz") >= 0);
 pruefe("der To-do-Knopf legt die Kurznotiz an",

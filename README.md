@@ -269,6 +269,24 @@ merkt sich den vollen Pfad.
 
 ## Die zwei Ansichten
 
+**Modulnotizen (seit 14.10.2026).** „+ Notiz“ an einer Vorlesung legt eine
+kurze Notiz zum ganzen Modul an: eine Zeile, kein Titel, kein Häkchen. Sie
+steht an jeder Vorlesung dieses Moduls, in der Liste, im
+Kalenderkästchen (mit ✎), im Terminfenster und unter „Heute“, aber
+**nicht** im Reiter Notizen. In der Liste gibt es den Knopf im
+Bearbeiten-Modus und im Tagesfenster, im Kalender im Terminfenster. Nach
+dem Hinzufügen bleibt das Feld offen für die nächste; leer abschicken
+oder Esc schließt es. × löscht.
+
+Vorher gab es zwei Knöpfe, „+ Notiz“ (an genau dieser Vorlesung) und
+„+ Notiz zum Modul“, und beide legten eine Notiz im Notizbuch an. Sie
+sind zu diesem einen zusammengelegt. Notizen aus dem Notizbuch, die mit
+einem Termin oder Modul verknüpft sind, stehen weiter im Terminfenster.
+
+Gespeichert als eigene Art `modulnotiz` mit `fach` (der Titel des
+Termins) und `inhalt`; ältere Fassungen heben sie beim Abgleich
+unverändert auf.
+
 **Wochentagsfarben in der Liste (seit 05.10.2026).** Jeder Wochentag hat
 eine feste Farbe: Mo blau, Di lila, Mi grün, Do orange, Fr pink, Sa
 türkis, So indigo. Sie färbt den Streifen links an der Tageskarte, den

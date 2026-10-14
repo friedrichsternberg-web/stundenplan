@@ -817,7 +817,9 @@ function startZeichnen() {
       ? (minutenBis < 60 ? "in " + Math.max(1, minutenBis) + " Min."
          : "in " + Math.floor(minutenBis / 60) + " Std." + (minutenBis % 60 ? " " + (minutenBis % 60) + " Min." : ""))
       : "";
-    const notiz = notizText(t.id) || (t.anmerkung && !t.eigen ? t.anmerkung : "");
+    const notiz = [notizText(t.id)]
+      .concat(t.eigen || t.arbeit ? [] : modulnotizenFuer(t.titel).map(n => n.text))
+      .filter(Boolean).join(" · ") || (t.anmerkung && !t.eigen ? t.anmerkung : "");
     return `
       <button type="button" class="heute-termin${laeuft ? " heute-jetzt" : ""}${
                 t.eigen ? " heute-eigen" : ""}${t.arbeit ? " heute-arbeit" : ""}" data-termin="${sicher(t.id)}">
@@ -1396,6 +1398,7 @@ function terminZeichnen(termin) {
           ? `<div class="termin-korrektur">✎ ${sicher(termin.korrektur)}</div>`
           : ""}
         ${notizZeichnen(termin)}
+        ${modulnotizenZeichnen(termin, termin.id)}
         ${terminZettelZeile(termin)}
         ${terminKnoepfeZeichnen(termin)}
       </div>
@@ -2235,6 +2238,76 @@ function einkaufEntfernen(kennungen) {
   einkaufSpeichern();
 }
 
+/* --- Modulnotizen ------------------------------------------------------
+
+   Kurze Notizen zu einem Modul: "Präsi am 13.10.", "Laptop mitbringen",
+   "Folien liegen im Moodle". Eine Zeile, kein Häkchen, kein Titel.
+
+   Bewusst KEIN Eintrag im Notizbuch. Früher legte "+ Notiz" am Termin eine
+   vollwertige Notiz an, die dann im Reiter Notizen zwischen den langen
+   Texten stand. Für eine Zeile zum Modul war das zu viel.
+
+   Sie hängen am Modul, also am Titel des Termins ("4 - Management -
+   Controlling"), und stehen damit an jeder Vorlesung dieses Moduls - in
+   der Liste, im Kalenderkästchen, im Terminfenster und unter "Heute".
+   Text im Feld "inhalt", damit ältere Fassungen sie als unbekannt
+   aufheben, statt eine Notiz an einem Termin daraus zu machen. */
+const SPEICHER_MODULNOTIZEN = "stundenplan.modulnotizen";
+let modulnotizen = [];
+// An welchem Termin gerade das Feld für eine neue Modulnotiz offen ist.
+let offeneModulnotiz = "";
+
+function modulnotizGeraderuecken(roh) {
+  return {
+    id: String(roh.id),
+    fach: typeof roh.fach === "string" ? roh.fach : "",
+    text: typeof roh.text === "string" ? roh.text : "",
+    angelegt: Number(roh.angelegt) || Number(roh.geaendert) || 0,
+    geaendert: Number(roh.geaendert) || 0,
+  };
+}
+
+function modulnotizenLaden() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SPEICHER_MODULNOTIZEN) || "[]");
+    return Array.isArray(roh)
+      ? roh.filter(n => n && typeof n.id === "string" && n.text && n.fach).map(modulnotizGeraderuecken) : [];
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function modulnotizenSpeichern() {
+  try { localStorage.setItem(SPEICHER_MODULNOTIZEN, JSON.stringify(modulnotizen)); }
+  catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+/* Die Notizen eines Moduls, in der Reihenfolge, in der sie entstanden. */
+function modulnotizenFuer(fach) {
+  if (!fach) return [];
+  return modulnotizen.filter(n => n.fach === fach).sort((a, b) => a.angelegt - b.angelegt);
+}
+
+function modulnotizHinzufuegen(fach, text) {
+  const sauber = String(text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  if (!sauber || !fach) return false;
+  const jetzt = Abgleich.jetzt();
+  const kennung = "modulnotiz-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+  modulnotizen.push({ id: kennung, fach: fach, text: sauber, angelegt: jetzt, geaendert: jetzt });
+  grabsteinEntfernen(kennung);
+  modulnotizenSpeichern();
+  return true;
+}
+
+function modulnotizEntfernen(kennung) {
+  const vorher = modulnotizen.length;
+  modulnotizen = modulnotizen.filter(n => n.id !== kennung);
+  if (modulnotizen.length === vorher) return;
+  grabsteinSetzen(kennung);
+  modulnotizenSpeichern();
+}
+
 /* Volltextsuche über Überschrift und Text. Kleinschreibung auf beiden
    Seiten, damit "hwr" auch "HWR" findet. */
 function zettelGefunden(suchwort) {
@@ -2532,14 +2605,64 @@ function terminKnoepfeZeichnen(termin) {
   if (!bearbeitenModus) return "";
   if (offeneNotiz === termin.id) return "";
 
+  /* "+ Notiz" legt seit dem 14.10.2026 eine Modulnotiz an, keine Notiz
+     im Notizbuch mehr - siehe modulnotizenZeichnen(). Eigene Termine und
+     die Arbeit haben kein Modul; dort gibt es nur "+ To-do". */
+  const mitModul = !termin.eigen && !termin.arbeit;
+  const notizKnopf = mitModul && offeneModulnotiz !== termin.id
+    ? `<button type="button" class="notiz-neu" data-modulnotiz-neu="${sicher(termin.id)}">+ Notiz</button>`
+    : "";
+  const todoKnopf = notizText(termin.id) ? "" : `
+        <button type="button" class="notiz-neu"
+                data-notiz-oeffnen="${sicher(termin.id)}">+ To-do</button>`;
+  if (!notizKnopf && !todoKnopf) return "";
   return `
     <div class="termin-knoepfe">
-      <button type="button" class="notiz-neu"
-              data-zettel-neu="termin:${sicher(termin.id)}">+ Notiz</button>
-      ${notizText(termin.id) ? "" : `
-        <button type="button" class="notiz-neu"
-                data-notiz-oeffnen="${sicher(termin.id)}">+ To-do</button>`}
+      ${notizKnopf}${todoKnopf}
     </div>`;
+}
+
+/* Die Modulnotizen an einem Termin: jede eine Zeile mit ✎. Im
+   Bearbeiten-Modus und im Terminfenster mit × zum Löschen, und wenn an
+   diesem Termin gerade "+ Notiz" getippt wurde, mit Eingabefeld.
+
+   ort: die Kennung, unter der das Feld offen ist. In der Liste ist das
+   der Termin, im Terminfenster "fenster:" + Termin - sonst stünde das
+   Feld nach dem Tippen im Fenster auch noch in der Liste dahinter. */
+function modulnotizenZeichnen(termin, ort, immerBearbeitbar) {
+  if (!termin || termin.eigen || termin.arbeit) return "";
+  const fach = termin.titel;
+  const liste = modulnotizenFuer(fach);
+  const bearbeitbar = Boolean(immerBearbeitbar) || bearbeitenModus;
+  const offen = offeneModulnotiz === ort;
+  if (!liste.length && !offen) return "";
+
+  return `
+    <div class="modulnotizen">
+      ${liste.map(n => `
+        <div class="modulnotiz">
+          <span class="modulnotiz-zeichen" aria-hidden="true">✎</span>
+          <span class="modulnotiz-text">${sicher(n.text)}</span>
+          ${bearbeitbar ? `<button type="button" class="modulnotiz-weg"
+                  data-modulnotiz-weg="${sicher(n.id)}" aria-label="Notiz löschen">×</button>` : ""}
+        </div>`).join("")}
+      ${offen ? `
+        <form class="modulnotiz-neu" data-modulnotiz-form="${sicher(fach)}" autocomplete="off">
+          <input type="text" class="modulnotiz-feld" maxlength="160" enterkeyhint="done"
+                 aria-label="Notiz zu ${sicher(kurzerTitel(fach))}">
+          <button type="submit" class="knopf-schlicht knopf-betont modulnotiz-plus"
+                  aria-label="Notiz hinzufügen">+</button>
+        </form>` : ""}
+    </div>`;
+}
+
+/* Nach dem Neuzeichnen den Cursor ins offene Feld setzen, damit man
+   gleich weiterschreiben kann - auch die zweite und dritte Notiz. */
+function modulnotizFeldAktivieren() {
+  if (!offeneModulnotiz) return;
+  const felder = document.querySelectorAll(".modulnotiz-feld");
+  const feld = felder[felder.length - 1];
+  if (feld && feld.focus) feld.focus();
 }
 
 
@@ -3117,8 +3240,14 @@ function kalenderBauen(tage) {
          gehoert deshalb in die Notizzeile und nicht in die Zeile fuer
          HWR-Hinweise, die als Erste weicht, wenn es eng wird. */
       const hwrHinweis = termin.eigen ? "" : termin.anmerkung;
+      /* Modulnotizen gehören in dieselbe Zeile: auch sie hat man selbst
+         geschrieben. Durchgestrichen wird die Zeile nur, wenn außer dem
+         abgehakten To-do nichts darin steht. */
+      const modulTexte = termin.eigen || termin.arbeit ? [] : modulnotizenFuer(termin.titel).map(n => n.text);
       const notiz = [termin.eigen ? termin.anmerkung : "", notizText(termin.id)]
-                    .filter(Boolean).join(" · ");
+                    .concat(modulTexte).filter(Boolean).join(" · ");
+      const notizNurErledigt = notizErledigt(termin.id) && !modulTexte.length
+                               && !(termin.eigen && termin.anmerkung);
 
       const volltext = uhrzeit(termin.start) + "–" + uhrzeit(termin.ende)
                      + " " + termin.titel
@@ -3140,7 +3269,7 @@ function kalenderBauen(tage) {
              title="${sicher(volltext)}">
           <div class="kalender-termin-zeit">${uhrzeit(termin.start)}<span
                class="kalender-zeit-ende">–${uhrzeit(termin.ende)}</span>${
-            notizText(termin.id)
+            notizText(termin.id) || modulTexte.length
               ? ` <span class="kalender-notizzeichen">${
                   istWichtig(termin.id) ? "★" : "✎"}</span>`
               : ""}</div>
@@ -3150,7 +3279,7 @@ function kalenderBauen(tage) {
             ${termin.raum ? `<div class="kalender-termin-zeile">${sicher(termin.raum)}</div>` : ""}
             ${hwrHinweis ? `<div class="kalender-termin-zeile"><strong>${sicher(hwrHinweis)}</strong></div>` : ""}`}
           ${notiz ? `<div class="kalender-termin-zeile kalender-termin-notiz${
-              notizErledigt(termin.id) ? " kalender-termin-notiz-erledigt" : ""}">${
+              notizNurErledigt ? " kalender-termin-notiz-erledigt" : ""}">${
               sicher(notiz)}</div>` : ""}
         </div>`;
     }).join("");
@@ -3210,11 +3339,17 @@ function jetztLinieVerschieben() {
    50 Bildpunkte hoch. Am Rechner half der Hinweistext beim Überfahren mit
    der Maus, auf dem Handy gibt es den nicht. Deshalb dieses Fenster: das
    Raster zeigt, was hineinpasst, ein Tippen zeigt alles. */
+// Welcher Termin im Terminfenster steht - zum Neuzeichnen nach einer Modulnotiz.
+let terminFensterKennung = "";
+
 function terminFensterZeigen(kennung) {
   const termin = terminZuKennung(kennung);
   const fenster = document.getElementById("terminHintergrund");
   const inhalt = document.getElementById("terminInhalt");
   if (!termin || !fenster || !inhalt) return;
+  // Ein anderer Termin: ein offenes Notizfeld vom vorigen gehört nicht hierher.
+  if (terminFensterKennung !== kennung && offeneModulnotiz.indexOf("fenster:") === 0) offeneModulnotiz = "";
+  terminFensterKennung = kennung;
 
   /* Die Erinnerung steht am eigenen Termin, nicht an der Plandarstellung.
      eigeneTermineAlsPlan() lässt sie weg, weil ein HWR-Termin keine hat -
@@ -3290,25 +3425,26 @@ function terminFensterZeigen(kennung) {
    nämlich jedes Mal. */
 function terminZettelZeichnen(termin, kennung) {
   const passende = zettelFuerTermin(kennung);
-  const fach = termin.eigen ? "" : termin.titel;
+  const fach = termin.eigen || termin.arbeit ? "" : termin.titel;
 
-  const knoepfe = `
+  /* Neue Notizen zum Modul entstehen hier als Modulnotiz (eine Zeile,
+     nicht im Notizbuch). Notizen aus dem Notizbuch, die mit dem Termin
+     oder Modul verknüpft sind, stehen weiter darunter. */
+  const modulTeil = fach ? `
+    <div class="termin-modulnotizen">
+      <div class="termin-notiz-kopf">✎ Notizen zum Modul</div>
+      ${modulnotizenZeichnen(termin, "fenster:" + kennung, true)}
+      ${offeneModulnotiz === "fenster:" + kennung ? "" : `
+        <button type="button" class="knopf-schlicht" data-modulnotiz-neu="fenster:${sicher(kennung)}">
+          + Notiz
+        </button>`}
+    </div>` : "";
+  const knoepfe = modulTeil + (fach && zettelFuerFach(fach).length > 0 ? `
     <div class="termin-zettel-knoepfe">
-      <button type="button" class="knopf-schlicht"
-              data-zettel-neu="termin:${sicher(kennung)}">
-        + Notiz
+      <button type="button" class="knopf-schlicht" data-zettel-fach="${sicher(fach)}">
+        Alle Notizen zum Modul
       </button>
-      ${fach ? `
-        <button type="button" class="knopf-schlicht"
-                data-zettel-neu="fach:${sicher(fach)}">
-          + Notiz zum Modul
-        </button>
-        ${zettelFuerFach(fach).length > 0 ? `
-          <button type="button" class="knopf-schlicht"
-                  data-zettel-fach="${sicher(fach)}">
-            Alle Notizen zum Modul
-          </button>` : ""}` : ""}
-    </div>`;
+    </div>` : "");
 
   if (passende.length === 0) return knoepfe;
 
@@ -6198,6 +6334,16 @@ function abgleichSammeln() {
     };
   }
 
+  for (const notiz of modulnotizen) {
+    eintraege[notiz.id] = {
+      art: "modulnotiz",
+      fach: notiz.fach,
+      inhalt: notiz.text,
+      angelegt: notiz.angelegt,
+      geaendert: Number(notiz.geaendert) || 0,
+    };
+  }
+
   for (const posten of einkauf) {
     eintraege[posten.id] = {
       art: "einkauf",
@@ -6275,6 +6421,7 @@ function abgleichUebernehmen(nutzlast) {
   let neueUniplan = null;
   let neuerAbend = null;
   const neuerEinkauf = [];
+  const neueModulnotizen = [];
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -6334,6 +6481,18 @@ function abgleichUebernehmen(nutzlast) {
       continue;
     }
 
+    // Eine Modulnotiz: braucht Modul und Text.
+    if (eintrag.art === "modulnotiz") {
+      const inhalt = typeof eintrag.inhalt === "string" ? eintrag.inhalt : "";
+      const fach = typeof eintrag.fach === "string" ? eintrag.fach : "";
+      if (!inhalt || !fach) continue;
+      neueModulnotizen.push(modulnotizGeraderuecken({
+        id: kennung, fach: fach, text: inhalt,
+        angelegt: eintrag.angelegt, geaendert: zeitpunkt,
+      }));
+      continue;
+    }
+
     // Ein Artikel vom Einkaufszettel.
     if (eintrag.art === "einkauf") {
       const inhalt = typeof eintrag.inhalt === "string" ? eintrag.inhalt : "";
@@ -6382,6 +6541,7 @@ function abgleichUebernehmen(nutzlast) {
   eigeneTermine = neueTermine;
   zettel = neueZettel;
   einkauf = neuerEinkauf;
+  modulnotizen = neueModulnotizen;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
   // Steht im Abgleich noch keine Einstellung, bleibt die auf dem Gerät.
@@ -6410,6 +6570,7 @@ function abgleichUebernehmen(nutzlast) {
     localStorage.setItem(SPEICHER_TERMINE, JSON.stringify(eigeneTermine));
     localStorage.setItem(SPEICHER_ZETTEL, JSON.stringify(zettel));
     localStorage.setItem(SPEICHER_EINKAUF, JSON.stringify(einkauf));
+    localStorage.setItem(SPEICHER_MODULNOTIZEN, JSON.stringify(modulnotizen));
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
@@ -7095,7 +7256,10 @@ function seiteSetzen(neueSeite) {
 function bearbeitenUmschalten() {
   bearbeitenModus = !bearbeitenModus;
   // Beim Verlassen ein offenes Textfeld schließen, sonst bliebe es hängen.
-  if (!bearbeitenModus) offeneNotiz = null;
+  if (!bearbeitenModus) {
+    offeneNotiz = null;
+    if (offeneModulnotiz.indexOf("fenster:") !== 0) offeneModulnotiz = "";
+  }
 
   const knopf = document.getElementById("bearbeitenSchalter");
   if (knopf) {
@@ -7521,6 +7685,47 @@ function knoepfeVerbinden() {
     if (ereignis.target === fenster) fensterSchliessen();
   });
 
+  /* Modulnotizen: "+ Notiz", × und das Eingabefeld. Ein Zuhörer für die
+     ganze Seite, weil dieselben Knöpfe in der Liste, im Tagesfenster und
+     im Terminfenster stehen. Danach wird neu gezeichnet, wo sie stehen:
+     das Terminfenster, wenn es offen ist, und der Rest wie immer. */
+  function nachModulnotiz() {
+    const ort = offeneModulnotiz;
+    const fensterTermin = document.getElementById("terminHintergrund");
+    if (fensterTermin && !fensterTermin.hidden && terminFensterKennung) {
+      terminFensterZeigen(terminFensterKennung);
+    }
+    allesZeichnen();
+    if (ort) modulnotizFeldAktivieren();
+  }
+  document.addEventListener("click", ereignis => {
+    const ziel = ereignis.target && ereignis.target.closest
+      ? ereignis.target.closest("[data-modulnotiz-neu],[data-modulnotiz-weg]") : null;
+    if (!ziel) return;
+    const neu = ziel.getAttribute("data-modulnotiz-neu");
+    if (neu) offeneModulnotiz = neu;
+    else modulnotizEntfernen(ziel.getAttribute("data-modulnotiz-weg"));
+    nachModulnotiz();
+  });
+  document.addEventListener("submit", ereignis => {
+    const form = ereignis.target;
+    if (!form || !form.getAttribute || !form.hasAttribute("data-modulnotiz-form")) return;
+    ereignis.preventDefault();
+    const feld = form.querySelector(".modulnotiz-feld");
+    // Leer abgeschickt heißt: fertig, Feld zu.
+    if (!modulnotizHinzufuegen(form.getAttribute("data-modulnotiz-form"), feld ? feld.value : "")) {
+      offeneModulnotiz = "";
+    }
+    nachModulnotiz();
+  });
+  document.addEventListener("keydown", ereignis => {
+    if (ereignis.key === "Escape" && ereignis.target && ereignis.target.classList
+        && ereignis.target.classList.contains("modulnotiz-feld")) {
+      offeneModulnotiz = "";
+      nachModulnotiz();
+    }
+  });
+
   /* Das Detailfenster eines Kalendertermins. Geöffnet wird es in
      notizKlick(), geschlossen hier. */
   const terminFenster = document.getElementById("terminHintergrund");
@@ -7648,6 +7853,7 @@ function starten() {
   eigeneTermine = eigeneTermineLaden();
   zettel = zettelLaden();
   einkauf = einkaufLaden();
+  modulnotizen = modulnotizenLaden();
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
   if (training) trainingZustand = "ok";

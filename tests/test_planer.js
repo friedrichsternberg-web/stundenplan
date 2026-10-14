@@ -136,6 +136,7 @@ const werkzeug = eval(
   "  arbeitAus: function () { uniplan.arbeit = false; }," +
   "  uniplanRoh: function (u) { if (u) uniplan = u; return uniplan; }," +
   "  abendRoh: function (w) { if (w) abend = w; return abend; }," +
+  "  modulnotizenRoh: function (w) { if (w) modulnotizen = w; return modulnotizen; }," +
   "  UNIPLAN_VORGABE: UNIPLAN_VORGABE" +
   "})");
 werkzeug.arbeitAus();
@@ -504,6 +505,28 @@ pruefe("und kommt auf dem anderen Geraet als aus an",
 werkzeug.abendRoh({ an: true, geaendert: 0 });
 pruefe("nie geaendert: nichts mitschicken, der Server nimmt dann an",
        !werkzeug.sammeln().eintraege["einstellung-abend"]);
+
+
+/* ====================================================================== */
+abschnitt("Modulnotizen ueberleben den Abgleich und bleiben aus dem Notizbuch");
+
+werkzeug.setzen({}, [], [], {});
+werkzeug.modulnotizenRoh([{ id: "modulnotiz-1", fach: "4 - Management - Controlling",
+                            text: "Präsi am 13.10.", angelegt: 10, geaendert: 10 }]);
+const mitModul = werkzeug.sammeln();
+const e = mitModul.eintraege["modulnotiz-1"];
+pruefe("wird als eigene Art mitgeschickt",
+       e && e.art === "modulnotiz" && e.fach === "4 - Management - Controlling" && e.inhalt === "Präsi am 13.10.");
+pruefe("mit inhalt statt text (aeltere Fassungen heben sie dann nur auf)", e && e.text === undefined);
+werkzeug.modulnotizenRoh([]);
+werkzeug.uebernehmen(mitModul);
+const zurueckModul = werkzeug.modulnotizenRoh();
+pruefe("und kommt auf dem anderen Geraet so an",
+       zurueckModul.length === 1 && zurueckModul[0].text === "Präsi am 13.10."
+       && zurueckModul[0].fach === "4 - Management - Controlling" && zurueckModul[0].angelegt === 10);
+pruefe("keine Notiz und kein To-do daraus geworden",
+       Object.keys(werkzeug.lage().notizen).length === 0 && werkzeug.lage().aufgaben.length === 0);
+werkzeug.modulnotizenRoh([]);
 
 
 /* ====================================================================== */
