@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "1602e394";
+const GEBAUTE_VERSION = "e071b40d";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -710,6 +710,7 @@ const SYMBOLE = {
   pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
   phasen: '<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.5c3 2.2 8 2.2 11 0v-4.5M21.5 9.5v5"/>',
   verlauf: '<path d="M3 17l5.5-5.5 4 4L21 7"/><path d="M15 7h6v6"/>',
+  post: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
   uhr: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
   aufteilung: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 2.5A7 7 0 0 1 21.5 9H15z"/>',
 };
@@ -882,6 +883,10 @@ function startZeichnen() {
       { symbol: "notizen", farbe: "gelb", klasse: "start-karte-notizen" });
   }
 
+  // --- Post: wichtige Mails, gleich nach "Heute" ---------------------------
+  const postKarte = postStartKarte(jetzt);
+  if (postKarte) karten.push(postKarte);
+
   /* To-dos links, Training und Notizen rechts übereinander. Beide Spalten
      gleich breit und unten bündig: die kürzere Seite streckt ihre letzte
      Karte, statt eine Lücke zu lassen. Fehlt rechts beides – auf fremden
@@ -985,6 +990,7 @@ function startKlick(ereignis) {
   if (neueSeite) {
     // Der Uni-Plan ist kein Reiter, sondern ein Fenster.
     if (neueSeite === "uniplan") { uniplanFensterZeigen(); return; }
+    if (neueSeite === "post") { postFensterZeigen(""); return; }
     // In den Plan heißt: diese Woche, heute oben.
     if (neueSeite === "plan") {
       angezeigterMontag = montagDerWoche(new Date());
@@ -4931,6 +4937,223 @@ function trainingStartKarte(jetzt) {
 
 
 /* -------------------------------------------------------------------------
+   5b2. Post: wichtige Mails aus Gmail (seit 14.10.2026)
+
+   Ein Google Apps Script in Friedrichs Google-Konto (gmail/post.gs) lässt
+   neue Mails von Claude sortieren und liefert die wichtigen als
+   KOPFDATEN an die Supabase-Funktion "post": Absender, Betreff, Datum,
+   Gruppe, Link. Kein Text. Nach 30 Tagen löscht der Server sie.
+
+   Die App holt sie hier mit dem Gerätecode ab. Freigegeben ist nur
+   Friedrichs Raum (sync.post_zugang) - für alle anderen bleibt die Karte
+   weg, genau wie das Training.
+   ------------------------------------------------------------------------- */
+
+const POST_URL = "/functions/v1/post";
+const SPEICHER_POST = "stundenplan.post";
+const SPEICHER_POST_ZUGANG = "stundenplan.postZugang";
+const SPEICHER_POST_GESEHEN = "stundenplan.postGesehen";
+const POST_FRISCH_MS = 2 * 60 * 1000;
+const POST_NEIN_MERKEN_MS = 24 * 60 * 60 * 1000;
+
+const POST_GRUPPEN = {
+  noten:   { name: "Noten",   zeichen: "🎓", farbe: "gruen" },
+  fristen: { name: "Fristen", zeichen: "📅", farbe: "rot" },
+  uni:     { name: "Uni",     zeichen: "🏫", farbe: "blau" },
+  privat:  { name: "Privat",  zeichen: "⭐", farbe: "gelb" },
+};
+
+let post = null;         // { abgerufenAm, mails: [...] }
+let postLaeuft = false;
+let postFilter = "";     // im Fenster: "" = alle, sonst eine Gruppe
+
+function postLaden() {
+  try {
+    const wert = JSON.parse(localStorage.getItem(SPEICHER_POST) || "null");
+    return wert && Array.isArray(wert.mails) ? wert : null;
+  } catch (fehler) {
+    return null;
+  }
+}
+
+function postZugang() {
+  try {
+    const wert = JSON.parse(localStorage.getItem(SPEICHER_POST_ZUGANG) || "null");
+    return wert && typeof wert === "object" ? wert : { antwort: "", am: 0, code: "" };
+  } catch (fehler) {
+    return { antwort: "", am: 0, code: "" };
+  }
+}
+
+function postZugangMerken(antwort) {
+  try {
+    localStorage.setItem(SPEICHER_POST_ZUGANG, JSON.stringify(
+      { antwort: antwort, am: Date.now(), code: typeof Abgleich !== "undefined" ? Abgleich.code() : "" }));
+  } catch (fehler) { /* dann wird eben wieder gefragt */ }
+}
+
+function postSichtbar() {
+  return postZugang().antwort === "ja";
+}
+
+/* Welche Mails schon angetippt wurden. Nur auf diesem Gerät - ein
+   "gelesen" in Gmail bekommt die App nicht mit. */
+function postGesehen() {
+  try { return new Set(JSON.parse(localStorage.getItem(SPEICHER_POST_GESEHEN) || "[]")); }
+  catch (fehler) { return new Set(); }
+}
+
+function postAlsGesehen(kennung) {
+  const gesehen = postGesehen();
+  gesehen.add(kennung);
+  // Nur behalten, was noch in der Liste steht - der Rest ist nach 30 Tagen weg.
+  const vorhanden = new Set(((post && post.mails) || []).map(m => m.kennung));
+  const rest = [...gesehen].filter(k => vorhanden.has(k) || k === kennung);
+  try { localStorage.setItem(SPEICHER_POST_GESEHEN, JSON.stringify(rest)); }
+  catch (fehler) { /* dann bleibt sie eben fett */ }
+}
+
+function postAbholen(zwingen) {
+  if (postLaeuft) return;
+  if (typeof Abgleich === "undefined" || !Abgleich.code()) return;
+  if (typeof ABGLEICH_URL === "undefined" || typeof fetch !== "function") return;
+
+  const zugang = postZugang();
+  // Ein "nein" gilt nur für den Code, mit dem es kam (siehe Training).
+  if (!zwingen && zugang.antwort === "nein" && zugang.code === Abgleich.code()
+      && Date.now() - zugang.am < POST_NEIN_MERKEN_MS) return;
+  if (!zwingen && post && Date.now() - Date.parse(post.abgerufenAm) < POST_FRISCH_MS) return;
+
+  postLaeuft = true;
+  fetch(ABGLEICH_URL + POST_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ aktion: "lesen", code: Abgleich.code() }),
+  })
+    .then(a => a.json().then(inhalt => ({ status: a.status, inhalt })))
+    .then(({ status, inhalt }) => {
+      if (status === 403) { postZugangMerken("nein"); return; }
+      if (inhalt && inhalt.zustand === "ok") {
+        postZugangMerken("ja");
+        post = { abgerufenAm: inhalt.abgerufenAm, mails: Array.isArray(inhalt.mails) ? inhalt.mails : [] };
+        try { localStorage.setItem(SPEICHER_POST, JSON.stringify(post)); }
+        catch (fehler) { /* dann nur bis zum Neuladen */ }
+      }
+    })
+    .catch(() => { /* kein Netz: der alte Stand bleibt */ })
+    .then(() => {
+      postLaeuft = false;
+      if (seite === "start") startZeichnen();
+      postFensterZeichnen();
+    });
+}
+
+/* "vor 5 Min.", "vor 3 Std.", "gestern", "Mo 12.10." */
+function postWann(iso, jetzt) {
+  const zeit = new Date(iso);
+  if (isNaN(zeit.getTime())) return "";
+  const minuten = Math.round((jetzt - zeit) / 60000);
+  if (minuten < 1) return "gerade";
+  if (minuten < 60) return "vor " + minuten + " Min.";
+  if (tagesSchluessel(zeit) === tagesSchluessel(jetzt)) return "vor " + Math.round(minuten / 60) + " Std.";
+  if (tagesSchluessel(zeit) === tagesSchluessel(tageDazu(jetzt, -1))) return "gestern";
+  return WOCHENTAGE[zeit.getDay()].slice(0, 2) + " " + datumKurz(zeit);
+}
+
+/* Eine Zeile: Gruppenzeichen, Betreff (fett, solange nicht angetippt),
+   darunter Absender und Zeit. Antippen öffnet die Mail in Gmail. */
+function postZeile(mail, jetzt, gesehen) {
+  const gruppe = POST_GRUPPEN[mail.gruppe] || POST_GRUPPEN.uni;
+  const neu = !gesehen.has(mail.kennung);
+  return `
+    <a class="post-zeile${neu ? " post-neu" : ""}" href="${sicher(mail.link || "#")}"
+       target="_blank" rel="noopener" data-post-oeffnen="${sicher(mail.kennung)}">
+      <span class="post-zeichen post-zeichen-${sicher(mail.gruppe)}" aria-label="${gruppe.name}">${gruppe.zeichen}</span>
+      <span class="post-text">
+        <span class="post-betreff">${sicher(mail.betreff || "(ohne Betreff)")}</span>
+        <span class="post-unterzeile">${sicher(mail.absender)} · ${sicher(postWann(mail.eingegangen, jetzt))}</span>
+      </span>
+    </a>`;
+}
+
+/* Die Karte auf der Übersicht: oben je Gruppe, wie viele in den letzten
+   sieben Tagen kamen, darunter die neuesten. Noten und Fristen, die noch
+   nicht angetippt wurden, stehen vorn. */
+function postStartKarte(jetzt) {
+  if (!postSichtbar() || !post) return "";
+  const gesehen = postGesehen();
+  const woche = tageDazu(jetzt, -7);
+  const neueste = post.mails.filter(m => new Date(m.eingegangen) >= woche);
+
+  const zahlen = Object.keys(POST_GRUPPEN).map(g => {
+    const anzahl = neueste.filter(m => m.gruppe === g).length;
+    const ungesehen = neueste.filter(m => m.gruppe === g && !gesehen.has(m.kennung)).length;
+    return anzahl ? `
+      <button type="button" class="post-zahl post-zahl-${g}${ungesehen ? " post-zahl-neu" : ""}" data-post-filter="${g}">
+        <span>${POST_GRUPPEN[g].zeichen}</span><strong>${anzahl}</strong><span>${POST_GRUPPEN[g].name}</span>
+      </button>` : "";
+  }).join("");
+
+  // Nur frische, ungelesene Noten und Fristen nach vorn - eine Woche alte
+  // drängen sonst neue Mails aus der Karte.
+  const vorn = m => (!gesehen.has(m.kennung) && (m.gruppe === "noten" || m.gruppe === "fristen")
+                     && new Date(m.eingegangen) >= woche) ? 0 : 1;
+  const liste = post.mails.slice()
+    .sort((a, b) => vorn(a) - vorn(b) || Date.parse(b.eingegangen) - Date.parse(a.eingegangen))
+    .slice(0, 4);
+
+  const ungesehenGesamt = neueste.filter(m => !gesehen.has(m.kennung)).length;
+  const inhalt = `
+    ${zahlen ? `<div class="post-zahlen">${zahlen}</div>` : ""}
+    ${liste.length ? `<div class="post-liste">${liste.map(m => postZeile(m, jetzt, gesehen)).join("")}</div>`
+      : `<p class="start-leer">In den letzten 30 Tagen nichts Wichtiges.</p>`}`;
+  return startKarte("Post", "post", "Alle", inhalt, {
+    symbol: "post", farbe: "blau", breit: true, klasse: "start-karte-post",
+    unterzeile: ungesehenGesamt ? ungesehenGesamt + " neu" : "",
+  });
+}
+
+function postFensterZeigen(filter) {
+  postFilter = filter || "";
+  postFensterZeichnen();
+  const fenster = document.getElementById("postHintergrund");
+  if (fenster) fenster.hidden = false;
+  postAbholen(true);
+}
+
+/* Alle Mails der letzten 30 Tage, nach Tagen, mit Filter nach Gruppe. */
+function postFensterZeichnen() {
+  const bereich = document.getElementById("postInhalt");
+  if (!bereich) return;
+  const jetzt = new Date();
+  const gesehen = postGesehen();
+  const alle = (post && post.mails) || [];
+  const gefiltert = alle.filter(m => !postFilter || m.gruppe === postFilter);
+
+  const knopf = (wert, text) => `
+    <button type="button" class="training-filter${postFilter === wert ? " training-filter-aktiv" : ""}"
+            data-post-filter="${wert}">${text}</button>`;
+
+  const tage = [];
+  for (const mail of gefiltert) {
+    const tag = tagesSchluessel(new Date(mail.eingegangen));
+    if (!tage.length || tage[tage.length - 1].tag !== tag) tage.push({ tag, liste: [] });
+    tage[tage.length - 1].liste.push(mail);
+  }
+
+  bereich.innerHTML = `
+    <div class="training-filterleiste">
+      ${knopf("", "Alle")}
+      ${Object.keys(POST_GRUPPEN).map(g => knopf(g, POST_GRUPPEN[g].zeichen + " " + POST_GRUPPEN[g].name)).join("")}
+    </div>
+    ${gefiltert.length ? tage.map(t => `
+      <div class="post-tag">${sicher(tagLesbar(t.tag))}</div>
+      <div class="post-liste">${t.liste.map(m => postZeile(m, jetzt, gesehen)).join("")}</div>`).join("")
+      : `<p class="leer-text">${alle.length ? "Nichts in dieser Gruppe." : "Noch keine Mails."}</p>`}`;
+}
+
+
+/* -------------------------------------------------------------------------
    5c. Uni-Plan: Theorie- und Praxisphasen, Arbeitszeit, Urlaub
 
    Friedrich studiert dual: alle paar Monate wechselt er zwischen Hochschule
@@ -7243,6 +7466,7 @@ function seiteSetzen(neueSeite) {
 
   // Beim Öffnen nachfragen – trainingAbholen() lässt es, wenn der Stand frisch ist.
   if (seite === "training" || seite === "start") trainingAbholen(false);
+  if (seite === "start") postAbholen(false);
 
   /* Nur den Bereich zeichnen, der jetzt erscheint - und auch den nur,
      wenn sich seit dem letzten Mal etwas geändert hat. Die Zeitangaben
@@ -7573,6 +7797,7 @@ function knoepfeVerbinden() {
     if (document.visibilityState === "hidden") return;
     jetztLinieVerschieben();
     if (seite === "start" || seite === "training") trainingAbholen(false);
+    if (seite === "start") postAbholen(false);
     if (seite !== "start") return;
     naechstenZeichnen();
     startZeichnen();
@@ -7690,6 +7915,31 @@ function knoepfeVerbinden() {
   // Ein Klick neben das Fenster schließt es ebenfalls.
   fenster.addEventListener("click", ereignis => {
     if (ereignis.target === fenster) fensterSchliessen();
+  });
+
+  /* Post: Mail antippen merkt sie als gesehen (der Link selbst öffnet
+     Gmail), Gruppenknöpfe filtern im Fenster. */
+  const postFenster = document.getElementById("postHintergrund");
+  if (postFenster) {
+    document.getElementById("postSchliessen").addEventListener("click", () => { postFenster.hidden = true; });
+    postFenster.addEventListener("click", ereignis => {
+      if (ereignis.target === postFenster) postFenster.hidden = true;
+    });
+  }
+  document.addEventListener("click", ereignis => {
+    const ziel = ereignis.target && ereignis.target.closest
+      ? ereignis.target.closest("[data-post-oeffnen],[data-post-filter]") : null;
+    if (!ziel) return;
+    const kennung = ziel.getAttribute("data-post-oeffnen");
+    if (kennung) {
+      postAlsGesehen(kennung);
+      // Erst nach dem Öffnen neu zeichnen, sonst verschwindet der Link unter dem Finger.
+      setTimeout(() => { if (seite === "start") startZeichnen(); postFensterZeichnen(); }, 300);
+      return;
+    }
+    const filter = ziel.getAttribute("data-post-filter");
+    if (postFenster && !postFenster.hidden) { postFilter = filter; postFensterZeichnen(); }
+    else postFensterZeigen(filter);
   });
 
   /* Modulnotizen: "+ Notiz", × und das Eingabefeld. Ein Zuhörer für die
@@ -7863,6 +8113,7 @@ function starten() {
   modulnotizen = modulnotizenLaden();
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
+  post = postLaden();
   if (training) trainingZustand = "ok";
   uniplan = uniplanLaden();
   abend = abendLaden();
@@ -7916,6 +8167,7 @@ function starten() {
   /* Trainingsdaten erst nach dem Abgleich-Start: ein Gerät, das gerade
      per Link seinen Code bekommen hat, soll schon mit diesem fragen. */
   trainingAbholen(false);
+  postAbholen(false);
   pushNachziehen();
 }
 

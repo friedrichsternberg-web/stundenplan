@@ -53,7 +53,7 @@
 })();
 </script>
 
-<link rel="stylesheet" href="style.css?v=1602e394">
+<link rel="stylesheet" href="style.css?v=e071b40d">
 </head>
 <body>
 
@@ -399,6 +399,18 @@
   </div>
 </div>
 
+<!-- Post: wichtige Mails der letzten 30 Tage. Gefüllt von
+     postFensterZeichnen() in app.js. -->
+<div class="filter-hintergrund" id="postHintergrund" hidden>
+  <div class="filter-fenster">
+    <div class="filter-kopf">
+      <h2>Post</h2>
+      <button type="button" class="knopf-schlicht" id="postSchliessen">Fertig</button>
+    </div>
+    <div id="postInhalt"></div>
+  </div>
+</div>
+
 <!-- Der Uni-Plan: Zeitplan des Studienjahrgangs, Arbeitszeit in den
      Praxisphasen und Urlaub. Gefüllt von uniplanFensterZeichnen(). -->
 <div class="filter-hintergrund" id="uniplanHintergrund" hidden>
@@ -414,12 +426,12 @@
 <!-- sync.js muss vor app.js stehen: app.js ruft schon beim Laden von
      Notizen und Aufgaben Abgleich.jetzt() auf. melden.js benutzt die
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
-<script src="sync.js?v=1602e394"></script>
-<script src="melden.js?v=1602e394"></script>
+<script src="sync.js?v=e071b40d"></script>
+<script src="melden.js?v=e071b40d"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->
-<script src="app.js?v=1602e394"></script>
+<script src="app.js?v=e071b40d"></script>
 
 </body>
 </html>
