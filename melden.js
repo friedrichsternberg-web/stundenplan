@@ -186,6 +186,7 @@ var Melden = (function () {
         bezeichnung: geraetename(),
       });
 
+      try { localStorage.setItem(SPEICHER_PUSH_CODE, Abgleich.code()); } catch (fehler) { /* egal */ }
       return { erfolg: true, meldung: "Eingeschaltet für " + geraetename() + "." };
     } catch (fehler) {
       return { erfolg: false,
@@ -233,6 +234,41 @@ var Melden = (function () {
     }
   }
 
+  /* Zieht die Anmeldung dieses Geräts auf den aktuellen Code um.
+
+     Anlass (14.10.2026): Am 05.10. entstand beim Neueinrichten des
+     Abgleichs ein neuer Code. Die Geräte waren für Benachrichtigungen
+     aber noch unter dem alten angemeldet - Erinnerungen aus dem neuen
+     Raum kamen nicht mehr an, und niemand merkte es. Jetzt merkt sich das
+     Gerät, unter welchem Code es angemeldet ist, und meldet sich still
+     neu an, sobald der Code ein anderer ist. Ohne Rückfrage: die
+     Erlaubnis gibt es ja schon, es ändert sich nur, wohin geliefert wird. */
+  const SPEICHER_PUSH_CODE = "stundenplan.pushCode";
+  async function nachziehen() {
+    const jetzigerCode = Abgleich.code();
+    if (!jetzigerCode || !(await angemeldet())) return false;
+    let gemerkt = "";
+    try { gemerkt = localStorage.getItem(SPEICHER_PUSH_CODE) || ""; } catch (fehler) { /* dann neu */ }
+    if (gemerkt === jetzigerCode) return false;
+    try {
+      const stelle = await navigator.serviceWorker.getRegistration();
+      const anmeldung = stelle && await stelle.pushManager.getSubscription();
+      if (!anmeldung) return false;
+      const roh = anmeldung.toJSON();
+      await rufen("push_anmelden", {
+        schluessel: jetzigerCode,
+        endpunkt: roh.endpoint,
+        p256dh: roh.keys.p256dh,
+        auth: roh.keys.auth,
+        bezeichnung: geraetename(),
+      });
+      try { localStorage.setItem(SPEICHER_PUSH_CODE, jetzigerCode); } catch (fehler) { /* beim nächsten Start wieder */ }
+      return true;
+    } catch (fehler) {
+      return false;
+    }
+  }
+
   // Wie viele Geräte hängen insgesamt am Code?
   async function anzahlGeraete() {
     if (!Abgleich.code()) return 0;
@@ -252,6 +288,7 @@ var Melden = (function () {
     ausschalten: ausschalten,
     angemeldet: angemeldet,
     anzahlGeraete: anzahlGeraete,
+    nachziehen: nachziehen,
     alsAppGeoeffnet: alsAppGeoeffnet,
     istApfelGeraet: istApfelGeraet,
     geraetename: geraetename,

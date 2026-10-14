@@ -567,6 +567,27 @@ aber nichts frei:
 Der Vorteil gegenüber einer richtigen Anmeldung: kein Passwort, keine
 Bestätigungsmail, nichts zu tippen außer einmal pro Gerät.
 
+### Wenn der Code wechselt
+
+Am 05.10.2026 wurde der Abgleich neu eingerichtet, und es entstand ein
+neuer Code (neuer Raum, alle Einträge zusammengeführt). Zwei Dinge hingen
+aber am alten Code und fielen still aus: die Freigabe für den Reiter
+Training (`sync.training_zugang`) und die Anmeldung der Geräte für
+Benachrichtigungen (`sync.push_geraete`). Erinnerungen aus dem neuen Raum
+kamen dadurch nicht an, die Abendübersicht kam aus dem alten Stand.
+Behoben am 14.10.2026: der neue Raum ist freigegeben (der alte bleibt es
+auch), die drei Geräte hängen am neuen Raum.
+
+Damit das nicht wieder passiert:
+- `Melden.nachziehen()` merkt sich, unter welchem Code das Gerät für
+  Benachrichtigungen angemeldet ist, und meldet es beim Start und nach
+  jedem Codewechsel still unter dem neuen an.
+- Ein gemerktes „kein Trainingszugang“ gilt nur für den Code, mit dem es
+  kam. Bei einem anderen Code fragt die App sofort neu.
+- Die Trainings-Freigabe selbst muss nach einem Codewechsel weiterhin von
+  Hand für den neuen Raum eingetragen werden (Absicht: sie gibt
+  Gymbro-Daten frei, das soll keine App von sich aus tun können).
+
 ### Warum zusammenführen und nicht überschreiben
 
 Der naheliegende Weg wäre „wer zuletzt speichert, gewinnt". Der verliert aber

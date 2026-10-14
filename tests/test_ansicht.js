@@ -164,7 +164,8 @@ const werkzeug = eval(
   "  modulnotizEntfernen: modulnotizEntfernen," +
   "  modulnotizenRoh: function (w) { if (w) modulnotizen = w; return modulnotizen; }," +
   "  zettelRoh: function () { return zettel; }," +
-  "  offeneModulnotiz: function (w) { offeneModulnotiz = w; }" +
+  "  offeneModulnotiz: function (w) { offeneModulnotiz = w; }," +
+  "  trainingAbholen: function (z) { trainingLaeuft = false; trainingAbholen(z); trainingLaeuft = false; }" +
   "})");
 
 
@@ -1394,6 +1395,30 @@ pruefe("aber nicht beim anderen Modul",
 werkzeug.modulnotizEntfernen(werkzeug.modulnotizenRoh()[0].id);
 pruefe("loeschen entfernt sie", werkzeug.modulnotizenRoh().length === 0
        && werkzeug.listeBauen(tage20).indexOf("Präsi") < 0);
+
+
+/* ====================================================================== */
+abschnitt("21. Ein gemerktes nein gilt nur fuer den Code, mit dem es kam");
+
+/* Der Fall vom 14.10.2026: nach einem Codewechsel bekam das Geraet 403,
+   merkte sich "nein" fuer 24 Stunden und fragte selbst dann nicht mehr,
+   als der neue Code freigegeben war. */
+let anfragen21 = 0;
+fetch = function () { anfragen21++; return new Promise(function () {}); };
+const CODE_ALT = "AAAAABBBBBCCCCCDDDDDEEEEE", CODE_NEU = "FFFFFGGGGGHHHHHJJJJJKKKKK";
+localStorage.setItem("stundenplan.geraetecode", CODE_NEU);
+localStorage.setItem("stundenplan.trainingZugang", JSON.stringify({ antwort: "nein", am: Date.now(), code: CODE_NEU }));
+werkzeug.trainingAbholen(false);
+pruefe("nein mit demselben Code: nicht nachfragen", anfragen21 === 0);
+localStorage.setItem("stundenplan.trainingZugang", JSON.stringify({ antwort: "nein", am: Date.now(), code: CODE_ALT }));
+werkzeug.trainingAbholen(false);
+pruefe("nein von einem anderen Code: sofort nachfragen", anfragen21 === 1);
+localStorage.setItem("stundenplan.trainingZugang", JSON.stringify({ antwort: "nein", am: Date.now() }));
+werkzeug.trainingAbholen(false);
+pruefe("altes nein ohne Code (von vor dem Update): ebenfalls nachfragen", anfragen21 === 2);
+localStorage.removeItem("stundenplan.trainingZugang");
+localStorage.removeItem("stundenplan.geraetecode");
+fetch = undefined;
 
 
 /* ====================================================================== */
