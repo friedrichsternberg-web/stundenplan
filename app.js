@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "e071b40d";
+const GEBAUTE_VERSION = "d4d93e3b";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -4164,6 +4164,18 @@ function gymbroListe(daten, name) {
   return roh.filter(e => e && typeof e === "object");
 }
 
+/* Laufen und Cardio sind bei Friedrich dasselbe: jedes Cardio-Training
+   ist Laufen, und in Gymbro trägt er oft beides ein (Art "cardio",
+   Muskelgruppen "cardio" und "run"). Ohne das hier stand dasselbe
+   Training in der Aufteilung zweimal halb, und der Filter in "Alle
+   Trainings" hatte zwei Knöpfe für eine Sache. Alles wird zu "run",
+   angezeigt als "Laufen" (17.10.2026). */
+const LAUF_ARTEN = ["cardio", "run", "running", "laufen", "lauf"];
+
+function laufVereinheitlichen(wort) {
+  return LAUF_ARTEN.indexOf(String(wort || "").toLowerCase().trim()) >= 0 ? "run" : wort;
+}
+
 function gymbroEinheiten(daten) {
   /* Gymbro schickt die Gyms als eigene Liste mit Namen; am Training steht
      nur die Kennung ("dns_potsdam"). Hier wird nachgeschlagen, damit
@@ -4182,8 +4194,10 @@ function gymbroEinheiten(daten) {
       gymName: gymNamen[s.gymId] || s.customGym || "",
       start: gymbroDatum(gymbroFeld(s, ["arrivedAt", "startedAt", "start", "date"])),
       ende: gymbroDatum(gymbroFeld(s, ["leftAt", "endedAt", "end"])),
-      typ: gymbroFeld(s, ["trainingType", "type"]) || "",
-      muskeln: Array.isArray(s.muscleGroups) ? s.muscleGroups.map(String) : [],
+      typ: laufVereinheitlichen(gymbroFeld(s, ["trainingType", "type"]) || ""),
+      // Doppeltes fällt weg: "cardio" und "run" sind nach dem Vereinheitlichen dasselbe.
+      muskeln: Array.isArray(s.muscleGroups)
+        ? [...new Set(s.muscleGroups.map(String).map(laufVereinheitlichen))] : [],
       bewertung: gymbroZahl(gymbroFeld(s, ["rating"])),
       gym: gymbroFeld(s, ["gymName", "gymId", "gym"]) || "",
     }))
