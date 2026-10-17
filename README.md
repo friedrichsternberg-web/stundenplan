@@ -210,6 +210,11 @@ usw., an welchen Wochentagen und zu welcher Tageszeit, das Gewicht seit
 der ersten Messung, Bestwerte, Bestleistungen, Pläne und Ruhetage. Auf
 der Übersicht steht eine kurze Karte davon.
 
+**Cardio ist Laufen (seit 17.10.2026).** Bei Friedrich ist jedes
+Cardio-Training Laufen, in Gymbro trägt er oft beides ein. `gymbroEinheiten()`
+macht aus `cardio`, `run` und `running` eine Art `run` („Laufen“), bei der
+Trainingsart wie bei den Muskelgruppen, doppelte fallen weg.
+
 **Der Wochenschnitt.** Verglichen werden die letzten vier
 abgeschlossenen Wochen mit den vier davor; die laufende Woche zählt
 nicht mit. Wochen vor dem ersten Training zählen ebenfalls nicht, sie

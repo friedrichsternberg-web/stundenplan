@@ -990,6 +990,18 @@ pruefe("Juni: 3 Trainings, Ø 105 Min. ohne Cardio",
        l.monate[1].anzahl === 3 && l.monate[1].dauer === 105);
 pruefe("Juli und August leer, ohne Dauer", l.monate[2].anzahl === 0 && l.monate[2].dauer === null);
 pruefe("Aufteilung: Pull vorn mit 3", l.aufteilung[0].typ === "pull" && l.aufteilung[0].anzahl === 3);
+/* Cardio und Laufen sind bei Friedrich dasselbe (17.10.2026): das Cardio
+   vom 17.06. und das Laufen vom 23.09. sind zusammen zwei Mal Laufen. */
+pruefe("Cardio und Laufen zusammen: 2 Mal Laufen, kein Cardio",
+       l.aufteilung.filter(t => t.typ === "run")[0].anzahl === 2
+       && l.aufteilung.every(t => t.typ !== "cardio"));
+const lauf17 = werkzeug.trainingAuswerten({ sessions: [
+  { arrivedAt: "2026-10-16T06:00:00.000Z", leftAt: "2026-10-16T06:30:00.000Z",
+    trainingType: "cardio", muscleGroups: ["cardio", "run"] },
+] }, new Date(2026, 9, 17, 9, 0));
+pruefe("Art cardio mit Muskelgruppen cardio und run: einmal Laufen",
+       lauf17.letzte.typ === "run" && lauf17.letzte.muskeln.length === 1 && lauf17.letzte.muskeln[0] === "run");
+pruefe("angezeigt als Laufen", werkzeug.trainingWort(lauf17.letzte.typ) === "Laufen");
 pruefe("Anteile ergeben zusammen 1",
        Math.abs(l.aufteilung.reduce((x, t) => x + t.anteil, 0) - 1) < 1e-9);
 pruefe("Wochentage: Mittwoch vorn (5)", l.wochentage.tage[2] === 5 && l.wochentage.tage[0] === 1);
