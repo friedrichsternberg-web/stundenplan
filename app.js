@@ -6029,10 +6029,12 @@ function zettelFensterZeichnen() {
   const teile = zettelTeile(offenerZettelText);
 
   inhalt.innerHTML = `
-    <input type="text" id="zettelTitel" class="zettel-titel" maxlength="120" autocomplete="off"
-           value="${sicher(teile.titel)}">
-    <textarea id="zettelFeld" class="zettel-feld" rows="9"
-              >${sicher(teile.rest)}</textarea>
+    <div class="zettel-blatt">
+      <input type="text" id="zettelTitel" class="zettel-titel" maxlength="120" autocomplete="off"
+             aria-label="Überschrift" value="${sicher(teile.titel)}">
+      <textarea id="zettelFeld" class="zettel-feld" rows="9" aria-label="Text"
+                >${sicher(teile.rest)}</textarea>
+    </div>
 
     <div class="zettel-haken-reihe">
       <label class="form-haken">
