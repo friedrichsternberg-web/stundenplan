@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Planer mit Claude verbinden</title>
+<link rel="icon" href="symbol.png">
+<!--
+  Anmeldeseite für den Claude-Connector (siehe supabase/functions/planer-mcp).
+
+  Claude schickt Friedrich hierher, wenn er den Planer als Connector
+  verbindet. Liegt hier, nicht bei Supabase, weil Supabase auf seiner
+  Adresse keine Webseiten ausliefert.
+
+  Ist der Planer in diesem Browser eingerichtet, steht sein Gerätecode im
+  Speicher dieser Seite (gleiche Adresse wie die App): dann reicht ein Klick.
+  Sonst - etwa im Anmeldefenster der iPhone-App - den kurzen
+  Verbindungscode eingeben, den der Planer unter ⚙ → Claude erzeugt.
+-->
+<style>
+  :root {
+    --hintergrund: #ffffff; --flaeche: rgba(242,242,247,.9); --rand: rgba(0,0,0,.08);
+    --schrift: #1c1c1e; --leise: #6b7280; --akzent: #007aff; --fehler: #d4453d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --hintergrund: #000; --flaeche: rgba(28,28,30,.95); --rand: rgba(255,255,255,.1);
+            --schrift: #f2f2f7; --leise: #98989f; --akzent: #0a84ff; --fehler: #ff6961; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; background: var(--hintergrund); color: var(--schrift);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  main {
+    width: 100%; max-width: 400px; padding: 28px 24px; text-align: center;
+    background: var(--flaeche); border: 1px solid var(--rand); border-radius: 26px;
+  }
+  img { width: 72px; height: 72px; border-radius: 17px; }
+  h1 { font-size: 22px; margin: 14px 0 6px; }
+  p { margin: 0 0 18px; color: var(--leise); font-size: 15px; }
+  button {
+    width: 100%; padding: 14px 18px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--akzent); color: #fff; font: inherit; font-weight: 600;
+  }
+  button:disabled { opacity: .5; }
+  input {
+    width: 100%; margin: 0 0 12px; padding: 14px; border: 1px solid var(--rand); border-radius: 14px;
+    background: transparent; color: var(--schrift); font: 600 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .25em; text-align: center; text-transform: uppercase;
+  }
+  input:focus { outline: 2px solid var(--akzent); border-color: transparent; }
+  .fehler { color: var(--fehler); margin: 12px 0 0; min-height: 1.4em; font-size: 14px; }
+  .oder { margin: 18px 0 12px; font-size: 13px; color: var(--leise); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img src="symbol.png" alt="">
+  <h1>Planer mit Claude verbinden</h1>
+  <p id="hinweis">Claude darf danach Termine, To-dos und Notizen im Planer lesen und anlegen.</p>
+
+  <section id="direkt" hidden>
+    <button type="button" id="direktKnopf">Verbinden</button>
+    <div class="oder">oder mit Verbindungscode</div>
+  </section>
+
+  <form id="codeForm" autocomplete="off">
+    <input id="codeFeld" maxlength="9" inputmode="text" autocapitalize="characters" spellcheck="false"
+           aria-label="Verbindungscode aus dem Planer (⚙ → Claude)">
+    <button type="submit" id="codeKnopf">Mit Code verbinden</button>
+  </form>
+  <p class="fehler" id="fehler" role="alert"></p>
+</main>
+
+<script>
+  "use strict";
+  const BASIS = "https://copydwpdqpnwjvknsakz.supabase.co/functions/v1/planer-mcp";
+  const q = new URLSearchParams(location.search);
+  const anfrage = {
+    client_id: q.get("client_id") || "",
+    redirect_uri: q.get("redirect_uri") || "",
+    code_challenge: q.get("code_challenge") || "",
+    state: q.get("state") || "",
+  };
+  const fehler = document.getElementById("fehler");
+
+  if (!anfrage.client_id || !anfrage.redirect_uri || !anfrage.code_challenge) {
+    document.getElementById("hinweis").textContent =
+      "Diese Seite öffnet Claude beim Verbinden. Bitte dort unter Connectors „Planer“ verbinden.";
+    document.getElementById("codeForm").hidden = true;
+  }
+
+  // Derselbe Speicher wie die App (gleiche Adresse): ist der Planer hier eingerichtet?
+  let geraetecode = "";
+  try { geraetecode = (localStorage.getItem("stundenplan.geraetecode") || "").trim(); } catch (e) { /* privat */ }
+  if (geraetecode && anfrage.client_id) document.getElementById("direkt").hidden = false;
+
+  async function verbinden(felder, knopf) {
+    fehler.textContent = "";
+    knopf.disabled = true;
+    try {
+      const a = await fetch(BASIS + "/verbinden", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.assign({}, anfrage, felder)),
+      });
+      const daten = await a.json().catch(() => ({}));
+      if (a.ok && daten.weiter) { location.replace(daten.weiter); return; }
+      fehler.textContent = daten.fehler || "Das hat nicht geklappt.";
+    } catch (e) {
+      fehler.textContent = "Keine Verbindung.";
+    }
+    knopf.disabled = false;
+  }
+
+  document.getElementById("direktKnopf").addEventListener("click", ereignis =>
+    verbinden({ geraetecode }, ereignis.currentTarget));
+
+  document.getElementById("codeForm").addEventListener("submit", ereignis => {
+    ereignis.preventDefault();
+    const code = document.getElementById("codeFeld").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length !== 8) { fehler.textContent = "Der Code hat 8 Zeichen."; return; }
+    verbinden({ verbindungscode: code }, document.getElementById("codeKnopf"));
+  });
+</script>
+</body>
+</html>
