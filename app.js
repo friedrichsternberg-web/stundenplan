@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "c21483dd";
+const GEBAUTE_VERSION = "521a7771";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -912,9 +912,8 @@ function startZeichnen() {
       { symbol: "hinweis", farbe: "gelb", klasse: "start-karte-hinweise", breit: true }));
   }
 
-  // --- Studienphasen aus dem Uni-Plan, ganz unten: nur was noch kommt ------
-  const phasenKarte = uniplanStartKarte(jetzt);
-  if (phasenKarte) karten.push(phasenKarte);
+  // Die Studienphasen stehen seit dem 19.10.2026 in den Einstellungen,
+  // siehe uniplanBereichZeichnen() – auf Wunsch, die Übersicht war zu voll.
 
   stuecke.push(`<div class="start-raster">${karten.join("")}</div>`);
   bereich.innerHTML = stuecke.join("");
@@ -5498,10 +5497,9 @@ function inTagen(heute, tag) {
   return "in " + Math.round(n / 30.4) + " Monaten";
 }
 
-/* Das Widget auf der Übersicht. Oben die laufende Phase mit Fortschritt,
-   darunter eine Leiste bis zum Ende des Studiums – Theorie blau, Praxis
-   grün, Fristen als Striche –, und die nächsten Stationen als Liste. */
-function uniplanStartKarte(jetzt) {
+/* Die Studienphasen in den Einstellungen: oben die laufende Phase mit
+   Fortschritt, darunter die nächsten Stationen. Nach dem Studium leer. */
+function uniplanAusblickHtml(jetzt) {
   const heute = tagesSchluessel(jetzt);
   const ende = UNI_PLAN.phasen[UNI_PLAN.phasen.length - 1].bis;
   if (heute > ende) return "";
@@ -5518,7 +5516,7 @@ function uniplanStartKarte(jetzt) {
       <span style="width:${Math.round(a.aktuell.anteil * 100)}%"></span>
     </div>` : `<p class="start-leer">Das Studium beginnt am ${datumMitJahr(UNI_PLAN.phasen[0].von)}.</p>`;
 
-  const liste = a.eintraege.slice(0, 5).map(e => `
+  const liste = a.eintraege.slice(0, 4).map(e => `
     <div class="up-eintrag up-eintrag-${e.art}">
       <span class="up-punkt"></span>
       <span class="up-eintrag-text">
@@ -5529,10 +5527,7 @@ function uniplanStartKarte(jetzt) {
       <span class="up-wann">${sicher(inTagen(heute, e.von))}</span>
     </div>`).join("");
 
-  return startKarte("Studienphasen", "uniplan", "Uni-Plan", `
-    ${oben}
-    ${liste ? `<div class="up-liste">${liste}</div>` : ""}`,
-    { symbol: "phasen", farbe: "gruen", breit: true, klasse: "start-karte-phasen" });
+  return `<div class="up-kasten">${oben}${liste ? `<div class="up-liste">${liste}</div>` : ""}</div>`;
 }
 
 
@@ -5696,17 +5691,12 @@ function uniplanVerbinden() {
 function uniplanBereichZeichnen() {
   const bereich = document.getElementById("uniplanBereich");
   if (!bereich) return;
-  const heute = tagesSchluessel(new Date());
-  const a = uniplanAusblick(heute);
-  const naechste = a.eintraege.filter(e => e.art === "theorie" || e.art === "praxis")[0];
+  const ausblick = uniplanAusblickHtml(new Date());
   bereich.innerHTML = `
-    <h3 class="melden-titel">Uni-Plan</h3>
-    <p class="filter-hinweis">${a.aktuell
-      ? `Gerade ${PHASEN_NAME[a.aktuell.art]}phase, ${a.aktuell.halbjahr}. Studienhalbjahr, bis ${datumMitJahr(a.aktuell.bis)}.`
-      : "Gerade keine Phase aus dem Zeitplan."}${naechste
-      ? ` Danach ${naechste.titel} ab ${datumMitJahr(naechste.von)}.` : ""}
-      Arbeit im Kalender: ${uniplan.arbeit ? uniplan.von + "–" + uniplan.bis + " Uhr" : "aus"}.</p>
-    <button type="button" class="knopf-schlicht" id="uniplanOeffnen">Uni-Plan und Urlaub</button>`;
+    <h3 class="melden-titel">Studienphasen</h3>
+    ${ausblick || `<p class="filter-hinweis">Das Studium ist abgeschlossen.</p>`}
+    <p class="filter-hinweis">Arbeit im Kalender: ${uniplan.arbeit ? uniplan.von + "–" + uniplan.bis + " Uhr, Mo–Fr in den Praxisphasen" : "aus"}.</p>
+    <button type="button" class="knopf-schlicht" id="uniplanOeffnen">Zeitplan, Arbeitszeit und Urlaub</button>`;
 }
 
 
@@ -5825,6 +5815,24 @@ function zettelZeichnen() {
         ${oben.length ? `<div class="zettel-abschnitt">Notizen</div>` : ""}
         <div class="zettel-gruppe" data-zettel-gruppe="rest">${rest.map(karte).join("")}</div>` : "")
     ;
+}
+
+/* Eingeklappt oder offen. Gilt nur für dieses Gerät: am Laptop darf der
+   Zettel offen stehen, während er auf dem Handy zu ist. */
+const SPEICHER_EINKAUF_ZU = "stundenplan.einkaufZu";
+
+function einkaufIstZu() {
+  try { return localStorage.getItem(SPEICHER_EINKAUF_ZU) === "ja"; } catch (fehler) { return false; }
+}
+
+function einkaufKlappen(zu) {
+  const karte = document.getElementById("einkaufKarte");
+  const klappe = document.getElementById("einkaufKlappe");
+  if (!karte || !klappe) return;
+  karte.classList.toggle("einkauf-zu", zu);
+  klappe.setAttribute("aria-expanded", zu ? "false" : "true");
+  klappe.setAttribute("aria-label", zu ? "Einkaufszettel aufklappen" : "Einkaufszettel einklappen");
+  try { localStorage.setItem(SPEICHER_EINKAUF_ZU, zu ? "ja" : "nein"); } catch (fehler) { /* dann bis zum Neuladen */ }
 }
 
 /* Der Einkaufszettel. Gezeichnet wird nur die Liste darunter, nie das
@@ -7319,6 +7327,30 @@ function claudeBereichZeichnen(meldung) {
   }).catch(() => { bereich.innerHTML = ""; });
 }
 
+/* Der Knopf "Claude" oben im Kopf: sichtbar, sobald der Server sagt, dass
+   dieser Raum sich mit Claude verbinden darf. Gemerkt wird das (mit dem
+   Code), damit er beim nächsten Start sofort dasteht und nicht erst nach
+   der Rückfrage auftaucht. */
+const SPEICHER_CLAUDE_KNOPF = "stundenplan.claudeKnopf";
+
+function claudeKnopfZeigen() {
+  const knopf = document.getElementById("claudeFragen");
+  if (!knopf || typeof Abgleich === "undefined") return;
+  const code = Abgleich.code();
+  let gemerkt = "";
+  try { gemerkt = localStorage.getItem(SPEICHER_CLAUDE_KNOPF) || ""; } catch (fehler) { /* egal */ }
+  knopf.hidden = !code || gemerkt !== code;
+  if (!code || typeof fetch !== "function") return;
+  claudeAnfrage("status").then(({ status }) => {
+    const darf = status === 200;
+    knopf.hidden = !darf;
+    try {
+      if (darf) localStorage.setItem(SPEICHER_CLAUDE_KNOPF, code);
+      else localStorage.removeItem(SPEICHER_CLAUDE_KNOPF);
+    } catch (fehler) { /* egal */ }
+  }).catch(() => { /* ohne Netz bleibt es, wie es war */ });
+}
+
 function claudeBereichVerbinden() {
   const bereich = document.getElementById("claudeBereich");
   if (!bereich) return;
@@ -7748,6 +7780,15 @@ function zettelVerbinden() {
       feld.focus();
     });
   }
+  // Ein Tipp auf den Kopf klappt den Zettel auf oder zu.
+  const einkaufKopf = document.querySelector("#einkaufKarte .start-karte-kopf");
+  if (einkaufKopf) {
+    einkaufKlappen(einkaufIstZu());
+    einkaufKopf.addEventListener("click", () => {
+      einkaufKlappen(!document.getElementById("einkaufKarte").classList.contains("einkauf-zu"));
+    });
+  }
+
   const einkaufListe = document.getElementById("einkaufListe");
   if (einkaufListe) {
     einkaufListe.addEventListener("click", ereignis => {
@@ -8322,6 +8363,7 @@ function starten() {
   trainingAbholen(false);
   postAbholen(false);
   pushNachziehen();
+  claudeKnopfZeigen();
 }
 
 /* Benachrichtigungen dem aktuellen Code nachziehen - siehe

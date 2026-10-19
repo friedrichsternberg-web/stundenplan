@@ -4340,3 +4340,64 @@ button:active:not(:disabled),
 .claude-gedaechtnis-titel { margin-top: 18px; }
 .claude-gedaechtnis .modulnotiz { color: var(--schrift); padding: 5px 0; border-top: 1px solid var(--glas-linie, var(--linie)); }
 .claude-gedaechtnis .modulnotiz:first-child { border-top: 0; }
+
+
+/* Der Knopf "Claude" im Kopf: rund wie ↻, aber in der Akzentfarbe mit
+   Funkel-Symbol, damit er sich von ⚙ und ↻ abhebt. Nur Symbol, sonst
+   bricht auf dem iPhone die Zeile unter "Planer" um. */
+.kopf-knoepfe .claude-knopf {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--akzent);
+  border-color: transparent;
+  color: #fff;
+  text-decoration: none;
+}
+.kopf-knoepfe .claude-knopf:hover { background: var(--akzent); filter: brightness(1.08); }
+.kopf-knoepfe .claude-knopf svg { width: 19px; height: 19px; }
+.kopf-knoepfe .claude-knopf[hidden] { display: none; }
+
+
+/* Einkaufszettel einklappbar: der ganze Kopf ist die Fläche zum Tippen,
+   rechts ein Pfeil, der sich beim Zuklappen dreht. */
+#einkaufKarte .start-karte-kopf { cursor: pointer; user-select: none; -webkit-user-select: none; }
+.einkauf-klappe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: -4px -6px -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--schrift-leise);
+  cursor: pointer;
+}
+.einkauf-klappe svg { width: 18px; height: 18px; transition: transform .25s ease; }
+.einkauf-zu .einkauf-klappe svg { transform: rotate(-90deg); }
+.einkauf-zu .start-karte-kopf { border-bottom-color: transparent; }
+.einkauf-zu #einkaufInhalt { display: none; }
+@media (prefers-reduced-motion: reduce) { .einkauf-klappe svg { transition: none; } }
+
+
+/* Studienphasen in den Einstellungen: die laufende Phase und was kommt,
+   in einem Kasten wie die übrigen Abschnitte. */
+.up-kasten {
+  margin: 0 0 10px;
+  padding: 10px 12px 4px;
+  border: 1px solid var(--glas-linie, var(--linie));
+  border-radius: 14px;
+  background: transparent;
+}
+.up-kasten .up-jetzt { margin-top: 0; }
+.up-kasten .up-fortschritt { margin: 8px 0 10px; }
+.up-kasten .start-leer { margin: 4px 0 10px; }
+#uniplanBereich #uniplanOeffnen { margin-bottom: 4px; }
