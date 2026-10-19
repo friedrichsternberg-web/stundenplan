@@ -4205,3 +4205,119 @@ button:active:not(:disabled),
   color: var(--schrift-leise);
 }
 #postInhalt .training-filterleiste { margin-bottom: 4px; }
+
+
+/* =========================================================================
+   FORMULARE AUFGERÄUMT (19.10.2026)
+
+   Seit dem Liquid-Glass-Umbau gab die allgemeine Regel für Eingabefelder
+   (runde Ecken, Rahmen, helle Füllung) auch Überschrift und Text einer
+   Notiz je einen eigenen Kasten - zwei verschieden helle Kästen, die
+   eckig aneinanderstießen. Jetzt trägt ein gemeinsames Blatt Rahmen und
+   Füllung, die beiden Felder darin sind durchsichtig, eine feine Linie
+   trennt sie.
+   ========================================================================= */
+.zettel-blatt {
+  margin-top: 12px;
+  border: 1px solid var(--glas-linie, var(--linie));
+  border-radius: 16px;
+  background: var(--feld, var(--flaeche));
+  overflow: hidden;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.zettel-blatt:focus-within {
+  border-color: var(--akzent);
+  box-shadow: 0 0 0 3px var(--akzent-flaeche);
+}
+.zettel-blatt input.zettel-titel,
+.zettel-blatt textarea.zettel-feld {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+.zettel-blatt input.zettel-titel {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--glas-linie, var(--linie));
+}
+.zettel-blatt textarea.zettel-feld {
+  padding: 12px 16px 14px;
+  min-height: 190px;
+  resize: none;
+}
+
+/* Kästchen zum Ankreuzen als Schaltflächen im Stil der App: eine Kapsel,
+   die sich färbt, wenn sie an ist. Das echte Kontrollkästchen bleibt
+   darin (unsichtbar), damit Tastatur, Bildschirmleser und die
+   Zuhörer in app.js unverändert funktionieren. Gilt überall, wo
+   .form-haken steht: Notiz, Termin, Uni-Plan. */
+.form-haken {
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--glas-linie, var(--linie));
+  border-radius: 999px;
+  background: var(--flaeche-gedaempft);
+  color: var(--schrift);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.form-haken input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.form-haken::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--schrift-leise);
+  box-sizing: border-box;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.form-haken:has(input:checked) {
+  background: var(--akzent-flaeche);
+  border-color: var(--akzent);
+  color: var(--akzent);
+}
+.form-haken:has(input:checked)::before {
+  border-color: var(--akzent);
+  background: var(--akzent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+.form-haken:has(input:focus-visible) { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+.zettel-haken-reihe { margin-top: 12px; gap: 8px; }
+
+/* Die Fußleiste zeigt nur etwas, wenn es etwas zu zeigen gibt: "Gesichert"
+   oder "Löschen". Bei einer neuen, leeren Notiz stand sonst eine leere
+   Leiste mit Trennlinie am Ende. */
+.zettel-fuss:has(#zettelLoeschen[hidden]):has(.zettel-gesichert:empty) { display: none; }
+.zettel-verweise-kopf { margin-top: 18px; }
+
+/* Das Termin-Formular scrollte in sich selbst, obwohl das Fenster
+   drumherum schon scrollt. Der zweite Scrollbalken lag über dem rechten
+   Rand der Felder - sie sahen abgeschnitten aus. Jetzt scrollt nur das
+   Fenster. */
+.filter-fenster > .termin-form { overflow: visible; flex-shrink: 0; }
+
+/* Ein leerer Erinnerungs-Hinweis belegte trotzdem eine Zeile und riss
+   eine Lücke vor "Wichtig". */
+.erinnerung-hinweis:empty { display: none; }

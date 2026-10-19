@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "d4d93e3b";
+const GEBAUTE_VERSION = "7c211e33";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -6029,10 +6029,12 @@ function zettelFensterZeichnen() {
   const teile = zettelTeile(offenerZettelText);
 
   inhalt.innerHTML = `
-    <input type="text" id="zettelTitel" class="zettel-titel" maxlength="120" autocomplete="off"
-           value="${sicher(teile.titel)}">
-    <textarea id="zettelFeld" class="zettel-feld" rows="9"
-              >${sicher(teile.rest)}</textarea>
+    <div class="zettel-blatt">
+      <input type="text" id="zettelTitel" class="zettel-titel" maxlength="120" autocomplete="off"
+             aria-label="Überschrift" value="${sicher(teile.titel)}">
+      <textarea id="zettelFeld" class="zettel-feld" rows="9" aria-label="Text"
+                >${sicher(teile.rest)}</textarea>
+    </div>
 
     <div class="zettel-haken-reihe">
       <label class="form-haken">
