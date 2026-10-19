@@ -150,7 +150,8 @@ const werkzeug = eval(
   "  feiertagAm: feiertagAm," +
   "  ostersonntag: ostersonntag," +
   "  uniplanAusblick: uniplanAusblick," +
-  "  uniplanStartKarte: uniplanStartKarte," +
+  "  uniplanAusblickHtml: uniplanAusblickHtml," +
+  "  uniplanBereichZeichnen: uniplanBereichZeichnen," +
   "  urlaubEintragen: urlaubEintragen," +
   "  urlaubsTage: urlaubsTage," +
   "  alleAngezeigten: alleAngezeigtenTermine," +
@@ -1241,11 +1242,22 @@ pruefe("Vergangenes ist nicht dabei (Abgabe Studienarbeit 17.08.2026)",
 pruefe("der Urlaub steht im Ausblick", blick.eintraege.some(e => e.art === "urlaub" && e.von === "2026-12-28"));
 pruefe("die Bachelorarbeit auch", blick.eintraege.some(e => e.titel === "Abgabe der Bachelorarbeit"));
 
-let karte = werkzeug.uniplanStartKarte(new Date(2026, 8, 24, 12, 0));
+let karte = werkzeug.uniplanAusblickHtml(new Date(2026, 8, 24, 12, 0));
 pruefe("das Widget zeigt die laufende Woche", karte.indexOf("Woche 7 von 12") >= 0);
 pruefe("und nichts Vergangenes", karte.indexOf("Studienarbeit") < 0 && karte.indexOf("2025") < 0);
 pruefe("keine kaputten Werte im Widget", !/undefined|NaN/.test(karte));
-pruefe("nach dem Studium kein Widget", werkzeug.uniplanStartKarte(new Date(2027, 9, 5)) === "");
+pruefe("nach dem Studium kein Widget", werkzeug.uniplanAusblickHtml(new Date(2027, 9, 5)) === "");
+
+// Seit 19.10.2026 stehen die Studienphasen nur noch in den Einstellungen.
+werkzeug.startZeichnen();
+pruefe("die Übersicht zeigt keine Studienphasen mehr",
+       document.getElementById("startInhalt").innerHTML.indexOf("up-kasten") < 0
+       && document.getElementById("startInhalt").innerHTML.indexOf("Studienphasen") < 0);
+werkzeug.uniplanBereichZeichnen();
+const upBereich = document.getElementById("uniplanBereich").innerHTML;
+pruefe("die Einstellungen zeigen sie, mit Knopf zum Zeitplan",
+       upBereich.indexOf("Studienphasen") >= 0 && upBereich.indexOf("uniplanOeffnen") >= 0
+       && !/undefined|NaN/.test(upBereich));
 werkzeug.eigene([]);
 
 

@@ -175,6 +175,79 @@ async function modulFinden(beschreibung: string): Promise<string> {
 }
 
 
+/* --- Studienphasen und Arbeit im Betrieb --------------------------------
+
+   Dieselben Daten und Regeln wie UNI_PLAN, feiertage() und arbeitsTermine()
+   in app.js: In Praxisphasen ist Mo–Fr Arbeit, außer an Feiertagen und im
+   Urlaub. Steht hier ein zweites Mal, damit Claude die Arbeitstage kennt
+   und nicht bei jeder Antwort dazusagen muss, dass sie fehlen. */
+const PHASEN: { halbjahr: number; art: "theorie" | "praxis"; von: string; bis: string }[] = [
+  { halbjahr: 1, art: "praxis",  von: "2024-10-01", bis: "2024-10-20" },
+  { halbjahr: 1, art: "theorie", von: "2024-10-21", bis: "2024-12-22" },
+  { halbjahr: 1, art: "praxis",  von: "2024-12-23", bis: "2025-01-05" },
+  { halbjahr: 1, art: "theorie", von: "2025-01-06", bis: "2025-01-26" },
+  { halbjahr: 1, art: "praxis",  von: "2025-01-27", bis: "2025-04-13" },
+  { halbjahr: 2, art: "theorie", von: "2025-04-14", bis: "2025-07-06" },
+  { halbjahr: 2, art: "praxis",  von: "2025-07-07", bis: "2025-09-28" },
+  { halbjahr: 3, art: "theorie", von: "2025-09-29", bis: "2025-12-21" },
+  { halbjahr: 3, art: "praxis",  von: "2025-12-22", bis: "2026-02-22" },
+  { halbjahr: 4, art: "theorie", von: "2026-02-23", bis: "2026-05-17" },
+  { halbjahr: 4, art: "praxis",  von: "2026-05-18", bis: "2026-08-09" },
+  { halbjahr: 5, art: "theorie", von: "2026-08-10", bis: "2026-11-01" },
+  { halbjahr: 5, art: "praxis",  von: "2026-11-02", bis: "2027-01-31" },
+  { halbjahr: 6, art: "theorie", von: "2027-02-01", bis: "2027-04-25" },
+  { halbjahr: 6, art: "praxis",  von: "2027-04-26", bis: "2027-09-26" },
+];
+
+function phaseAm(tag: string) {
+  return PHASEN.find(p => p.von <= tag && p.bis >= tag) || null;
+}
+
+function ostersonntag(jahr: number): string {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tag = ((h + l - 7 * m + 114) % 31) + 1;
+  return jahr + "-" + String(monat).padStart(2, "0") + "-" + String(tag).padStart(2, "0");
+}
+
+function feiertagAm(tag: string, land: string): string {
+  const jahr = Number(tag.slice(0, 4)), ostern = ostersonntag(jahr);
+  const liste: Record<string, string> = {
+    [jahr + "-01-01"]: "Neujahr", [tagPlus(ostern, -2)]: "Karfreitag", [tagPlus(ostern, 1)]: "Ostermontag",
+    [jahr + "-05-01"]: "Tag der Arbeit", [tagPlus(ostern, 39)]: "Christi Himmelfahrt",
+    [tagPlus(ostern, 50)]: "Pfingstmontag", [jahr + "-10-03"]: "Tag der Deutschen Einheit",
+    [jahr + "-12-25"]: "1. Weihnachtstag", [jahr + "-12-26"]: "2. Weihnachtstag",
+  };
+  if (land === "BE" || (land === "MV" && jahr >= 2023)) liste[jahr + "-03-08"] = "Frauentag";
+  if (land === "BB" || land === "MV") liste[jahr + "-10-31"] = "Reformationstag";
+  return liste[tag] || "";
+}
+
+/* Die Einstellung aus der App (Eintrag "einstellung-uniplan"), sonst die
+   Vorgabe der App: Arbeit an, 08:00–16:30, Feiertage nach MV. */
+function arbeitszeit(eintraege: Record<string, Eintrag>) {
+  const e = eintraege["einstellung-uniplan"] || {};
+  return {
+    an: e.arbeit === undefined ? true : e.arbeit === true || e.arbeit === "ja",
+    von: istUhr(e.von) ? String(e.von) : "08:00",
+    bis: istUhr(e.bis) ? String(e.bis) : "16:30",
+    land: ["MV", "BE", "BB"].includes(String(e.land)) ? String(e.land) : "MV",
+  };
+}
+
+function phaseText(tag: string): string {
+  const p = phaseAm(tag);
+  return p ? `${p.art === "praxis" ? "Praxisphase (im Betrieb)" : "Theoriephase (an der HWR)"}, ${p.halbjahr}. Studienhalbjahr, bis ${tagText(p.bis)}`
+    : "keine Studienphase";
+}
+
+
 /* --- Der Raum ------------------------------------------------------------ */
 
 type Eintrag = Record<string, unknown>;
@@ -253,6 +326,19 @@ async function termineZwischen(raum: string, von: string, bis: string) {
       + (e.urlaub ? " (Urlaub)" : "") + (e.ort ? ` · ${e.ort}` : "") + (e.notiz ? ` · Notiz: ${e.notiz}` : "")
       + (e.wichtig ? " · ★" : "") + ` [eigener Termin, kennung ${k}]` });
   }
+  // Arbeit im Betrieb, wie die App sie in den Kalender rechnet.
+  const arbeit = arbeitszeit(eintraege);
+  if (arbeit.an) {
+    const urlaub = lebendig(eintraege).filter(([, e]) => e.art === "termin" && e.urlaub)
+      .map(([, e]) => [String(e.start || "").slice(0, 10), String(e.ende || e.start || "").slice(0, 10)]);
+    for (let tag = von; tag <= bis; tag = tagPlus(tag, 1)) {
+      const wochentag = new Date(tag + "T12:00:00Z").getUTCDay();
+      if (phaseAm(tag)?.art !== "praxis" || wochentag === 0 || wochentag === 6) continue;
+      if (feiertagAm(tag, arbeit.land) || urlaub.some(([u, o]) => u <= tag && o >= tag)) continue;
+      zeilen.push({ start: tag + "T" + arbeit.von,
+        text: `${tagText(tag)} ${arbeit.von}–${arbeit.bis} Arbeit im Betrieb [Praxisphase]` });
+    }
+  }
   zeilen.sort((a, b) => a.start.localeCompare(b.start));
   return zeilen.map(z => z.text);
 }
@@ -281,6 +367,7 @@ const WERKZEUGE: Werkzeug[] = [
       const todos = todosText(eintraege, false, heute).slice(0, 15);
       const gedaechtnis = lebendig(eintraege).filter(([, e]) => e.art === "gedaechtnis").length;
       return [`Jetzt: ${tagText(heute)}, ${jetzt.slice(11, 16)} Uhr (Europe/Berlin).`,
+        `Studienphase: ${phaseText(heute)}.`,
         "", "Termine heute und morgen:", ...(termine.length ? termine : ["keine"]),
         "", "Offene To-dos:", ...(todos.length ? todos : ["keine"]),
         "", `Gedächtnis: ${gedaechtnis} Einträge (gedaechtnis_lesen).`].join("\n");
@@ -288,7 +375,7 @@ const WERKZEUGE: Werkzeug[] = [
   },
   {
     name: "termine_lesen", title: "Termine in einem Zeitraum",
-    description: "Alle Termine zwischen zwei Tagen (höchstens 62 Tage): HWR-Vorlesungen (mit Raum, HWR-Hinweisen, Modulnotizen) und eigene Termine. Die Arbeit im Betrieb (Praxisphasen) berechnet nur die App und steht hier nicht.",
+    description: "Alle Termine zwischen zwei Tagen (höchstens 62 Tage): HWR-Vorlesungen (mit Raum, HWR-Hinweisen, Modulnotizen), eigene Termine und in Praxisphasen die Arbeit im Betrieb.",
     inputSchema: OBJ({ von: { type: "string", description: "YYYY-MM-DD" }, bis: { type: "string", description: "YYYY-MM-DD" } }, ["von", "bis"]),
     annotations: LESEN,
     ausfuehren: async (raum, a) => {
@@ -561,7 +648,7 @@ const ANLEITUNG = [
   "Du bist mit Friedrichs Planer verbunden, seiner App für Studium und Alltag (dualer Student, Tourismus, HWR Berlin).",
   "Bereiche: Plan (HWR-Stundenplan und eigene Termine), To-dos (mit oder ohne Datum), Notizbuch (lange Notizen, erste Zeile ist die Überschrift),",
   "Modulnotizen (kurze Zeilen zu einem Modul, stehen in der App an jeder Vorlesung), Einkaufszettel und dein Gedächtnis über Friedrich.",
-  "Die Arbeit im Betrieb in den Praxisphasen (Mo–Fr) berechnet nur die App, sie steht nicht in termine_lesen.",
+  "Theorie- und Praxisphasen wechseln sich ab; in Praxisphasen arbeitet er Mo–Fr im Betrieb (steht als Termin in termine_lesen).",
   "",
   "So arbeitest du:",
   "- Rufe zu Beginn planer_ueberblick auf (heutiges Datum, Termine, To-dos) und gedaechtnis_lesen, und richte dich danach.",
@@ -570,6 +657,11 @@ const ANLEITUNG = [
   "- Sagt Friedrich etwas Dauerhaftes über sich (Gewohnheit, Vorliebe, Regel), merke es dir mit gedaechtnis_merken, kurz und sachlich.",
   "- Anlegen darfst du direkt. Ändern und Löschen nur, nachdem Friedrich es im Gespräch bestätigt hat.",
   "- Bestätige knapp, was du angelegt hast. Antworte auf Deutsch.",
+  "",
+  "So sehen deine Antworten aus (sie erscheinen oft in einem kleinen Fenster auf dem iPhone, das kein Markdown kann):",
+  "- Kein Markdown: keine Sternchen, keine Rauten, keine Tabellen.",
+  "- Ein Termin oder To-do pro Zeile, Zeit vorn: „10:00–11:00  Werkstatt-Termin“. Vor jedem Tag eine kurze Zeile wie „Morgen, Di 20.10.:“.",
+  "- Kurz. Keine Einleitung, keine Hinweise darauf, was der Planer nicht enthält, und die Studienphase nur, wenn danach gefragt ist oder sie etwas ändert.",
 ].join("\n");
 
 
@@ -593,7 +685,7 @@ async function mcp(anfrage: Request, raum: string): Promise<Response> {
         antworten.push({ jsonrpc: "2.0", id, result: {
           protocolVersion: PROTOKOLLE.includes(gewuenscht) ? gewuenscht : PROTOKOLLE[1],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "planer", title: "Planer", version: "1.0.0" },
+          serverInfo: { name: "planer", title: "Planer", version: "1.1.0" },
           instructions: ANLEITUNG,
         } });
       } else if (methode === "ping") {

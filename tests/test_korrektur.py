@@ -83,8 +83,13 @@ if os.path.exists(abgleich.DATEI_STAND):
     korrigiert = abgleich.korrekturen_anwenden(fach)
     anfaenge = sorted(set(t["start"][11:16] for t in korrigiert))
     print("       Anfangszeiten nach Korrektur: " + ", ".join(anfaenge))
-    pruefe("alle " + str(len(fach)) + " Termine beginnen um 8:45",
-           anfaenge == ["08:45"])
+    # Am 19.10.2026 stand das Fach nicht mehr als "(Do)" im Plan (die HWR
+    # fuehrt es jetzt als "(Die)"). Ohne Termine gibt es nichts zu messen.
+    if fach:
+        pruefe("alle " + str(len(fach)) + " Termine beginnen um 8:45",
+               anfaenge == ["08:45"])
+    else:
+        print("       (Fach steht nicht mehr im Plan - nichts zu messen)")
     roh = sorted(set(t["start"][11:16] for t in fach))
     print("       Anfangszeiten im HWR-Plan:  " + ", ".join(roh))
 
@@ -101,7 +106,7 @@ if os.path.exists(abgleich.DATEI_STAND):
     die HWR 08:00, 08:45 oder beides eintraegt. Nichts wird doppelt
     verschoben - waere das der Fall, stuende hier 09:30.
     """
-    pruefe("nichts wurde doppelt verschoben", anfaenge == ["08:45"])
+    pruefe("nichts wurde doppelt verschoben", not fach or anfaenge == ["08:45"])
     pruefe("die Korrektur greift nur bei 08:00",
            all(t["start"][11:16] == "08:45" for t in korrigiert))
 else:

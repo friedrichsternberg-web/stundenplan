@@ -64,6 +64,16 @@
     <p class="kopf-stand" id="planStand">wird geladen …</p>
   </div>
   <div class="kopf-knoepfe">
+    <!-- Öffnet einen neuen Chat in Claude (App oder claude.ai). Dort ist der
+         Planer als Connector verbunden. Erscheint nur für Räume, die sich
+         mit Claude verbinden dürfen - siehe claudeKnopfZeigen() in app.js. -->
+    <a class="knopf-schlicht claude-knopf" id="claudeFragen" href="https://claude.ai/new"
+       target="_blank" rel="noopener" title="Claude fragen" aria-label="Claude fragen" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+        <path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/>
+        <path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>
+      </svg>
+    </a>
     <!-- Geräteabgleich einrichten. Steht im Kopf und nicht in der
          Werkzeugleiste, weil es die ganze App betrifft und nicht nur den
          Plan. -->
@@ -186,8 +196,14 @@
         <span class="zettel-nadel-marke" title="Angeheftet" aria-label="Angeheftet"><svg viewBox="0 0 24 24"
           aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path
           d="M9 3.5h6l-1 6.5 3.2 3v1.3H6.8V13L10 10z"/><path d="M12 14.3v6.2" fill="none"/></svg></span>
+        <!-- Ein- und ausklappen. Der ganze Kopf reagiert, der Pfeil zeigt
+             den Zustand - siehe einkaufKlappen() in app.js. -->
+        <button type="button" class="einkauf-klappe" id="einkaufKlappe" aria-expanded="true"
+                aria-controls="einkaufInhalt" aria-label="Einkaufszettel einklappen"><svg viewBox="0 0 24 24"
+          aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+          stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>
       </div>
-      <div class="start-karte-inhalt">
+      <div class="start-karte-inhalt" id="einkaufInhalt">
         <form class="einkauf-neu" id="einkaufForm" autocomplete="off">
           <input type="text" id="einkaufFeld"
                  maxlength="120" enterkeyhint="done" autocorrect="on">
