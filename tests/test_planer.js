@@ -137,6 +137,7 @@ const werkzeug = eval(
   "  uniplanRoh: function (u) { if (u) uniplan = u; return uniplan; }," +
   "  abendRoh: function (w) { if (w) abend = w; return abend; }," +
   "  modulnotizenRoh: function (w) { if (w) modulnotizen = w; return modulnotizen; }," +
+  "  gedaechtnisRoh: function (w) { if (w) gedaechtnis = w; return gedaechtnis; }," +
   "  UNIPLAN_VORGABE: UNIPLAN_VORGABE" +
   "})");
 werkzeug.arbeitAus();
@@ -527,6 +528,27 @@ pruefe("und kommt auf dem anderen Geraet so an",
 pruefe("keine Notiz und kein To-do daraus geworden",
        Object.keys(werkzeug.lage().notizen).length === 0 && werkzeug.lage().aufgaben.length === 0);
 werkzeug.modulnotizenRoh([]);
+
+
+/* ====================================================================== */
+abschnitt("Gedaechtnis fuer Claude ueberlebt den Abgleich");
+
+werkzeug.setzen({}, [], [], {});
+werkzeug.gedaechtnisRoh([{ id: "gedaechtnis-1", text: "Cardio heißt Laufen", angelegt: 5, geaendert: 5 }]);
+const mitGedaechtnis = werkzeug.sammeln();
+const g1 = mitGedaechtnis.eintraege["gedaechtnis-1"];
+pruefe("wird als eigene Art mit inhalt mitgeschickt",
+       g1 && g1.art === "gedaechtnis" && g1.inhalt === "Cardio heißt Laufen" && g1.text === undefined);
+werkzeug.gedaechtnisRoh([]);
+/* Claude legt ueber den Connector an - so kommt es beim Geraet an. */
+mitGedaechtnis.eintraege["gedaechtnis-2"] = { art: "gedaechtnis", inhalt: "Arbeitet 8 bis 16:30", angelegt: 9, geaendert: 9 };
+werkzeug.uebernehmen(mitGedaechtnis);
+pruefe("kommt an, beide Eintraege",
+       werkzeug.gedaechtnisRoh().length === 2
+       && werkzeug.gedaechtnisRoh().some(g => g.text === "Arbeitet 8 bis 16:30"));
+pruefe("wird keine Notiz und kein To-do",
+       Object.keys(werkzeug.lage().notizen).length === 0 && werkzeug.lage().aufgaben.length === 0);
+werkzeug.gedaechtnisRoh([]);
 
 
 /* ====================================================================== */

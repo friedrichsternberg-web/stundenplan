@@ -4321,3 +4321,22 @@ button:active:not(:disabled),
 /* Ein leerer Erinnerungs-Hinweis belegte trotzdem eine Zeile und riss
    eine Lücke vor "Wichtig". */
 .erinnerung-hinweis:empty { display: none; }
+
+
+/* Claude in den Einstellungen: der Verbindungscode groß und gut lesbar,
+   in zwei Vierergruppen wie ein Bestätigungscode. */
+.claude-code {
+  margin: 8px 0 2px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--akzent-flaeche);
+  color: var(--akzent);
+  font: 700 28px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .18em;
+  text-align: center;
+  user-select: all;
+  -webkit-user-select: all;
+}
+.claude-gedaechtnis-titel { margin-top: 18px; }
+.claude-gedaechtnis .modulnotiz { color: var(--schrift); padding: 5px 0; border-top: 1px solid var(--glas-linie, var(--linie)); }
+.claude-gedaechtnis .modulnotiz:first-child { border-top: 0; }

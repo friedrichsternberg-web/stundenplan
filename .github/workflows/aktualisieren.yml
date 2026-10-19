@@ -87,7 +87,7 @@ jobs:
         # jedem Lauf, sonst gaebe es alle 30 Minuten eine neue index.html.
         run: |
           cp index.html app.js sync.js melden.js style.css symbol.png \
-             manifest.json sw.js veroeffentlichung/
+             manifest.json sw.js verbinden.html veroeffentlichung/
           VERSION="${GITHUB_SHA:0:8}"
           sed -i \
             -e "s|href=\"style.css\"|href=\"style.css?v=$VERSION\"|" \
@@ -121,7 +121,7 @@ jobs:
           # keine Benachrichtigungen mehr an. Beides sieht aus wie "geht
           # halt gerade nicht". Deshalb hier hart abbrechen, statt es
           # stillschweigend zu veroeffentlichen.
-          for datei in sync.js melden.js sw.js manifest.json; do
+          for datei in sync.js melden.js sw.js manifest.json verbinden.html; do
             test -s "veroeffentlichung/$datei" \
               || { echo "$datei fehlt in der Veroeffentlichung"; exit 1; }
           done

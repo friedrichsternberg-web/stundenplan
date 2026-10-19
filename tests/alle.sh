@@ -66,4 +66,8 @@ echo "== Post: nur Friedrichs Code liest, nur das Skript liefert ein =="
 python3 tests/test_post.py
 
 echo
+echo "== Claude-Connector: ohne Anmeldung kein Zugriff =="
+python3 tests/test_planer_mcp.py
+
+echo
 echo "ALLE SAMMLUNGEN BESTANDEN"

@@ -693,6 +693,49 @@ Aus demselben Grund bekommt `sw.js` als einzige Datei **keine Versionsnummer**
 an die Adresse: ein Service Worker wird über seinen Pfad angemeldet, und mit
 wechselndem `?v=…` wäre es bei jeder Veröffentlichung ein anderer.
 
+## Claude als Assistent (Connector, seit 19.10.2026)
+
+Der Planer ist ein **eigener Connector für Claude**. Über Friedrichs
+Claude-Pro-Abo (Browser, Mac, iPhone-App, auch per Sprache) kann Claude im
+Planer lesen und anlegen: „Leg mir für Donnerstag ein To-do an“, „Notiz zu
+Controlling: Laptop mitbringen“, „Was steht morgen an?“. Keine API-Kosten.
+
+**Adresse:** `https://copydwpdqpnwjvknsakz.supabase.co/functions/v1/planer-mcp`
+(Quelltext `supabase/functions/planer-mcp/index.ts`, ohne Geheimnisse).
+
+**Werkzeuge (17):** lesen: Überblick, Termine, To-dos, Notizen, Module,
+Einkaufszettel, Gedächtnis · anlegen: To-do, Termin, Notiz, Modulnotiz,
+Einkauf, Gedächtnis, abhaken · ändern/löschen (als zerstörerisch markiert,
+Claude fragt immer nach): To-do ändern, Termin ändern, Eintrag löschen.
+HWR-Termine sind nicht änderbar. Die Arbeit aus dem Uni-Plan kennt der
+Server nicht.
+
+**Anmeldung:** OAuth 2.1 mit dynamischer Registrierung und PKCE, wie Claude
+es verlangt (feste Kopfzeilen sind laut Anthropic noch Beta für wenige
+Organisationen, Geheimnisse in der Adresse rät Anthropic ab). Registrieren
+darf sich nur, wer als Rücksprung `claude.ai`/`claude.com` (oder localhost)
+angibt. Die Anmeldeseite ist `verbinden.html` auf GitHub Pages, weil
+Supabase auf seiner Adresse keine Webseiten ausliefert: ein Klick, wenn
+der Planer im selben Browser eingerichtet ist, sonst der 8-stellige
+Verbindungscode aus ⚙ → Claude (10 Minuten gültig, einmal benutzbar).
+Gespeichert werden nur SHA-256-Prüfsummen von Codes und Schlüsseln.
+Zugelassen sind nur Räume in `sync.mcp_zugang`; nach einem Codewechsel
+muss der neue Raum dort eingetragen werden.
+
+**Schreiben:** dieselbe Form wie der Geräteabgleich (`{ v: 2, eintraege }`,
+`geaendert` in ms), mit Fassungsprüfung und bis zu vier Versuchen. Die
+Geräte übernehmen es beim nächsten Abgleich.
+
+**Gedächtnis:** Einträge der Art `gedaechtnis` (Text in `inhalt`), die
+Claude anlegt, wenn Friedrich etwas Dauerhaftes über sich sagt. In ⚙ →
+Claude zu sehen und mit × zu löschen.
+
+**Tests:** `tests/test_planer_mcp.py` prüft von außen (kein Zugriff ohne
+Anmeldung, keine fremden Registrierungen, fremde Codes 403, Datenbank-
+funktionen gesperrt). Der volle Ablauf (Registrieren, Anmelden mit
+Verbindungscode, PKCE, alle Werkzeuge, Erneuern, Trennen) wurde am
+19.10.2026 mit einem Testraum durchgespielt und der Testraum danach gelöscht.
+
 ## Post: wichtige Mails aus Gmail (seit 14.10.2026)
 
 Wichtige Mails (Noten, Fristen, Uni, privat Wichtiges) erscheinen als

@@ -2314,6 +2314,35 @@ function modulnotizEntfernen(kennung) {
   modulnotizenSpeichern();
 }
 
+/* --- Gedächtnis für Claude (seit 19.10.2026) ----------------------------
+
+   Was Claude sich über Friedrich merkt ("Cardio heißt Laufen", "arbeitet
+   in Praxisphasen 8 bis 16:30"). Angelegt wird es von Claude über den
+   Connector (supabase/functions/planer-mcp), hier ist es zu sehen und zu
+   löschen. Eintragsart "gedaechtnis", Text in "inhalt" - wie bei den
+   Modulnotizen, damit ältere Fassungen es nur aufheben. */
+const SPEICHER_GEDAECHTNIS = "stundenplan.gedaechtnis";
+let gedaechtnis = [];
+
+function gedaechtnisLaden() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SPEICHER_GEDAECHTNIS) || "[]");
+    return Array.isArray(roh) ? roh.filter(g => g && typeof g.id === "string" && g.text) : [];
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function gedaechtnisEntfernen(kennung) {
+  const vorher = gedaechtnis.length;
+  gedaechtnis = gedaechtnis.filter(g => g.id !== kennung);
+  if (gedaechtnis.length === vorher) return;
+  grabsteinSetzen(kennung);
+  try { localStorage.setItem(SPEICHER_GEDAECHTNIS, JSON.stringify(gedaechtnis)); }
+  catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
 /* Volltextsuche über Überschrift und Text. Kleinschreibung auf beiden
    Seiten, damit "hwr" auch "HWR" findet. */
 function zettelGefunden(suchwort) {
@@ -6578,6 +6607,15 @@ function abgleichSammeln() {
     };
   }
 
+  for (const g of gedaechtnis) {
+    eintraege[g.id] = {
+      art: "gedaechtnis",
+      inhalt: g.text,
+      angelegt: Number(g.angelegt) || 0,
+      geaendert: Number(g.geaendert) || 0,
+    };
+  }
+
   for (const notiz of modulnotizen) {
     eintraege[notiz.id] = {
       art: "modulnotiz",
@@ -6666,6 +6704,7 @@ function abgleichUebernehmen(nutzlast) {
   let neuerAbend = null;
   const neuerEinkauf = [];
   const neueModulnotizen = [];
+  const neuesGedaechtnis = [];
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -6722,6 +6761,15 @@ function abgleichUebernehmen(nutzlast) {
         wichtig: eintrag.wichtig, angeheftet: eintrag.angeheftet,
         position: eintrag.position, geaendert: zeitpunkt,
       }));
+      continue;
+    }
+
+    // Ein Eintrag im Gedächtnis für Claude.
+    if (eintrag.art === "gedaechtnis") {
+      const inhalt = typeof eintrag.inhalt === "string" ? eintrag.inhalt : "";
+      if (!inhalt) continue;
+      neuesGedaechtnis.push({ id: kennung, text: inhalt,
+        angelegt: Number(eintrag.angelegt) || zeitpunkt, geaendert: zeitpunkt });
       continue;
     }
 
@@ -6786,6 +6834,7 @@ function abgleichUebernehmen(nutzlast) {
   zettel = neueZettel;
   einkauf = neuerEinkauf;
   modulnotizen = neueModulnotizen;
+  gedaechtnis = neuesGedaechtnis;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
   // Steht im Abgleich noch keine Einstellung, bleibt die auf dem Gerät.
@@ -6815,6 +6864,7 @@ function abgleichUebernehmen(nutzlast) {
     localStorage.setItem(SPEICHER_ZETTEL, JSON.stringify(zettel));
     localStorage.setItem(SPEICHER_EINKAUF, JSON.stringify(einkauf));
     localStorage.setItem(SPEICHER_MODULNOTIZEN, JSON.stringify(modulnotizen));
+    localStorage.setItem(SPEICHER_GEDAECHTNIS, JSON.stringify(gedaechtnis));
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
@@ -7218,6 +7268,90 @@ function codeAusAdresseUebernehmen() {
   return Abgleich.codeSetzen(neuerCode);
 }
 
+/* --- Claude in den Einstellungen ------------------------------------------
+
+   Der Planer ist ein Connector für Claude (claude.ai, Mac, iPhone): Claude
+   kann darüber Termine, To-dos und Notizen lesen und anlegen. Hier:
+   kurzen Verbindungscode erzeugen (für die Anmeldung in Claude), sehen,
+   ob verbunden, trennen, und das Gedächtnis ansehen und ausmisten.
+   Sichtbar nur für Räume, die der Server freigegeben hat. */
+const CLAUDE_CONNECTOR = "https://copydwpdqpnwjvknsakz.supabase.co/functions/v1/planer-mcp";
+let claudeVerbindungscode = null;   // { code, bis }
+
+function claudeAnfrage(aktion) {
+  return fetch(CLAUDE_CONNECTOR + "/planer/" + aktion, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: Abgleich.code() }),
+  }).then(a => a.json().then(inhalt => ({ status: a.status, inhalt })));
+}
+
+function claudeBereichZeichnen(meldung) {
+  const bereich = document.getElementById("claudeBereich");
+  if (!bereich) return;
+  if (typeof Abgleich === "undefined" || !Abgleich.code() || typeof fetch !== "function") {
+    bereich.innerHTML = "";
+    return;
+  }
+  claudeAnfrage("status").then(({ status, inhalt }) => {
+    if (status === 403) { bereich.innerHTML = ""; return; }
+    const verbunden = inhalt && inhalt.verbindungen > 0;
+    const code = claudeVerbindungscode && claudeVerbindungscode.bis > Date.now() ? claudeVerbindungscode.code : "";
+    const liste = gedaechtnis.slice().sort((a, b) => a.angelegt - b.angelegt);
+    bereich.innerHTML = `
+      <h3 class="melden-titel">Claude</h3>
+      <p class="abgleich-stand${verbunden ? " abgleich-gut" : ""}">${verbunden ? "Verbunden" : "Nicht verbunden"}</p>
+      ${code ? `<div class="claude-code" aria-label="Verbindungscode">${sicher(code.slice(0, 4) + " " + code.slice(4))}</div>
+                <p class="filter-hinweis">10 Minuten gültig</p>` : ""}
+      <div class="filter-knoepfe">
+        <button type="button" class="knopf-schlicht knopf-betont" id="claudeKopplung">Verbindungscode</button>
+        <button type="button" class="knopf-schlicht" id="claudeAdresse">Adresse kopieren</button>
+        ${verbunden ? `<button type="button" class="knopf-schlicht knopf-gefahr" id="claudeTrennen">Trennen</button>` : ""}
+      </div>
+      ${meldung ? `<p class="geraete-meldung">${sicher(meldung)}</p>` : ""}
+      <h3 class="melden-titel claude-gedaechtnis-titel">Gedächtnis</h3>
+      ${liste.length ? `<div class="claude-gedaechtnis">${liste.map(g => `
+        <div class="modulnotiz">
+          <span class="modulnotiz-text">${sicher(g.text)}</span>
+          <button type="button" class="modulnotiz-weg" data-gedaechtnis-weg="${sicher(g.id)}"
+                  aria-label="Vergessen">×</button>
+        </div>`).join("")}</div>` : `<p class="filter-hinweis">Leer</p>`}`;
+  }).catch(() => { bereich.innerHTML = ""; });
+}
+
+function claudeBereichVerbinden() {
+  const bereich = document.getElementById("claudeBereich");
+  if (!bereich) return;
+  bereich.addEventListener("click", async ereignis => {
+    const ziel = ereignis.target && ereignis.target.closest
+      ? ereignis.target.closest("button") : null;
+    if (!ziel) return;
+    const vergessen = ziel.getAttribute("data-gedaechtnis-weg");
+    if (vergessen) { gedaechtnisEntfernen(vergessen); claudeBereichZeichnen(); return; }
+    if (ziel.id === "claudeAdresse") {
+      inZwischenablage(CLAUDE_CONNECTOR);
+      claudeBereichZeichnen("Adresse kopiert.");
+      return;
+    }
+    if (ziel.id === "claudeKopplung") {
+      ziel.disabled = true;
+      try {
+        const { status, inhalt } = await claudeAnfrage("kopplung");
+        if (status === 200 && inhalt.verbindungscode) {
+          claudeVerbindungscode = { code: inhalt.verbindungscode, bis: Date.now() + 10 * 60 * 1000 };
+          claudeBereichZeichnen();
+        } else claudeBereichZeichnen("Ging nicht.");
+      } catch (fehler) { claudeBereichZeichnen("Keine Verbindung."); }
+      return;
+    }
+    if (ziel.id === "claudeTrennen") {
+      if (!confirm("Claude vom Planer trennen?")) return;
+      try { await claudeAnfrage("trennen"); claudeBereichZeichnen("Getrennt."); }
+      catch (fehler) { claudeBereichZeichnen("Keine Verbindung."); }
+    }
+  });
+}
+
 function geraeteVerbinden() {
   const fenster = document.getElementById("geraeteHintergrund");
   if (!fenster) return;
@@ -7228,10 +7362,12 @@ function geraeteVerbinden() {
     aenderungenBereichZeichnen();
     geraeteZeichnen();
     meldenZeichnen();
+    claudeBereichZeichnen();
     erinnerungsdienstZeichnen();
     themaZeichnen();
     fenster.hidden = false;
   }
+  claudeBereichVerbinden();
 
   document.getElementById("geraeteOeffnen").addEventListener("click", oeffnen);
   document.getElementById("geraeteSchliessen").addEventListener("click", () => {
@@ -8127,6 +8263,7 @@ function starten() {
   zettel = zettelLaden();
   einkauf = einkaufLaden();
   modulnotizen = modulnotizenLaden();
+  gedaechtnis = gedaechtnisLaden();
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
   post = postLaden();
