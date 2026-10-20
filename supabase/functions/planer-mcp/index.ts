@@ -36,6 +36,12 @@
      dazwischen geschrieben, wird neu gelesen und erneut versucht.
    ========================================================================= */
 
+/* vorkommen.js liegt im Hauptordner des Projekts (die App lädt sie auch)
+   und wird beim Aufspielen als zweite Datei neben diese gelegt. */
+import "./vorkommen.js";
+// deno-lint-ignore no-explicit-any
+const VORKOMMEN = (globalThis as any).ErinnerungVorkommen;
+
 const BASIS = "https://copydwpdqpnwjvknsakz.supabase.co/functions/v1/planer-mcp";
 const VERBINDEN_SEITE = "https://friedrichsternberg-web.github.io/stundenplan/verbinden.html";
 const PLAN_URL = "https://friedrichsternberg-web.github.io/stundenplan/daten/plan.js";
@@ -434,6 +440,21 @@ const WERKZEUGE: Werkzeug[] = [
     },
   },
   {
+    name: "erinnerungen_lesen", title: "Erinnerungen lesen",
+    description: "Die gestellten eigenen Erinnerungen mit dem nächsten Mal, nach Zeit sortiert, mit Kennung zum Löschen.",
+    inputSchema: OBJ({}), annotations: LESEN,
+    ausfuehren: async (raum) => {
+      const e = (await raumLesen(raum)).inhalt?.eintraege || {};
+      const jetzt = berlin();
+      const z = lebendig(e).filter(([, x]) => x.art === "erinnerung")
+        .map(([k, x]) => ({ k, x, n: VORKOMMEN.naechstes(String(x.erinnerung), String(x.wiederholung || ""), jetzt) as string }))
+        .sort((a, b) => (a.n || "9999").localeCompare(b.n || "9999"))
+        .map(({ k, x, n }) => `${n ? tagText(n.slice(0, 10)) + " " + n.slice(11) : "vorbei"}  ${x.inhalt}`
+          + (x.wiederholung ? ` (${VORKOMMEN.regelText(String(x.wiederholung))})` : "") + ` [kennung ${k}]`);
+      return z.length ? z.join("\n") : "Keine Erinnerungen gestellt.";
+    },
+  },
+  {
     name: "gedaechtnis_lesen", title: "Gedächtnis: was du über Friedrich weißt",
     description: "Dauerhafte Fakten und Vorlieben über Friedrich, die du dir früher gemerkt hast. Zu Beginn eines Gesprächs über den Planer lesen und berücksichtigen.",
     inputSchema: OBJ({}), annotations: LESEN,
@@ -548,6 +569,33 @@ const WERKZEUGE: Werkzeug[] = [
     },
   },
   {
+    name: "erinnerung_anlegen", title: "Erinnerung stellen",
+    description: "Stellt eine Erinnerung, die als Benachrichtigung aufs iPhone kommt („erinnere mich morgen um 9 an …“). Optional wiederkehrend. Zeitpunkt in Berliner Ortszeit; relative Angaben vorher mit dem Datum aus planer_ueberblick umrechnen.",
+    inputSchema: OBJ({
+      text: { type: "string", description: "Woran erinnert wird, kurz" },
+      zeitpunkt: { type: "string", description: "YYYY-MM-DDTHH:MM, das erste Mal" },
+      wiederholung: { type: "string", enum: ["", "taeglich", "werktags", "woechentlich", "monatlich", "jaehrlich"],
+                      description: "leer = einmal" },
+    }, ["text", "zeitpunkt"]),
+    annotations: ANLEGEN,
+    ausfuehren: async (raum, a) => {
+      const text = sauber(a.text, 200);
+      const zeitpunkt = String(a.zeitpunkt || "");
+      const regel = String(a.wiederholung || "");
+      if (!text) throw new Error("Text fehlt");
+      if (!VORKOMMEN.gueltig(zeitpunkt)) throw new Error("zeitpunkt als YYYY-MM-DDTHH:MM");
+      if (!VORKOMMEN.regelGueltig(regel)) throw new Error("Unbekannte Wiederholung");
+      if (!regel && zeitpunkt <= berlin()) throw new Error("Der Zeitpunkt ist schon vorbei.");
+      const k = neueKennung("erinnerung");
+      await raumAendern(raum, (e, jetzt) => {
+        e[k] = { art: "erinnerung", inhalt: text, erinnerung: zeitpunkt, wiederholung: regel, angelegt: jetzt, geaendert: jetzt };
+      });
+      const naechstes = VORKOMMEN.naechstes(zeitpunkt, regel, berlin());
+      return `Erinnerung gestellt: ${text} · ${tagText(naechstes.slice(0, 10))} ${naechstes.slice(11)}`
+        + (regel ? ` · ${VORKOMMEN.regelText(regel)}` : "") + ` [kennung ${k}]`;
+    },
+  },
+  {
     name: "gedaechtnis_merken", title: "Etwas über Friedrich merken",
     description: "Speichert einen dauerhaften Fakt oder eine Vorliebe über Friedrich (ein Satz), damit du ihn künftig kennst. Nur Dauerhaftes, keine einmaligen Aufgaben. Friedrich sieht und löscht das Gedächtnis in den Planer-Einstellungen.",
     inputSchema: OBJ({ fakt: { type: "string" } }, ["fakt"]),
@@ -627,14 +675,14 @@ const WERKZEUGE: Werkzeug[] = [
   },
   {
     name: "eintrag_loeschen", title: "Eintrag löschen",
-    description: "Löscht ein To-do, einen eigenen Termin, eine Notiz, eine Modulnotiz, einen Einkaufsartikel oder einen Gedächtnis-Eintrag (HWR-Termine nicht). Vorher mit Friedrich bestätigen.",
+    description: "Löscht ein To-do, einen eigenen Termin, eine Notiz, eine Modulnotiz, einen Einkaufsartikel, eine Erinnerung oder einen Gedächtnis-Eintrag (HWR-Termine nicht). Vorher mit Friedrich bestätigen.",
     inputSchema: OBJ({ kennung: { type: "string" } }, ["kennung"]),
     annotations: AENDERN,
     ausfuehren: async (raum, a) => {
       const k = String(a.kennung || "");
       return await raumAendern(raum, (e, jetzt) => {
         const x = e[k];
-        if (!x || x.geloescht || !["aufgabe", "termin", "zettel", "modulnotiz", "einkauf", "gedaechtnis", "notiz"].includes(String(x.art))) {
+        if (!x || x.geloescht || !["aufgabe", "termin", "zettel", "modulnotiz", "einkauf", "gedaechtnis", "notiz", "erinnerung"].includes(String(x.art))) {
           throw new Error("Nichts Löschbares unter dieser Kennung");
         }
         e[k] = { geloescht: true, geaendert: jetzt };
@@ -647,12 +695,13 @@ const WERKZEUGE: Werkzeug[] = [
 const ANLEITUNG = [
   "Du bist mit Friedrichs Planer verbunden, seiner App für Studium und Alltag (dualer Student, Tourismus, HWR Berlin).",
   "Bereiche: Plan (HWR-Stundenplan und eigene Termine), To-dos (mit oder ohne Datum), Notizbuch (lange Notizen, erste Zeile ist die Überschrift),",
-  "Modulnotizen (kurze Zeilen zu einem Modul, stehen in der App an jeder Vorlesung), Einkaufszettel und dein Gedächtnis über Friedrich.",
+  "Modulnotizen (kurze Zeilen zu einem Modul, stehen in der App an jeder Vorlesung), Einkaufszettel, Erinnerungen (kommen als Benachrichtigung) und dein Gedächtnis über Friedrich.",
   "Theorie- und Praxisphasen wechseln sich ab; in Praxisphasen arbeitet er Mo–Fr im Betrieb (steht als Termin in termine_lesen).",
   "",
   "So arbeitest du:",
   "- Rufe zu Beginn planer_ueberblick auf (heutiges Datum, Termine, To-dos) und gedaechtnis_lesen, und richte dich danach.",
   "- Relative Angaben wie „morgen“ oder „nächsten Donnerstag“ rechnest du vom heutigen Datum aus planer_ueberblick um. Zeiten sind Europe/Berlin.",
+  "- „Erinnere mich …“ ist eine Erinnerung (erinnerung_anlegen), kein To-do. „Jeden Montag“ heißt woechentlich ab dem nächsten Montag.",
   "- „Notiz zu Management“ ist meist eine Modulnotiz (modulnotiz_anlegen); längere Texte gehören ins Notizbuch (notiz_anlegen).",
   "- Sagt Friedrich etwas Dauerhaftes über sich (Gewohnheit, Vorliebe, Regel), merke es dir mit gedaechtnis_merken, kurz und sachlich.",
   "- Anlegen darfst du direkt. Ändern und Löschen nur, nachdem Friedrich es im Gespräch bestätigt hat.",
@@ -685,7 +734,7 @@ async function mcp(anfrage: Request, raum: string): Promise<Response> {
         antworten.push({ jsonrpc: "2.0", id, result: {
           protocolVersion: PROTOKOLLE.includes(gewuenscht) ? gewuenscht : PROTOKOLLE[1],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "planer", title: "Planer", version: "1.1.0" },
+          serverInfo: { name: "planer", title: "Planer", version: "1.2.0" },
           instructions: ANLEITUNG,
         } });
       } else if (methode === "ping") {

@@ -34,6 +34,10 @@ echo "== Planer: eigene Termine, nichts geht verloren =="
 osascript -l JavaScript tests/test_planer.js
 
 echo
+echo "== Erinnerungen: wann sie dran sind (vorkommen.js) =="
+osascript -l JavaScript tests/test_erinnerungen.js
+
+echo
 echo "== Notizbuch: freie Notizen und Verknuepfungen =="
 osascript -l JavaScript tests/test_zettel.js
 

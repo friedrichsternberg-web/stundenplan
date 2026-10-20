@@ -2342,6 +2342,139 @@ function gedaechtnisEntfernen(kennung) {
   Abgleich.anstossen();
 }
 
+/* --- Eigene Erinnerungen (seit 20.10.2026) -----------------------------
+
+   Eine Erinnerung, die an nichts hängt: "Wäsche aufhängen, heute 18:00",
+   "Miete prüfen, monatlich am 1.". Anders als die Erinnerung an einem
+   To-do (siehe oben) gibt es hier kein Abhaken: einmalige sind nach dem
+   Termin "vorbei", wiederkehrende laufen, bis man sie löscht.
+
+   Eintragsart "erinnerung", Text in "inhalt", das erste Mal in
+   "erinnerung" (dasselbe Feld wie bei To-dos, damit der Server es
+   findet), die Regel in "wiederholung". Wann sie das nächste Mal dran
+   ist, rechnet vorkommen.js aus - dieselbe Datei wie auf dem Server. */
+const SPEICHER_ERINNERUNGEN = "stundenplan.erinnerungen";
+let erinnerungen = [];
+
+function erinnerungGeraderuecken(roh) {
+  const e = roh && typeof roh === "object" ? roh : {};
+  const regel = typeof e.wiederholung === "string" && typeof ErinnerungVorkommen !== "undefined"
+    && ErinnerungVorkommen.regelGueltig(e.wiederholung) ? e.wiederholung : "";
+  return {
+    id: String(e.id || ""),
+    text: typeof e.text === "string" ? e.text : "",
+    anker: typeof e.anker === "string" ? e.anker : "",
+    wiederholung: regel,
+    angelegt: Number(e.angelegt) || Number(e.geaendert) || 0,
+    geaendert: Number(e.geaendert) || 0,
+  };
+}
+
+function erinnerungenLaden() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SPEICHER_ERINNERUNGEN) || "[]");
+    return Array.isArray(roh)
+      ? roh.map(erinnerungGeraderuecken).filter(e => e.id && e.text && e.anker) : [];
+  } catch (fehler) {
+    return [];
+  }
+}
+
+function erinnerungenSpeichern() {
+  try { localStorage.setItem(SPEICHER_ERINNERUNGEN, JSON.stringify(erinnerungen)); }
+  catch (fehler) { /* siehe notizenSpeichern() */ }
+  Abgleich.anstossen();
+}
+
+/* Jetzt als Ortszeit "2026-10-20T14:05", wie die Erinnerungen selbst. */
+function jetztOrtszeit(jetzt) {
+  const d = jetzt || new Date();
+  return tagesSchluessel(d) + "T" + String(d.getHours()).padStart(2, "0")
+    + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+/* Legt eine Erinnerung an. Gibt "" zurück oder sagt, was fehlt. */
+function erinnerungHinzufuegen(text, anker, wiederholung, jetzt) {
+  const sauber = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
+  const regel = wiederholung || "";
+  if (!sauber) return "Woran soll ich dich erinnern?";
+  if (typeof ErinnerungVorkommen === "undefined" || !ErinnerungVorkommen.gueltig(anker)) {
+    return "Bitte Tag und Uhrzeit wählen.";
+  }
+  if (!ErinnerungVorkommen.regelGueltig(regel)) return "Unbekannte Wiederholung.";
+  if (!regel && anker <= jetztOrtszeit(jetzt)) return "Der Zeitpunkt ist schon vorbei.";
+  const zeitpunkt = Abgleich.jetzt();
+  const kennung = "erinnerung-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+  erinnerungen.push({ id: kennung, text: sauber, anker: anker, wiederholung: regel,
+                      angelegt: zeitpunkt, geaendert: zeitpunkt });
+  grabsteinEntfernen(kennung);
+  erinnerungenSpeichern();
+  return "";
+}
+
+function erinnerungEntfernen(kennungen) {
+  const weg = new Set(kennungen);
+  const vorher = erinnerungen.length;
+  erinnerungen = erinnerungen.filter(e => !weg.has(e.id));
+  if (erinnerungen.length === vorher) return;
+  weg.forEach(grabsteinSetzen);
+  erinnerungenSpeichern();
+}
+
+/* Kommende nach dem nächsten Mal sortiert, vergangene einmalige für sich. */
+function erinnerungenSortiert(jetzt) {
+  const nun = jetztOrtszeit(jetzt);
+  const kommend = [], vorbei = [];
+  for (const e of erinnerungen) {
+    const naechstes = ErinnerungVorkommen.naechstes(e.anker, e.wiederholung, nun);
+    if (naechstes) kommend.push({ erinnerung: e, naechstes: naechstes });
+    else vorbei.push(e);
+  }
+  kommend.sort((a, b) => a.naechstes.localeCompare(b.naechstes));
+  vorbei.sort((a, b) => b.anker.localeCompare(a.anker));
+  return { kommend: kommend, vorbei: vorbei };
+}
+
+/* Die Schnellwahl über dem Formular: aus "morgen9" wird ein Zeitpunkt. */
+const ERINNERUNG_SCHNELL = [
+  ["30min", "In 30 Min."],
+  ["1std", "In 1 Std."],
+  ["heute18", "Heute 18:00"],
+  ["morgen9", "Morgen 9:00"],
+  ["samstag10", "Sa 10:00"],
+];
+
+function erinnerungSchnellZeit(art, jetzt) {
+  const d = new Date((jetzt || new Date()).getTime());
+  const uhr = (h, m) => String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+  const heute = tagesSchluessel(d);
+  if (art === "30min" || art === "1std") {
+    // Auf volle 5 Minuten aufgerundet: 14:07 + 1 Std. ergibt 15:10.
+    const spaeter = new Date(d.getTime() + (art === "30min" ? 30 : 60) * 60000);
+    const minuten = Math.ceil(spaeter.getMinutes() / 5) * 5;
+    spaeter.setMinutes(minuten, 0, 0);
+    return tagesSchluessel(spaeter) + "T" + uhr(spaeter.getHours(), spaeter.getMinutes());
+  }
+  if (art === "heute18") return heute + "T18:00";
+  if (art === "morgen9") return tagVerschieben(heute, 1) + "T09:00";
+  if (art === "samstag10") {
+    // Der nächste Samstag; ist heute Samstag vor 10 Uhr, dann heute.
+    let abstand = (6 - d.getDay() + 7) % 7;
+    if (abstand === 0 && d.getHours() >= 10) abstand = 7;
+    return tagVerschieben(heute, abstand) + "T10:00";
+  }
+  return "";
+}
+
+/* "heute 18:00", "morgen 09:00", "Do 22.10., 09:00" */
+function erinnerungWannText(zeitpunkt, jetzt) {
+  const heute = tagesSchluessel(jetzt || new Date());
+  const tag = zeitpunkt.slice(0, 10), uhr = zeitpunkt.slice(11, 16);
+  if (tag === heute) return "heute " + uhr;
+  if (tag === tagVerschieben(heute, 1)) return "morgen " + uhr;
+  return zeitpunktLesbar(zeitpunkt);
+}
+
 /* Volltextsuche über Überschrift und Text. Kleinschreibung auf beiden
    Seiten, damit "hwr" auch "HWR" findet. */
 function zettelGefunden(suchwort) {
@@ -5868,6 +6001,117 @@ function einkaufZeichnen() {
         ${gekauft.map(zeile).join("")}` : "");
 }
 
+/* Die Erinnerungen im To-do-Reiter. Gezeichnet wird nur die Liste und die
+   Unterzeile, nie das Formular - siehe index.html. */
+function erinnerungenZeichnen() {
+  const liste = document.getElementById("erinnerungListe");
+  if (!liste || typeof ErinnerungVorkommen === "undefined") return;
+  const jetzt = new Date();
+  const { kommend, vorbei } = erinnerungenSortiert(jetzt);
+
+  const unterzeile = document.getElementById("erinnerungUnterzeile");
+  if (unterzeile) {
+    unterzeile.textContent = kommend.length
+      ? "nächste " + erinnerungWannText(kommend[0].naechstes, jetzt) : "";
+  }
+
+  const zeile = (e, naechstes) => `
+    <div class="erinnerung-posten${naechstes ? "" : " erinnerung-vorbei"}">
+      <span class="erinnerung-glocke" aria-hidden="true">${e.wiederholung ? "↻" : "🔔"}</span>
+      <span class="erinnerung-text">
+        <span>${sicher(e.text)}</span>
+        <span class="erinnerung-wann">${naechstes
+          ? sicher(erinnerungWannText(naechstes, jetzt))
+            + (e.wiederholung ? " · " + sicher(ErinnerungVorkommen.regelText(e.wiederholung)) : "")
+          : "war " + sicher(zeitpunktLesbar(e.anker))}</span>
+      </span>
+      <button type="button" class="einkauf-weg" data-erinnerung-weg="${sicher(e.id)}"
+              aria-label="Erinnerung löschen" title="Löschen">×</button>
+    </div>`;
+
+  liste.innerHTML =
+    (kommend.length ? kommend.map(k => zeile(k.erinnerung, k.naechstes)).join("")
+      : `<p class="start-leer">Keine Erinnerungen geplant.</p>`)
+    + (vorbei.length ? `
+        <div class="einkauf-gekauft-kopf">
+          <span>Vorbei (${vorbei.length})</span>
+          <button type="button" class="knopf-schlicht start-klein" id="erinnerungVorbeiWeg">Vorbei entfernen</button>
+        </div>
+        ${vorbei.slice(0, 5).map(e => zeile(e, "")).join("")}` : "");
+}
+
+/* Formular auf- oder zuklappen. Beim Aufklappen steht schon "in 1 Std."
+   drin, damit ein kurzer Text und "Erinnern" reichen. */
+function erinnerungFormZeigen(an) {
+  const form = document.getElementById("erinnerungForm");
+  const knopf = document.getElementById("erinnerungNeu");
+  if (!form || !knopf) return;
+  form.hidden = !an;
+  knopf.setAttribute("aria-expanded", an ? "true" : "false");
+  knopf.textContent = an ? "Schließen" : "+ Erinnerung";
+  document.getElementById("erinnerungMeldung").textContent = "";
+  if (an) {
+    document.getElementById("erinnerungZeit").value = erinnerungSchnellZeit("1std");
+    document.getElementById("erinnerungWiederholung").value = "";
+    erinnerungSchnellMarkieren();
+    document.getElementById("erinnerungText").focus();
+  }
+}
+
+/* Die Schnellwahl-Kapsel, deren Zeit gerade im Feld steht, leuchtet. */
+function erinnerungSchnellMarkieren() {
+  const wert = document.getElementById("erinnerungZeit").value;
+  document.querySelectorAll("#erinnerungSchnell [data-schnell]").forEach(knopf => {
+    knopf.classList.toggle("ist-gewaehlt", erinnerungSchnellZeit(knopf.getAttribute("data-schnell")) === wert);
+  });
+}
+
+function erinnerungenVerbinden() {
+  const form = document.getElementById("erinnerungForm");
+  if (!form || typeof ErinnerungVorkommen === "undefined") return;
+
+  document.getElementById("erinnerungSchnell").innerHTML = ERINNERUNG_SCHNELL.map(([art, name]) =>
+    `<button type="button" class="erinnerung-kapsel" data-schnell="${art}">${sicher(name)}</button>`).join("");
+  document.getElementById("erinnerungWiederholung").innerHTML = ErinnerungVorkommen.WIEDERHOLUNGEN
+    .map(([wert, name]) => `<option value="${wert}">${sicher(name)}</option>`).join("");
+
+  document.getElementById("erinnerungNeu").addEventListener("click", () => erinnerungFormZeigen(form.hidden));
+  document.getElementById("erinnerungAbbrechen").addEventListener("click", () => erinnerungFormZeigen(false));
+
+  document.getElementById("erinnerungSchnell").addEventListener("click", ereignis => {
+    const knopf = ereignis.target.closest ? ereignis.target.closest("[data-schnell]") : null;
+    if (!knopf) return;
+    document.getElementById("erinnerungZeit").value = erinnerungSchnellZeit(knopf.getAttribute("data-schnell"));
+    erinnerungSchnellMarkieren();
+  });
+  document.getElementById("erinnerungZeit").addEventListener("input", erinnerungSchnellMarkieren);
+
+  form.addEventListener("submit", ereignis => {
+    ereignis.preventDefault();
+    const feld = document.getElementById("erinnerungText");
+    const fehler = erinnerungHinzufuegen(feld.value, document.getElementById("erinnerungZeit").value,
+                                         document.getElementById("erinnerungWiederholung").value);
+    if (fehler) { document.getElementById("erinnerungMeldung").textContent = fehler; return; }
+    feld.value = "";
+    erinnerungFormZeigen(false);
+    erinnerungenZeichnen();
+    einblenden(document.getElementById("erinnerungListe"));
+  });
+
+  document.getElementById("erinnerungListe").addEventListener("click", ereignis => {
+    const ziel = ereignis.target.closest ? ereignis.target.closest("[data-erinnerung-weg],#erinnerungVorbeiWeg") : null;
+    if (!ziel) return;
+    const weg = ziel.getAttribute("data-erinnerung-weg");
+    if (weg) erinnerungEntfernen([weg]);
+    else erinnerungEntfernen(erinnerungenSortiert().vorbei.map(e => e.id));
+    erinnerungenZeichnen();
+  });
+
+  /* Eine Erinnerung kann während der offenen Seite vorbei sein. Einmal pro
+     Minute nachzeichnen, damit "heute 18:00" nicht um 19 Uhr noch dasteht. */
+  setInterval(() => { if (seite === "todos" && form.hidden) erinnerungenZeichnen(); }, 60000);
+}
+
 /* --- Notizen verschieben: gedrückt halten, dann ziehen ------------------
 
    Wie auf dem iPhone: kurz auf der Notiz liegen bleiben, bis sie sich
@@ -6615,6 +6859,17 @@ function abgleichSammeln() {
     };
   }
 
+  for (const e of erinnerungen) {
+    eintraege[e.id] = {
+      art: "erinnerung",
+      inhalt: e.text,
+      erinnerung: e.anker,
+      wiederholung: e.wiederholung,
+      angelegt: Number(e.angelegt) || 0,
+      geaendert: Number(e.geaendert) || 0,
+    };
+  }
+
   for (const g of gedaechtnis) {
     eintraege[g.id] = {
       art: "gedaechtnis",
@@ -6713,6 +6968,7 @@ function abgleichUebernehmen(nutzlast) {
   const neuerEinkauf = [];
   const neueModulnotizen = [];
   const neuesGedaechtnis = [];
+  const neueErinnerungen = [];
 
   for (const kennung of Object.keys(eintraege)) {
     const eintrag = eintraege[kennung] || {};
@@ -6769,6 +7025,14 @@ function abgleichUebernehmen(nutzlast) {
         wichtig: eintrag.wichtig, angeheftet: eintrag.angeheftet,
         position: eintrag.position, geaendert: zeitpunkt,
       }));
+      continue;
+    }
+
+    // Eine eigene Erinnerung (Text, erstes Mal, Wiederholung).
+    if (eintrag.art === "erinnerung") {
+      const e = erinnerungGeraderuecken({ id: kennung, text: eintrag.inhalt, anker: eintrag.erinnerung,
+        wiederholung: eintrag.wiederholung, angelegt: eintrag.angelegt, geaendert: zeitpunkt });
+      if (e.text && e.anker) neueErinnerungen.push(e);
       continue;
     }
 
@@ -6843,6 +7107,7 @@ function abgleichUebernehmen(nutzlast) {
   einkauf = neuerEinkauf;
   modulnotizen = neueModulnotizen;
   gedaechtnis = neuesGedaechtnis;
+  erinnerungen = neueErinnerungen;
   grabsteine = neueGrabsteine;
   unbekannteEintraege = neueUnbekannte;
   // Steht im Abgleich noch keine Einstellung, bleibt die auf dem Gerät.
@@ -6873,6 +7138,7 @@ function abgleichUebernehmen(nutzlast) {
     localStorage.setItem(SPEICHER_EINKAUF, JSON.stringify(einkauf));
     localStorage.setItem(SPEICHER_MODULNOTIZEN, JSON.stringify(modulnotizen));
     localStorage.setItem(SPEICHER_GEDAECHTNIS, JSON.stringify(gedaechtnis));
+    localStorage.setItem(SPEICHER_ERINNERUNGEN, JSON.stringify(erinnerungen));
     localStorage.setItem(SPEICHER_GRABSTEINE, JSON.stringify(grabsteine));
   } catch (fehler) { /* siehe notizenSpeichern() */ }
 }
@@ -7559,7 +7825,7 @@ const SEITEN_ZEICHNER = {
   plan: () => wocheZeichnen(),
   training: () => trainingZeichnen(),
   zettel: () => zettelZeichnen(),
-  todos: () => todosZeichnen(),
+  todos: () => { erinnerungenZeichnen(); todosZeichnen(); },
 };
 // Am Anfang ist noch keiner gezeichnet, also sind alle veraltet.
 const veralteteSeiten = new Set(["start", "plan", "training", "zettel", "todos"]);
@@ -8305,6 +8571,7 @@ function starten() {
   einkauf = einkaufLaden();
   modulnotizen = modulnotizenLaden();
   gedaechtnis = gedaechtnisLaden();
+  erinnerungen = erinnerungenLaden();
   abgewaehlteFaecher = filterLaden();
   training = trainingLaden();
   post = postLaden();
@@ -8340,6 +8607,7 @@ function starten() {
   geraeteVerbinden();
   terminFormVerbinden();
   zettelVerbinden();
+  erinnerungenVerbinden();
   uniplanVerbinden();
   // ansichtSetzen hebt den richtigen Ansichts-Knopf hervor, seiteSetzen den
   // richtigen Reiter – und ruft am Ende allesZeichnen() auf. Deshalb steht

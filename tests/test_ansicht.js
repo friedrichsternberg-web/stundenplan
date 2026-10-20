@@ -107,6 +107,7 @@ var STUNDENPLAN = {
 
 const werkzeug = eval(
   lies(WURZEL + "/sync.js") + "\n" +
+  lies(WURZEL + "/vorkommen.js") + "\n" +
   lies(WURZEL + "/app.js") + "\n" +
   "({" +
   "  zeitgruppeVon: zeitgruppeVon," +
@@ -169,7 +170,16 @@ const werkzeug = eval(
   "  trainingAbholen: function (z) { trainingLaeuft = false; trainingAbholen(z); trainingLaeuft = false; }," +
   "  postStartKarte: postStartKarte," +
   "  postSetzen: function (p) { post = p; }," +
-  "  postAlsGesehen: postAlsGesehen" +
+  "  postAlsGesehen: postAlsGesehen," +
+  "  erinnerungHinzufuegen: erinnerungHinzufuegen," +
+  "  erinnerungEntfernen: erinnerungEntfernen," +
+  "  erinnerungenSortiert: erinnerungenSortiert," +
+  "  erinnerungenZeichnen: erinnerungenZeichnen," +
+  "  erinnerungSchnellZeit: erinnerungSchnellZeit," +
+  "  erinnerungenRoh: function (w) { if (w) erinnerungen = w; return erinnerungen; }," +
+  "  abgleichSammeln: abgleichSammeln," +
+  "  abgleichUebernehmen: abgleichUebernehmen," +
+  "  grabsteineRoh: function () { return grabsteine; }" +
   "})");
 
 
@@ -1486,6 +1496,69 @@ localStorage.removeItem("stundenplan.postZugang");
 localStorage.removeItem("stundenplan.postGesehen");
 werkzeug.postSetzen(null);
 
+
+
+/* ====================================================================== */
+abschnitt("23. Eigene Erinnerungen");
+
+werkzeug.erinnerungenRoh([]);
+const jetzt23 = new Date(2026, 9, 20, 14, 7);   // Di 20.10.2026, 14:07
+pruefe("ohne Text: Rueckfrage",
+       werkzeug.erinnerungHinzufuegen("  ", "2026-10-20T18:00", "", jetzt23) !== "");
+pruefe("einmalig in der Vergangenheit: abgelehnt",
+       werkzeug.erinnerungHinzufuegen("Zu spaet", "2026-10-20T14:00", "", jetzt23) === "Der Zeitpunkt ist schon vorbei.");
+pruefe("kaputte Zeit: abgelehnt",
+       werkzeug.erinnerungHinzufuegen("Kaputt", "2026-10-20", "", jetzt23) !== "");
+pruefe("unbekannte Wiederholung: abgelehnt",
+       werkzeug.erinnerungHinzufuegen("Stuendlich", "2026-10-20T18:00", "stuendlich", jetzt23) !== "");
+pruefe("einmalig heute 18:00: angelegt",
+       werkzeug.erinnerungHinzufuegen("TEST Waesche <b>aufhaengen</b>", "2026-10-20T18:00", "", jetzt23) === "");
+pruefe("wiederkehrend darf in der Vergangenheit beginnen",
+       werkzeug.erinnerungHinzufuegen("TEST Miete pruefen", "2026-01-01T09:00", "monatlich", jetzt23) === "");
+pruefe("nur die zwei gueltigen stehen da", werkzeug.erinnerungenRoh().length === 2
+       && werkzeug.erinnerungenRoh().every(e => /^erinnerung-/.test(e.id)));
+
+const sortiert23 = werkzeug.erinnerungenSortiert(jetzt23);
+pruefe("sortiert nach dem naechsten Mal: erst heute 18:00, dann 01.11.",
+       sortiert23.kommend.length === 2 && sortiert23.kommend[0].naechstes === "2026-10-20T18:00"
+       && sortiert23.kommend[1].naechstes === "2026-11-01T09:00");
+pruefe("nach 18 Uhr ist die einmalige vorbei",
+       werkzeug.erinnerungenSortiert(new Date(2026, 9, 20, 18, 1)).vorbei.length === 1);
+
+werkzeug.erinnerungenZeichnen();
+const liste23 = document.getElementById("erinnerungListe").innerHTML;
+pruefe("die Liste zeigt beide und die Regel", liste23.indexOf("TEST Miete pruefen") >= 0
+       && liste23.indexOf("Monatlich") >= 0 && liste23.indexOf("data-erinnerung-weg") >= 0);
+pruefe("Text wird abgesichert, kein HTML aus der Eingabe",
+       liste23.indexOf("<b>aufhaengen") < 0 && liste23.indexOf("&lt;b&gt;") >= 0);
+pruefe("keine kaputten Werte", !/undefined|NaN|\[object/.test(liste23));
+
+/* Rundlauf durch den Abgleich: was rausgeht, kommt unveraendert wieder. */
+const vorher23 = JSON.stringify(werkzeug.erinnerungenRoh());
+const gesammelt23 = werkzeug.abgleichSammeln();
+const miete23 = werkzeug.erinnerungenRoh().filter(e => e.wiederholung === "monatlich")[0];
+const raus23 = gesammelt23.eintraege[miete23.id];
+pruefe("im Abgleich als art erinnerung, Text in inhalt, Zeit in erinnerung",
+       raus23 && raus23.art === "erinnerung" && raus23.inhalt === "TEST Miete pruefen"
+       && raus23.erinnerung === "2026-01-01T09:00" && raus23.wiederholung === "monatlich" && raus23.text === undefined);
+werkzeug.abgleichUebernehmen(gesammelt23);
+pruefe("nach dem Zurueckholen dieselben Erinnerungen", JSON.stringify(werkzeug.erinnerungenRoh()) === vorher23);
+
+werkzeug.erinnerungEntfernen([miete23.id]);
+pruefe("geloescht: weg und mit Grabstein, damit andere Geraete es auch loeschen",
+       werkzeug.erinnerungenRoh().length === 1 && Boolean(werkzeug.grabsteineRoh()[miete23.id]));
+
+abschnitt("23b. Schnellwahl");
+pruefe("in 1 Std. von 14:07: 15:10 (auf 5 Min. gerundet)", werkzeug.erinnerungSchnellZeit("1std", jetzt23) === "2026-10-20T15:10");
+pruefe("in 30 Min. von 23:50: morgen 00:20",
+       werkzeug.erinnerungSchnellZeit("30min", new Date(2026, 9, 20, 23, 50)) === "2026-10-21T00:20");
+pruefe("morgen 9:00", werkzeug.erinnerungSchnellZeit("morgen9", jetzt23) === "2026-10-21T09:00");
+pruefe("Sa 10:00 von Dienstag: dieser Samstag", werkzeug.erinnerungSchnellZeit("samstag10", jetzt23) === "2026-10-24T10:00");
+pruefe("Sa 10:00 am Samstag um 11: der naechste",
+       werkzeug.erinnerungSchnellZeit("samstag10", new Date(2026, 9, 24, 11, 0)) === "2026-10-31T10:00");
+pruefe("Sa 10:00 am Samstag um 8: heute",
+       werkzeug.erinnerungSchnellZeit("samstag10", new Date(2026, 9, 24, 8, 0)) === "2026-10-24T10:00");
+werkzeug.erinnerungenRoh([]);
 
 /* ====================================================================== */
 console.log("");

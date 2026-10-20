@@ -86,7 +86,7 @@ jobs:
         # dann, wenn sich am Quellcode etwas getan hat - und eben nicht bei
         # jedem Lauf, sonst gaebe es alle 30 Minuten eine neue index.html.
         run: |
-          cp index.html app.js sync.js melden.js style.css symbol.png \
+          cp index.html app.js sync.js melden.js vorkommen.js style.css symbol.png \
              manifest.json sw.js verbinden.html veroeffentlichung/
           VERSION="${GITHUB_SHA:0:8}"
           sed -i \
@@ -94,6 +94,7 @@ jobs:
             -e "s|src=\"app.js\"|src=\"app.js?v=$VERSION\"|" \
             -e "s|src=\"sync.js\"|src=\"sync.js?v=$VERSION\"|" \
             -e "s|src=\"melden.js\"|src=\"melden.js?v=$VERSION\"|" \
+            -e "s|src=\"vorkommen.js\"|src=\"vorkommen.js?v=$VERSION\"|" \
             veroeffentlichung/index.html
 
           # sw.js bekommt ABSICHTLICH keine Versionsnummer an die Adresse.
@@ -121,11 +122,11 @@ jobs:
           # keine Benachrichtigungen mehr an. Beides sieht aus wie "geht
           # halt gerade nicht". Deshalb hier hart abbrechen, statt es
           # stillschweigend zu veroeffentlichen.
-          for datei in sync.js melden.js sw.js manifest.json verbinden.html; do
+          for datei in sync.js melden.js vorkommen.js sw.js manifest.json verbinden.html; do
             test -s "veroeffentlichung/$datei" \
               || { echo "$datei fehlt in der Veroeffentlichung"; exit 1; }
           done
-          for tag in 'src="sync.js?v=' 'src="melden.js?v=' 'rel="manifest"'; do
+          for tag in 'src="sync.js?v=' 'src="melden.js?v=' 'src="vorkommen.js?v=' 'rel="manifest"'; do
             grep -q "$tag" veroeffentlichung/index.html \
               || { echo "index.html bindet $tag nicht ein"; exit 1; }
           done

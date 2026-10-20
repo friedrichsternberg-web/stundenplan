@@ -107,6 +107,7 @@ var matchMedia = window.matchMedia;
    eval waere von aussen sonst unerreichbar. */
 const werkzeug = eval(
   lies(WURZEL + "/sync.js") + "\n" +
+  lies(WURZEL + "/vorkommen.js") + "\n" +
   lies(WURZEL + "/app.js") + "\n" +
   "({" +
   "  A: Abgleich," +

@@ -218,6 +218,42 @@
 
   <!-- ================= Bereich 3: To-dos ================= -->
   <section id="seiteTodos" hidden>
+    <!-- Eigene Erinnerungen. Wie beim Einkaufszettel steht das Formular fest
+         im HTML und wird nie neu gezeichnet, nur #erinnerungListe - sonst
+         verschwände ein halb getippter Text beim nächsten Abgleich. Siehe
+         erinnerungenZeichnen() in app.js. -->
+    <section class="start-karte erinnerung-karte" id="erinnerungKarte">
+      <div class="start-karte-kopf">
+        <span class="start-symbol start-symbol-lila"><svg class="symbol" viewBox="0 0 24 24" aria-hidden="true"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
+          d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span>
+        <div class="start-karte-titel">
+          <h2>Erinnerungen</h2>
+          <span class="start-unterzeile" id="erinnerungUnterzeile"></span>
+        </div>
+        <button type="button" class="knopf-schlicht start-klein knopf-betont" id="erinnerungNeu"
+                aria-expanded="false" aria-controls="erinnerungForm">+ Erinnerung</button>
+      </div>
+      <div class="start-karte-inhalt">
+        <form class="erinnerung-neu" id="erinnerungForm" autocomplete="off" hidden>
+          <input type="text" id="erinnerungText" maxlength="200" enterkeyhint="done"
+                 placeholder="Woran soll ich dich erinnern?" aria-label="Woran erinnern">
+          <div class="erinnerung-schnell" id="erinnerungSchnell"></div>
+          <div class="erinnerung-zeile">
+            <label class="form-feld"><span>Wann</span>
+              <input type="datetime-local" id="erinnerungZeit" step="300"></label>
+            <label class="form-feld"><span>Wiederholen</span>
+              <select id="erinnerungWiederholung"></select></label>
+          </div>
+          <div class="erinnerung-knoepfe">
+            <button type="button" class="knopf-schlicht" id="erinnerungAbbrechen">Abbrechen</button>
+            <button type="submit" class="knopf-schlicht knopf-betont">Erinnern</button>
+          </div>
+          <p class="erinnerung-meldung" id="erinnerungMeldung" role="status"></p>
+        </form>
+        <div id="erinnerungListe"></div>
+      </div>
+    </section>
     <div id="todoInhalt"></div>
   </section>
 
@@ -447,6 +483,9 @@
      Zugangsdaten aus sync.js und muss deshalb dahinter stehen. -->
 <script src="sync.js"></script>
 <script src="melden.js"></script>
+<!-- Rechnet aus, wann eine Erinnerung dran ist. Dieselbe Datei benutzt der
+     Erinnerungsdienst auf dem Server, siehe Kopf von vorkommen.js. -->
+<script src="vorkommen.js"></script>
 
 <!-- app.js lädt daten/plan.js selbst nach – siehe datenLaden() dort.
      Deshalb steht hier kein zweites <script>-Tag für die Daten. -->

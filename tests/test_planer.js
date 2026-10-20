@@ -113,6 +113,7 @@ var STUNDENPLAN = {
 
 const werkzeug = eval(
   lies(WURZEL + "/sync.js") + "\n" +
+  lies(WURZEL + "/vorkommen.js") + "\n" +
   lies(WURZEL + "/app.js") + "\n" +
   "({" +
   "  sammeln: abgleichSammeln," +
