@@ -62,7 +62,7 @@ const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch",
    könnte, und die Selbstprüfung unten macht dann nichts.
 
    Wozu das gut ist, steht bei aufNeueFassungPruefen(). */
-const GEBAUTE_VERSION = "d7f7d868";
+const GEBAUTE_VERSION = "d7359a8a";
 
 /* Die Wahlpflichtfächer, die du NICHT belegst. Sie sind von Anfang an
    ausgeblendet, ohne dass du erst durch den Filter klicken musst.
@@ -844,11 +844,21 @@ function startZeichnen() {
       ? "zu " + kurzerTitel(x.eintrag.termin.titel) : "Heute fällig"),
     x.ueberfaellig)).join("");
 
+  /* Erinnerungen, die heute noch kommen: klein, als eine Zeile je
+     Erinnerung. Ein Tipp führt zur Liste im To-do-Reiter. */
+  const heuteErinnerungen = erinnerungenHeute(jetzt).map(k => `
+    <button type="button" class="heute-erinnerung" data-start-seite="todos">
+      <span class="heute-erinnerung-zeit">${sicher(k.naechstes.slice(11, 16))}</span>
+      <span class="heute-erinnerung-text">${sicher(k.erinnerung.text)}</span>
+    </button>`).join("");
+
   const leer = !termine && !heuteTodos && !ganztags;
   karten.push(startKarte("Heute", "plan", "Plan", `
     ${ganztags ? `<div class="start-ganztags-reihe">${ganztags}</div>` : ""}
     ${termine ? `<div class="heute-leiste">${termine}</div>`
       : `<p class="start-leer">${h.vorbei ? "Für heute keine Termine mehr." : "Heute keine Termine."}</p>`}
+    ${heuteErinnerungen ? `<div class="heute-abschnitt">Erinnerungen</div>
+      <div class="heute-erinnerungen">${heuteErinnerungen}</div>` : ""}
     ${heuteTodos ? `<div class="heute-abschnitt">To-dos für heute</div>${heuteTodos}` : ""}
     ${leer ? "" : ""}`,
     { symbol: "heute", farbe: "blau", breit: true, klasse: "start-karte-heute", unterzeile: anzahlText }));
@@ -2433,6 +2443,14 @@ function erinnerungenSortiert(jetzt) {
   kommend.sort((a, b) => a.naechstes.localeCompare(b.naechstes));
   vorbei.sort((a, b) => b.anker.localeCompare(a.anker));
   return { kommend: kommend, vorbei: vorbei };
+}
+
+/* Was heute noch an Erinnerungen kommt, nach Uhrzeit. Für die Karte
+   "Heute" auf der Übersicht; vergangene von heute fallen weg. */
+function erinnerungenHeute(jetzt) {
+  if (typeof ErinnerungVorkommen === "undefined") return [];
+  const heute = tagesSchluessel(jetzt);
+  return erinnerungenSortiert(jetzt).kommend.filter(k => k.naechstes.slice(0, 10) === heute);
 }
 
 /* Die Schnellwahl über dem Formular: aus "morgen9" wird ein Zeitpunkt. */
