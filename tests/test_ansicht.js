@@ -176,6 +176,7 @@ const werkzeug = eval(
   "  erinnerungenSortiert: erinnerungenSortiert," +
   "  erinnerungenZeichnen: erinnerungenZeichnen," +
   "  erinnerungSchnellZeit: erinnerungSchnellZeit," +
+  "  erinnerungenHeute: erinnerungenHeute," +
   "  erinnerungenRoh: function (w) { if (w) erinnerungen = w; return erinnerungen; }," +
   "  abgleichSammeln: abgleichSammeln," +
   "  abgleichUebernehmen: abgleichUebernehmen," +
@@ -1558,7 +1559,40 @@ pruefe("Sa 10:00 am Samstag um 11: der naechste",
        werkzeug.erinnerungSchnellZeit("samstag10", new Date(2026, 9, 24, 11, 0)) === "2026-10-31T10:00");
 pruefe("Sa 10:00 am Samstag um 8: heute",
        werkzeug.erinnerungSchnellZeit("samstag10", new Date(2026, 9, 24, 8, 0)) === "2026-10-24T10:00");
+
+abschnitt("23c. Erinnerungen von heute auf der Uebersicht");
+werkzeug.erinnerungenRoh([
+  { id: "erinnerung-a", text: "TEST Taschenrechner", anker: "2026-10-20T18:00", wiederholung: "", angelegt: 1, geaendert: 1 },
+  { id: "erinnerung-b", text: "TEST Vitamin", anker: "2026-10-01T08:00", wiederholung: "taeglich", angelegt: 1, geaendert: 1 },
+  { id: "erinnerung-c", text: "TEST Morgen frueh", anker: "2026-10-21T06:00", wiederholung: "", angelegt: 1, geaendert: 1 },
+  { id: "erinnerung-d", text: "TEST Heute abends", anker: "2026-10-20T21:30", wiederholung: "", angelegt: 1, geaendert: 1 },
+]);
+const heute23 = werkzeug.erinnerungenHeute(jetzt23).map(k => k.erinnerung.text + "@" + k.naechstes.slice(11));
+pruefe("heute um 14:07: 18:00 und 21:30, nach Uhrzeit",
+       heute23.join("|") === "TEST Taschenrechner@18:00|TEST Heute abends@21:30", heute23.join("|"));
+pruefe("die taegliche von 08:00 ist heute schon vorbei und steht nicht da",
+       heute23.every(t => t.indexOf("Vitamin") < 0));
+pruefe("morgen frueh gehoert nicht zu heute", heute23.every(t => t.indexOf("Morgen frueh") < 0));
+
+/* Auf der echten Uebersicht, mit der echten Uhr: eine taegliche
+   Erinnerung um 23:59 steht heute immer noch an (ausser in der letzten
+   Minute des Tages, dann ist nichts zu pruefen). */
+const uhr23 = new Date();
+if (uhr23.getHours() * 60 + uhr23.getMinutes() < 23 * 60 + 58) {
+  werkzeug.erinnerungenRoh([{ id: "erinnerung-e", text: "TEST <i>Spaet</i>", anker: "2020-01-01T23:59",
+                              wiederholung: "taeglich", angelegt: 1, geaendert: 1 }]);
+  werkzeug.startZeichnen();
+  const start23 = document.getElementById("startInhalt").innerHTML;
+  pruefe("die Karte Heute zeigt die Erinnerung mit Uhrzeit",
+         start23.indexOf("heute-erinnerung") >= 0 && start23.indexOf("23:59") >= 0
+         && start23.indexOf("Erinnerungen</div>") >= 0);
+  pruefe("abgesichert und mit Weg zum To-do-Reiter",
+         start23.indexOf("<i>Spaet") < 0 && start23.indexOf('data-start-seite="todos"') >= 0);
+}
 werkzeug.erinnerungenRoh([]);
+werkzeug.startZeichnen();
+pruefe("ohne Erinnerungen kein leerer Abschnitt",
+       document.getElementById("startInhalt").innerHTML.indexOf("heute-erinnerung") < 0);
 
 /* ====================================================================== */
 console.log("");

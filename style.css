@@ -4461,3 +4461,25 @@ button:active:not(:disabled),
 .erinnerung-wann { font-size: 12.5px; color: var(--schrift-leise); }
 .erinnerung-vorbei .erinnerung-text > span:first-child { color: var(--schrift-leise); text-decoration: line-through; }
 .erinnerung-vorbei .erinnerung-glocke { opacity: .5; }
+
+
+/* Erinnerungen in der Karte "Heute": klein, eine Zeile je Erinnerung,
+   Glocke und Uhrzeit vorn. */
+.heute-erinnerungen { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.heute-erinnerung {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--schrift);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.heute-erinnerung::before { content: "🔔"; font-size: 12px; }
+.heute-erinnerung-zeit { flex: 0 0 auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--schrift-leise); }
+.heute-erinnerung-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
