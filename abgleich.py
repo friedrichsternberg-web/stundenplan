@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -166,7 +167,45 @@ ZEITZONE_UTC = ZoneInfo("UTC")
 # 2. Die Kalenderdatei holen
 # ===========================================================================
 
-def kalender_herunterladen(bekanntes_etag):
+# Wie oft und wie geduldig. Am 21.10.2026 hing der HWR-Server einmal genau
+# die 60 Sekunden, die ein einzelner Versuch damals warten durfte - der Lauf
+# war rot, eine halbe Stunde spaeter ging alles wieder. Drei kuerzere
+# Versuche mit Pause dazwischen ueberstehen so einen Aussetzer.
+ABRUF_VERSUCHE = 3
+ABRUF_WARTEN_SEKUNDEN = 45
+ABRUF_PAUSEN_SEKUNDEN = (15, 45)
+
+
+def voruebergehend(fehler):
+    """
+    Lohnt ein zweiter Versuch? Ja bei Zeitueberschreitung, fehlendem Netz und
+    Serverfehlern (5xx). Nein bei 4xx - eine falsche Adresse wird durch
+    Warten nicht richtig.
+    """
+    if isinstance(fehler, urllib.error.HTTPError):
+        return fehler.code >= 500 or fehler.code == 429
+    return isinstance(fehler, (urllib.error.URLError, TimeoutError, ConnectionError, OSError))
+
+
+def kalender_herunterladen(bekanntes_etag, schlafen=time.sleep, oeffnen=None):
+    """
+    Wie kalender_einmal_herunterladen(), aber mit bis zu ABRUF_VERSUCHE
+    Versuchen bei voruebergehenden Fehlern. schlafen und oeffnen lassen sich
+    fuer die Tests ersetzen.
+    """
+    for versuch in range(1, ABRUF_VERSUCHE + 1):
+        try:
+            return kalender_einmal_herunterladen(bekanntes_etag, oeffnen)
+        except Exception as fehler:
+            if versuch == ABRUF_VERSUCHE or not voruebergehend(fehler):
+                raise
+            pause = ABRUF_PAUSEN_SEKUNDEN[min(versuch - 1, len(ABRUF_PAUSEN_SEKUNDEN) - 1)]
+            print("Versuch %d fehlgeschlagen (%s), neuer Versuch in %d s"
+                  % (versuch, fehler, pause))
+            schlafen(pause)
+
+
+def kalender_einmal_herunterladen(bekanntes_etag, oeffnen=None):
     """
     Laedt die iCal-Datei vom HWR-Server.
 
@@ -185,7 +224,7 @@ def kalender_herunterladen(bekanntes_etag):
         anfrage.add_header("If-None-Match", bekanntes_etag)
 
     try:
-        with urllib.request.urlopen(anfrage, timeout=60) as antwort:
+        with (oeffnen or urllib.request.urlopen)(anfrage, timeout=ABRUF_WARTEN_SEKUNDEN) as antwort:
             rohdaten = antwort.read()
             etag = antwort.headers.get("ETag", "")
     except urllib.error.HTTPError as fehler:
@@ -943,8 +982,17 @@ def main():
         text, etag, unveraendert = kalender_herunterladen(bekanntes_etag)
     except Exception as fehler:
         # Kein Netz, Server weg, Uni-Wartung: kein Grund zur Panik. Wir
-        # brechen still ab, damit der naechste Lauf es erneut versucht.
+        # brechen ab, damit der naechste Lauf es erneut versucht.
         print("Abruf fehlgeschlagen: " + str(fehler))
+        # Auf dem Server ist eine HWR-Stoerung kein Fehler der Automatik:
+        # eine Warnung statt eines roten Laufs (und einer Fehler-Mail). Der
+        # bisherige Stand bleibt veroeffentlicht, und haelt die Stoerung an,
+        # faerbt die App die Zeile "geprueft vor ..." nach zwoelf Stunden
+        # orange. Alles andere - kaputte Datei, falsche Adresse - bleibt rot.
+        if LAEUFT_AUF_SERVER and voruebergehend(fehler):
+            print("::warning::HWR-Server nicht erreichbar, naechster Lauf versucht es wieder: "
+                  + str(fehler))
+            return 0
         return 1
 
     if unveraendert and alter_stand:

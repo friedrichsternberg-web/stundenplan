@@ -14,6 +14,10 @@ echo "== Zeitkorrekturen im Plan =="
 python3 tests/test_korrektur.py
 
 echo
+echo "== Abruf bei der HWR: Wiederholen bei Aussetzern =="
+python3 tests/test_abruf.py
+
+echo
 echo "== Aenderungserkennung im Stundenplan =="
 python3 tests/test_erkennung.py
 
