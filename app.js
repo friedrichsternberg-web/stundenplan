@@ -880,10 +880,10 @@ function startZeichnen() {
   // Steht rechts neben den To-dos, siehe unten.
 
   // --- Notizen: die zwei obersten, markierte zuerst ------------------------
-  const notizbuch = zettelSortiert().slice(0, 2);
+  const notizbuch = zettelSichtbar().slice(0, 2);
   let notizenKarte = "";
   if (notizbuch.length) {
-    notizenKarte = startKarte("Notizen", "zettel", "Alle " + zettel.length,
+    notizenKarte = startKarte("Notizen", "zettel", "Alle " + zettelSichtbar().length,
       notizbuch.map(z => `
         <button type="button" class="start-zettel" data-zettel-oeffnen="${sicher(z.id)}">
           <span class="start-zettel-titel">${z.angeheftet ? "📌 " : z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
@@ -1980,6 +1980,9 @@ function zettelGeraderuecken(roh) {
     verweise: verweiseSaeubern(roh.verweise),
     wichtig: Boolean(roh.wichtig),
     angeheftet: roh.angeheftet === true || roh.angeheftet === "true",
+    // Ausgeblendet (seit 22.10.2026): steht nur noch im zugeklappten
+    // Bereich unten im Notizbuch, sonst nirgends.
+    ausgeblendet: roh.ausgeblendet === true || roh.ausgeblendet === "true",
     position: isFinite(position) ? position : null,
     geaendert: Number(roh.geaendert) || 0,
   };
@@ -2118,6 +2121,9 @@ function zettelSetzen(kennung, felder) {
                ? Boolean(felder.wichtig)
                : Boolean(vorhandener && vorhandener.wichtig),
     angeheftet: angeheftet,
+    ausgeblendet: felder && felder.ausgeblendet !== undefined
+                    ? Boolean(felder.ausgeblendet)
+                    : Boolean(vorhandener && vorhandener.ausgeblendet),
     /* Wer angeheftet oder abgelöst wird, wechselt den Abschnitt und
        steht dort zuerst oben. Die alte Stelle gälte in der anderen Liste
        nichts mehr. */
@@ -2168,6 +2174,20 @@ function zettelReihenfolgeSetzen(kennungen) {
   });
   if (geaendert) zettelSpeichern();
   return geaendert;
+}
+
+/* Die Notizen ohne die ausgeblendeten - für alles, was Notizen zeigt:
+   Liste, Übersicht, Terminfenster. Nur der Bereich "Ausgeblendet" unten
+   im Notizbuch und das Verknüpfen arbeiten mit allen. */
+function zettelSichtbar() {
+  return zettelSortiert().filter(z => !z.ausgeblendet);
+}
+
+function zettelAusblendenUmschalten(kennung) {
+  const z = zettelZuKennung(kennung);
+  if (!z) return;
+  zettelSetzen(kennung, { text: z.text, verweise: z.verweise, wichtig: z.wichtig,
+                          angeheftet: z.angeheftet, ausgeblendet: !z.ausgeblendet });
 }
 
 function zettelAnheftenUmschalten(kennung) {
@@ -2518,13 +2538,13 @@ function zettelGefunden(suchwort) {
 function zettelFuerTermin(terminKennung) {
   const termin = terminZuKennung(terminKennung);
   const fach = termin && !termin.eigen ? termin.titel : "";
-  return zettelSortiert().filter(z =>
+  return zettelSichtbar().filter(z =>
     z.verweise.indexOf("termin:" + terminKennung) >= 0
     || (fach && z.verweise.indexOf("fach:" + fach) >= 0));
 }
 
 function zettelFuerFach(fachname) {
-  return zettelSortiert().filter(
+  return zettelSichtbar().filter(
     z => z.verweise.indexOf("fach:" + fachname) >= 0);
 }
 
@@ -2532,7 +2552,7 @@ function zettelFuerFach(fachname) {
    und genau dafür ist es hier auch gut: man sieht beim Lesen, in welchem
    Zusammenhang die Notiz sonst noch steht. */
 function zettelRueckverweise(kennung) {
-  return zettelSortiert().filter(
+  return zettelSichtbar().filter(
     z => z.id !== kennung && z.verweise.indexOf("zettel:" + kennung) >= 0);
 }
 
@@ -2860,7 +2880,7 @@ function modulnotizFeldAktivieren() {
    das zwanzigmal derselbe Text. */
 function terminZettelZeile(termin) {
   const passende = zettel.filter(
-    z => z.verweise.indexOf("termin:" + termin.id) >= 0);
+    z => !z.ausgeblendet && z.verweise.indexOf("termin:" + termin.id) >= 0);
   if (passende.length === 0) return "";
 
   return passende.map(z => `
@@ -5863,6 +5883,18 @@ function uniplanBereichZeichnen() {
    sucht: im Fenster des Termins.
    ------------------------------------------------------------------------- */
 
+/* Ob der Bereich "ausgeblendet" gerade offen ist. Absichtlich nicht
+   gespeichert: nach dem Neuladen ist er wieder zu. */
+let zettelVersteckteZeigen = false;
+
+const AUGE_ZU_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c5.5 0
+  9 5.5 9.5 7a13 13 0 0 1-2.6 3.6M6.3 6.4C3.9 8 2.7 10.6 2.5 12c.5 1.5 4 7 9.5 7a9.6 9.6 0 0 0 4.6-1.2"/><path
+  d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`;
+const AUGE_AUF_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12c.5-1.5 4-7 9.5-7s9 5.5 9.5 7c-.5 1.5-4 7-9.5 7s-9-5.5-9.5-7z"/><circle
+  cx="12" cy="12" r="3"/></svg>`;
+
 /* Die Stecknadel für "angeheftet", einmal als Text, damit Karte und Knopf
    dasselbe Zeichen benutzen. */
 const NADEL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="1.6"
@@ -5886,15 +5918,26 @@ function zettelZeichnen() {
 
   const unterzeile = document.getElementById("zettelUnterzeile");
   if (unterzeile) {
-    const angeheftet = zettel.filter(z => z.angeheftet).length;
-    unterzeile.textContent = zettel.length + (zettel.length === 1 ? " Notiz" : " Notizen")
+    const sichtbar = zettel.filter(z => !z.ausgeblendet);
+    const angeheftet = sichtbar.filter(z => z.angeheftet).length;
+    unterzeile.textContent = sichtbar.length + (sichtbar.length === 1 ? " Notiz" : " Notizen")
       + (angeheftet ? " · " + angeheftet + " angeheftet" : "");
   }
 
-  let liste = zettelGefunden(zettelSuche);
+  let gefunden = zettelGefunden(zettelSuche);
   if (zettelFilter) {
-    liste = liste.filter(z => z.verweise.indexOf(zettelFilter) >= 0);
+    gefunden = gefunden.filter(z => z.verweise.indexOf(zettelFilter) >= 0);
   }
+  let liste = gefunden.filter(z => !z.ausgeblendet);
+  const versteckt = gefunden.filter(z => z.ausgeblendet);
+
+  /* Ganz unten, klein: die ausgeblendeten. Zugeklappt, bis man sie
+     ausdrücklich aufklappt - und nach jedem Neuladen wieder zu. */
+  const verstecktBereich = !versteckt.length ? "" : `
+    <button type="button" class="zettel-versteckt-knopf" id="zettelVersteckteUmschalten"
+            aria-expanded="${zettelVersteckteZeigen ? "true" : "false"}">
+      ${AUGE_ZU_SVG} ${versteckt.length} ausgeblendet · ${zettelVersteckteZeigen ? "verbergen" : "zeigen"}
+    </button>`;
 
   /* Der Filterbalken erscheint nur, wenn gefiltert wird – sonst nähme er
      Platz weg und sagte nichts. Der Knopf daneben hebt ihn wieder auf; ohne
@@ -5912,7 +5955,7 @@ function zettelZeichnen() {
       </div>`;
   })();
 
-  if (liste.length === 0) {
+  if (liste.length === 0 && !versteckt.length) {
     bereich.innerHTML = filterBalken + `<p class="leer-text">${
       zettelSuche || zettelFilter
         ? "Dazu gibt es noch keine Notiz."
@@ -5931,18 +5974,24 @@ function zettelZeichnen() {
     const marken = z.verweise.map(verweisBeschreiben);
     return `
       <div class="zettel-karte${z.wichtig ? " zettel-karte-wichtig" : ""}${
-             z.angeheftet ? " zettel-karte-angeheftet" : ""}"
-           data-zettel-oeffnen="${sicher(z.id)}"${ziehbar ? ` data-ziehbar="1"` : ""}
+             z.angeheftet && !z.ausgeblendet ? " zettel-karte-angeheftet" : ""}${
+             z.ausgeblendet ? " zettel-karte-versteckt" : ""}"
+           data-zettel-oeffnen="${sicher(z.id)}"${ziehbar && !z.ausgeblendet ? ` data-ziehbar="1"` : ""}
            role="button" tabindex="0">
         <div class="zettel-karte-kopf">
           <span class="zettel-karte-titel">${
             z.wichtig ? "★ " : ""}${sicher(zettelTitel(z))}</span>
           <span class="zettel-karte-zeit">${sicher(zettelDatum(z))}</span>
-          <button type="button" class="zettel-nadel${z.angeheftet ? " zettel-nadel-an" : ""}"
+          <button type="button" class="zettel-nadel zettel-auge"
+                  data-zettel-ausblenden="${sicher(z.id)}"
+                  aria-label="${z.ausgeblendet ? "Wieder einblenden" : "Ausblenden"}"
+                  title="${z.ausgeblendet ? "Wieder einblenden" : "Ausblenden"}">${
+                    z.ausgeblendet ? AUGE_AUF_SVG : AUGE_ZU_SVG}</button>
+          ${z.ausgeblendet ? "" : `<button type="button" class="zettel-nadel${z.angeheftet ? " zettel-nadel-an" : ""}"
                   data-zettel-anheften="${sicher(z.id)}"
                   aria-pressed="${z.angeheftet ? "true" : "false"}"
                   aria-label="${z.angeheftet ? "Nicht mehr anheften" : "Anheften"}"
-                  title="${z.angeheftet ? "Nicht mehr anheften" : "Anheften"}">${NADEL_SVG}</button>
+                  title="${z.angeheftet ? "Nicht mehr anheften" : "Anheften"}">${NADEL_SVG}</button>`}
         </div>
         ${vorschau
           ? `<div class="zettel-karte-vorschau">${sicher(vorschau)}</div>`
@@ -5965,6 +6014,11 @@ function zettelZeichnen() {
     + (rest.length ? `
         ${oben.length ? `<div class="zettel-abschnitt">Notizen</div>` : ""}
         <div class="zettel-gruppe" data-zettel-gruppe="rest">${rest.map(karte).join("")}</div>` : "")
+    + (!liste.length ? `<p class="leer-text">${zettelSuche || zettelFilter
+        ? "Dazu gibt es keine sichtbare Notiz." : "Alle Notizen sind ausgeblendet."}</p>` : "")
+    + verstecktBereich
+    + (versteckt.length && zettelVersteckteZeigen
+        ? `<div class="zettel-gruppe zettel-gruppe-versteckt">${versteckt.map(karte).join("")}</div>` : "")
     ;
 }
 
@@ -6273,6 +6327,7 @@ let offeneVerweise = [];
 let offenerZettelText = "";
 let offenerZettelWichtig = false;
 let offenerZettelAngeheftet = false;
+let offenerZettelAusgeblendet = false;
 
 function zettelWerteLesen() {
   const kopf = document.getElementById("zettelTitel");
@@ -6286,6 +6341,8 @@ function zettelWerteLesen() {
   if (haken) offenerZettelWichtig = Boolean(haken.checked);
   const nadel = document.getElementById("zettelAngeheftet");
   if (nadel) offenerZettelAngeheftet = Boolean(nadel.checked);
+  const auge = document.getElementById("zettelAusgeblendet");
+  if (auge) offenerZettelAusgeblendet = Boolean(auge.checked);
 }
 
 /* Öffnet eine Notiz. Ohne Kennung entsteht eine neue; vorgabe ist eine
@@ -6298,6 +6355,7 @@ function zettelFensterZeigen(kennung, vorgabe) {
   offenerZettelText = vorhandener ? vorhandener.text : "";
   offenerZettelWichtig = vorhandener ? Boolean(vorhandener.wichtig) : false;
   offenerZettelAngeheftet = vorhandener ? Boolean(vorhandener.angeheftet) : false;
+  offenerZettelAusgeblendet = vorhandener ? Boolean(vorhandener.ausgeblendet) : false;
   offeneVerweise = verweiseSaeubern(
     vorhandener ? vorhandener.verweise : (vorgabe || []));
 
@@ -6343,6 +6401,10 @@ function zettelFensterZeichnen() {
       <label class="form-haken">
         <input type="checkbox" id="zettelWichtig"${offenerZettelWichtig ? " checked" : ""}>
         <span>★ Wichtig</span>
+      </label>
+      <label class="form-haken">
+        <input type="checkbox" id="zettelAusgeblendet"${offenerZettelAusgeblendet ? " checked" : ""}>
+        <span>Ausblenden</span>
       </label>
     </div>
 
@@ -6472,6 +6534,7 @@ function zettelSichern() {
     verweise: offeneVerweise,
     wichtig: offenerZettelWichtig,
     angeheftet: offenerZettelAngeheftet,
+    ausgeblendet: offenerZettelAusgeblendet,
   });
 }
 
@@ -6871,6 +6934,7 @@ function abgleichSammeln() {
       verweise: verweiseSaeubern(z.verweise),
       wichtig: Boolean(z.wichtig),
       angeheftet: Boolean(z.angeheftet),
+      ausgeblendet: Boolean(z.ausgeblendet),
       // "" statt null: der Abdruck beim Vergleichen macht aus allem Text.
       position: z.position === null ? "" : z.position,
       geaendert: Number(z.geaendert) || 0,
@@ -7040,7 +7104,7 @@ function abgleichUebernehmen(nutzlast) {
       if (!inhalt && verweise.length === 0) continue;
       neueZettel.push(zettelGeraderuecken({
         id: kennung, text: inhalt, verweise: verweise,
-        wichtig: eintrag.wichtig, angeheftet: eintrag.angeheftet,
+        wichtig: eintrag.wichtig, angeheftet: eintrag.angeheftet, ausgeblendet: eintrag.ausgeblendet,
         position: eintrag.position, geaendert: zeitpunkt,
       }));
       continue;
@@ -8018,8 +8082,21 @@ function zettelVerbinden() {
     liste.addEventListener("click", ereignis => {
       if (zettelKlickSperre) return;
       const ziel = ereignis.target && ereignis.target.closest
-        ? ereignis.target.closest("#zettelFilterWeg,[data-zettel-anheften],[data-zettel-oeffnen]") : null;
+        ? ereignis.target.closest("#zettelFilterWeg,#zettelVersteckteUmschalten,[data-zettel-anheften],"
+                                  + "[data-zettel-ausblenden],[data-zettel-oeffnen]") : null;
       if (!ziel) return;
+      if (ziel.id === "zettelVersteckteUmschalten") {
+        zettelVersteckteZeigen = !zettelVersteckteZeigen;
+        zettelZeichnen();
+        return;
+      }
+      const ausblenden = ziel.getAttribute("data-zettel-ausblenden");
+      if (ausblenden) {
+        zettelAusblendenUmschalten(ausblenden);
+        zettelZeichnen();
+        startZeichnen();
+        return;
+      }
       const anheften = ziel.getAttribute("data-zettel-anheften");
       if (anheften) {
         zettelAnheftenUmschalten(anheften);

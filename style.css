@@ -4483,3 +4483,25 @@ button:active:not(:disabled),
 .heute-erinnerung::before { content: "🔔"; font-size: 12px; }
 .heute-erinnerung-zeit { flex: 0 0 auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--schrift-leise); }
 .heute-erinnerung-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+/* Ausgeblendete Notizen (seit 22.10.2026): das Auge an der Karte, ganz
+   unten ein kleiner Knopf, der den Bereich auf- und zuklappt. */
+.zettel-auge { color: var(--schrift-leise); }
+.zettel-auge svg { width: 17px; height: 17px; }
+.zettel-versteckt-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--schrift-leise);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.zettel-versteckt-knopf svg { width: 15px; height: 15px; }
+.zettel-karte-versteckt { opacity: .6; }

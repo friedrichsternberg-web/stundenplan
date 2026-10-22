@@ -151,6 +151,10 @@ const werkzeug = eval(
   "  zettelSortiert: zettelSortiert," +
   "  zettelReihenfolgeSetzen: zettelReihenfolgeSetzen," +
   "  zettelAnheftenUmschalten: zettelAnheftenUmschalten," +
+  "  zettelAusblendenUmschalten: zettelAusblendenUmschalten," +
+  "  zettelSichtbar: zettelSichtbar," +
+  "  zettelZeichnen: zettelZeichnen," +
+  "  versteckteZeigen: function (an) { zettelVersteckteZeigen = an; }," +
   "  einkaufHinzufuegen: einkaufHinzufuegen," +
   "  einkaufUmschalten: einkaufUmschalten," +
   "  einkaufEntfernen: einkaufEntfernen," +
@@ -256,9 +260,9 @@ const ausgangslage = {
   zettel: [
     { id: "zettel-1", text: "Klausurvorbereitung\n\nKapitel 3 und 4.",
       verweise: ["fach:34 - Schluesselkompetenzen V", "termin:sked.b1"],
-      wichtig: false, angeheftet: true, position: 2, geaendert: 444 },
+      wichtig: false, angeheftet: true, ausgeblendet: false, position: 2, geaendert: 444 },
     { id: "zettel-2", text: "Lerngruppe", verweise: ["zettel:zettel-1"],
-      wichtig: true, angeheftet: false, position: null, geaendert: 555 },
+      wichtig: true, angeheftet: false, ausgeblendet: false, position: null, geaendert: 555 },
   ],
   grabsteine: { "eigen-weg": 666 },
   unbekannt: {},
@@ -817,6 +821,48 @@ pruefe("der Grabstein geht in den Abgleich", paketG.eintraege[milch].geloescht =
 werkzeug.einkaufWert([]);
 werkzeug.setzen({});
 
+
+/* ====================================================================== */
+abschnitt("16. Notizen ausblenden");
+
+werkzeug.setzen({ notizen: {}, aufgaben: [], termine: [], grabsteine: {}, unbekannt: {}, zettel: [
+  { id: "zettel-x", text: "TEST Sichtbar", verweise: ["fach:34 - Schluesselkompetenzen V"],
+    wichtig: false, angeheftet: false, position: null, geaendert: 1 },
+  { id: "zettel-y", text: "TEST Geheim\n\nNur fuer mich", verweise: ["fach:34 - Schluesselkompetenzen V"],
+    wichtig: false, angeheftet: true, position: null, geaendert: 2 },
+] });
+werkzeug.zettelAusblendenUmschalten("zettel-y");
+const geheim16 = werkzeug.lage().zettel.filter(z => z.id === "zettel-y")[0];
+pruefe("ausgeblendet ist gesetzt, Anheften und Text bleiben", geheim16.ausgeblendet === true
+       && geheim16.angeheftet === true && geheim16.text.indexOf("Nur fuer mich") > 0);
+pruefe("zettelSichtbar laesst sie weg", werkzeug.zettelSichtbar().map(z => z.id).join() === "zettel-x");
+pruefe("am Modul steht sie nicht mehr",
+       werkzeug.zettelFuerFach("34 - Schluesselkompetenzen V").map(z => z.id).join() === "zettel-x");
+
+werkzeug.versteckteZeigen(false);
+werkzeug.zettelZeichnen();
+let liste16 = document.getElementById("zettelListe").innerHTML;
+pruefe("in der Liste: nicht zu sehen, nur der Knopf '1 ausgeblendet'",
+       liste16.indexOf("TEST Geheim") < 0 && liste16.indexOf("1 ausgeblendet") >= 0
+       && liste16.indexOf("TEST Sichtbar") >= 0);
+werkzeug.versteckteZeigen(true);
+werkzeug.zettelZeichnen();
+liste16 = document.getElementById("zettelListe").innerHTML;
+pruefe("aufgeklappt: da, blass und nicht verschiebbar", liste16.indexOf("TEST Geheim") >= 0
+       && liste16.indexOf("zettel-karte-versteckt") >= 0
+       && !/zettel-karte-versteckt"[^>]*data-ziehbar/.test(liste16));
+werkzeug.versteckteZeigen(false);
+
+const paket16 = werkzeug.sammeln();
+pruefe("geht als ausgeblendet: true in den Abgleich", paket16.eintraege["zettel-y"].ausgeblendet === true
+       && paket16.eintraege["zettel-x"].ausgeblendet === false);
+werkzeug.uebernehmen(paket16);
+pruefe("und kommt so zurueck",
+       werkzeug.lage().zettel.filter(z => z.id === "zettel-y")[0].ausgeblendet === true);
+
+werkzeug.zettelAusblendenUmschalten("zettel-y");
+pruefe("wieder eingeblendet: ueberall zurueck", werkzeug.zettelSichtbar().length === 2);
+werkzeug.setzen({});
 
 /* ====================================================================== */
 console.log("");
