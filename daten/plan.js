@@ -23,7 +23,7 @@ const STUNDENPLAN = {
  "nichtBelegteGruppen": [
   "TM+HD"
  ],
- "geprueftAm": "2026-10-28T20:46",
+ "geprueftAm": "2026-10-29T00:38",
  "fensterVon": "2026-10-26T00:00",
  "fensterBis": "2026-11-02T00:00",
  "termine": [
@@ -132,13 +132,40 @@ const STUNDENPLAN = {
    "ende": "2026-10-29T16:00",
    "art": "Klausur",
    "titel": "WPF - IRFS Rechnungslegung",
-   "dozent": "Schlösser, Yollu-Tok",
+   "dozent": "Knobloch, Schlösser",
    "raum": "CL: 1.Audimax vorn",
    "anmerkung": "",
    "gruppe": ""
   }
  ],
  "aenderungen": [
+  {
+   "erkanntAm": "2026-10-29T00:38",
+   "anzahl": 1,
+   "eintraege": [
+    {
+     "typ": "geaendert",
+     "termin": {
+      "id": "sked.de1218695",
+      "start": "2026-10-29T14:00",
+      "ende": "2026-10-29T16:00",
+      "art": "Klausur",
+      "titel": "WPF - IRFS Rechnungslegung",
+      "dozent": "Knobloch, Schlösser",
+      "raum": "CL: 1.Audimax vorn",
+      "anmerkung": "",
+      "gruppe": ""
+     },
+     "felder": [
+      {
+       "feld": "Dozent",
+       "vorher": "Schlösser, Yollu-Tok",
+       "nachher": "Knobloch, Schlösser"
+      }
+     ]
+    }
+   ]
+  },
   {
    "erkanntAm": "2026-10-07T21:33",
    "anzahl": 1,
