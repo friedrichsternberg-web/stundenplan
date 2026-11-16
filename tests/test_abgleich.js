@@ -467,7 +467,10 @@ lage = werkzeug.lage();
 pruefe("der brauchbare Eintrag kommt an", !!lage.notizen["sked.gut"]);
 pruefe("die leere Notiz nicht", !lage.notizen["sked.leer"]);
 pruefe("die Notiz ohne Text nicht", !lage.notizen["sked.nix"]);
-pruefe("die Aufgabe ohne Datum nicht", lage.aufgaben.length === 0);
+/* Seit 16.11.2026 ist ein To-do ohne Datum kein kaputter Eintrag mehr,
+   sondern eins ohne Faelligkeitstag. Es kommt an, mit leerem Datum. */
+pruefe("die Aufgabe ohne Datum kommt an, mit leerem Datum",
+       lage.aufgaben.length === 1 && lage.aufgaben[0].datum === "");
 pruefe("und eine Zahl statt Text auch nicht", !lage.notizen["sked.zahl"]);
 
 

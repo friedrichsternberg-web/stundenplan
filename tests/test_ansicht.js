@@ -180,7 +180,15 @@ const werkzeug = eval(
   "  erinnerungenRoh: function (w) { if (w) erinnerungen = w; return erinnerungen; }," +
   "  abgleichSammeln: abgleichSammeln," +
   "  abgleichUebernehmen: abgleichUebernehmen," +
-  "  grabsteineRoh: function () { return grabsteine; }" +
+  "  grabsteineRoh: function () { return grabsteine; }," +
+  "  aufgabeSetzen: aufgabeSetzen," +
+  "  aufgabenRoh: function () { return aufgaben; }," +
+  "  datumSchnellRechnen: datumSchnellRechnen," +
+  "  monatWochen: monatWochen," +
+  "  monatBauen: monatBauen," +
+  "  monatZurWoche: monatZurWoche," +
+  "  wocheZumMonat: wocheZumMonat," +
+  "  schluessel: tagesSchluessel," +
   "})");
 
 
@@ -1593,6 +1601,166 @@ werkzeug.erinnerungenRoh([]);
 werkzeug.startZeichnen();
 pruefe("ohne Erinnerungen kein leerer Abschnitt",
        document.getElementById("startInhalt").innerHTML.indexOf("heute-erinnerung") < 0);
+
+/* ====================================================================== */
+abschnitt("24. To-dos ohne Faelligkeitstag");
+
+/* Der Kern: "" heisst bewusst ohne Datum, undefined heisst nicht anfassen.
+   Vor dem 16.11.2026 hiess beides "lass es" - ein Datum liess sich nie
+   wieder entfernen, und ein To-do ohne Datum gab es gar nicht. */
+werkzeug.setzen({}, []);
+werkzeug.aufgabeSetzen("eigen-ohne", "TEST irgendwann", "", false, "tag9");
+let ohne = werkzeug.aufgabenRoh()[0];
+pruefe("anlegen mit leerem Datum: bleibt leer, wird nicht heute", ohne && ohne.datum === "");
+pruefe("ohne Datum gibt es keine Erinnerung, auch wenn eine gewaehlt war",
+       ohne.erinnerung === "" && ohne.erinnerungVorgabe === "");
+
+werkzeug.aufgabeSetzen("eigen-ohne", "TEST irgendwann", "2026-08-26", false, "tag9");
+pruefe("ein Datum nachtragen: Datum und Erinnerung sind da",
+       ohne.datum === "2026-08-26" && ohne.erinnerung === "2026-08-26T09:00");
+werkzeug.aufgabeSetzen("eigen-ohne", "TEST anderer Text", undefined, false);
+pruefe("undefined laesst das Datum stehen", ohne.datum === "2026-08-26" && ohne.text === "TEST anderer Text");
+werkzeug.aufgabeSetzen("eigen-ohne", "TEST anderer Text", "", false, "tag9");
+pruefe("das Datum wieder entfernen: leer, Erinnerung weg",
+       ohne.datum === "" && ohne.erinnerung === "");
+
+pruefe("Schnellwahl 'ohne' leert das Feld",
+       werkzeug.datumSchnellRechnen("ohne", "2026-09-25") === "");
+
+const ohneEintrag = werkzeug.aufgabenSammeln().filter(a => a.kennung === "eigen-ohne")[0];
+pruefe("es steht im Fach 'Ohne Datum', nicht bei 'Ohne Termin im Plan' und nicht ueberfaellig",
+       werkzeug.zeitgruppeVon(ohneEintrag, MONTAG) === "ohneDatum");
+pruefe("das Fach hat eine Ueberschrift",
+       werkzeug.ZEITGRUPPEN.some(g => g.schluessel === "ohneDatum" && g.titel === "Ohne Datum"));
+
+werkzeug.setzen({}, [
+  { id: "eigen-a", text: "TEST ohne", datum: "", erledigt: false, wichtig: false, geaendert: 1 },
+  { id: "eigen-b", text: "TEST spaet", datum: "2031-01-01", erledigt: false, wichtig: false, geaendert: 1 },
+]);
+const reihenfolgeOhne = werkzeug.aufgabenSammeln().map(a => a.kennung);
+pruefe("ohne Datum sortiert hinter alles mit Datum", reihenfolgeOhne.join() === "eigen-b,eigen-a");
+
+werkzeug.seiteRoh("todos");
+werkzeug.todosZeichnen();
+const todoSeite = document.getElementById("todoInhalt").innerHTML;
+pruefe("im Reiter To-dos gibt es die Karte 'Ohne Datum' mit dem Eintrag",
+       todoSeite.indexOf("gruppen-karte-ohneDatum") >= 0 && todoSeite.indexOf("TEST ohne") >= 0);
+pruefe("nirgends 'undefined', 'NaN' oder ein kaputtes Datum",
+       todoSeite.indexOf("undefined") < 0 && todoSeite.indexOf("NaN") < 0);
+
+const startOhne = werkzeug.startTodos(MONTAG);
+pruefe("die Uebersicht fuellt mit 'ohne Datum' auf, aber zuletzt",
+       startOhne.auswahl.length === 2 && startOhne.auswahl[1].gruppe === "ohneDatum"
+       && startOhne.dringend === 0 && startOhne.ueberfaellig === 0);
+werkzeug.startZeichnen();
+const startSeiteOhne = document.getElementById("startInhalt").innerHTML;
+pruefe("und schreibt 'Ohne Datum' dazu statt eines erfundenen Tages",
+       startSeiteOhne.indexOf("Ohne Datum") >= 0 && startSeiteOhne.indexOf("NaN") < 0);
+pruefe("heute faellig ist es nicht", werkzeug.heuteSammeln(MONTAG).todos.length === 0);
+
+/* Der Rundlauf durch den Abgleich: frueher warf abgleichUebernehmen() ein
+   To-do ohne Datum weg - auch die, die Claude ueber den Connector ohne
+   Datum angelegt hatte. */
+const standOhne = werkzeug.abgleichSammeln();
+pruefe("es geht mit leerem Datum in die Ablage",
+       standOhne.eintraege["eigen-a"] && standOhne.eintraege["eigen-a"].datum === "");
+werkzeug.setzen({}, []);
+werkzeug.abgleichUebernehmen({ v: 1, eintraege: {
+  "eigen-a": standOhne.eintraege["eigen-a"],
+  "eigen-claude": { art: "aufgabe", text: "TEST von Claude", erledigt: false, geaendert: 5 },
+} });
+const zurueck = werkzeug.aufgabenRoh().map(a => a.id + "=" + a.datum).sort().join();
+pruefe("und kommt von dort wieder an, auch wenn das Feld ganz fehlt",
+       zurueck === "eigen-a=,eigen-claude=");
+werkzeug.setzen({}, []);
+
+
+/* ====================================================================== */
+abschnitt("25. Monatsansicht");
+
+function tageDer(wochen) {
+  return wochen.map(w => w.map(werkzeug.schluessel));
+}
+
+// November 2026: der 1. ist ein Sonntag, der 30. ein Montag - sechs Zeilen.
+let wochen = tageDer(werkzeug.monatWochen(new Date(2026, 10, 1)));
+pruefe("November 2026 hat sechs Wochenzeilen", wochen.length === 6);
+pruefe("die erste beginnt am Montag davor, die letzte endet am Sonntag danach",
+       wochen[0][0] === "2026-10-26" && wochen[0][6] === "2026-11-01"
+       && wochen[5][0] === "2026-11-30" && wochen[5][6] === "2026-12-06");
+// Februar 2027: beginnt am Montag und hat 28 Tage - genau vier Zeilen.
+wochen = tageDer(werkzeug.monatWochen(new Date(2027, 1, 1)));
+pruefe("Februar 2027 hat genau vier, ohne Nachbarmonate",
+       wochen.length === 4 && wochen[0][0] === "2027-02-01" && wochen[3][6] === "2027-02-28");
+// Die Zeitumstellung am 25.10.2026 darf keinen Tag verschlucken oder doppeln.
+wochen = tageDer(werkzeug.monatWochen(new Date(2026, 9, 1)));
+const alleTage = [].concat.apply([], wochen);
+pruefe("Oktober 2026 (Zeitumstellung): jeder Tag genau einmal, lueckenlos",
+       alleTage.length === 35 && new Set(alleTage).size === 35
+       && alleTage.indexOf("2026-10-25") >= 0 && alleTage.indexOf("2026-10-26") === alleTage.indexOf("2026-10-25") + 1);
+
+// Woche <-> Monat beim Umschalten
+const JETZT_MO = new Date(2026, 10, 30, 12, 0);     // Montag, 30.11.2026
+const s = werkzeug.schluessel;
+pruefe("die laufende Woche fuehrt in den laufenden Monat, auch am Monatsrand",
+       s(werkzeug.monatZurWoche(new Date(2026, 10, 30), JETZT_MO)) === "2026-11-01");
+pruefe("eine andere Woche in den Monat ihres Donnerstags",
+       s(werkzeug.monatZurWoche(new Date(2026, 11, 28), JETZT_MO)) === "2026-12-01"
+       && s(werkzeug.monatZurWoche(new Date(2027, 0, 25), JETZT_MO)) === "2027-01-01");
+pruefe("zurueck: passt die Woche von vorher noch, bleibt sie",
+       s(werkzeug.wocheZumMonat(new Date(2026, 11, 1), new Date(2026, 11, 14), JETZT_MO)) === "2026-12-14");
+pruefe("zurueck in den laufenden Monat: die laufende Woche",
+       s(werkzeug.wocheZumMonat(new Date(2026, 10, 1), new Date(2026, 11, 14), JETZT_MO)) === "2026-11-30");
+pruefe("zurueck in einen anderen Monat: die Woche mit dem Ersten",
+       s(werkzeug.wocheZumMonat(new Date(2027, 1, 1), new Date(2026, 10, 30), JETZT_MO)) === "2027-02-01");
+
+// Das Bild selbst
+werkzeug.filterLeeren();
+STUNDENPLAN.termine = [
+  { id: "sked.m1", start: "2026-11-16T08:00", ende: "2026-11-16T09:30", titel: "4 - Management <b>", raum: "", dozent: "", anmerkung: "", art: "SU", gruppe: "" },
+  { id: "sked.m2", start: "2026-11-16T09:45", ende: "2026-11-16T11:15", titel: "4 - Management <b>", raum: "", dozent: "", anmerkung: "", art: "SU", gruppe: "" },
+  { id: "sked.m3", start: "2026-11-16T12:00", ende: "2026-11-16T13:30", titel: "7 - Recht", raum: "", dozent: "", anmerkung: "ONLINE", art: "SU", gruppe: "" },
+];
+werkzeug.eigene([
+  { id: "termin-u", titel: "TEST Urlaub", start: "2026-11-20T00:00", ende: "2026-11-25T00:00", ganztags: true, urlaub: true, ort: "", notiz: "" },
+  { id: "termin-z", titel: "TEST Zahnarzt", start: "2026-11-16T17:00", ende: "2026-11-16T18:00", ganztags: false, ort: "", notiz: "" },
+]);
+werkzeug.setzen({}, [
+  { id: "eigen-m1", text: "TEST Abgabe", datum: "2026-11-16", erledigt: false, wichtig: true, geaendert: 1 },
+  { id: "eigen-m2", text: "TEST schon fertig", datum: "2026-11-17", erledigt: true, wichtig: false, geaendert: 1 },
+  { id: "eigen-m3", text: "TEST ohne Datum im Monat", datum: "", erledigt: false, wichtig: false, geaendert: 1 },
+]);
+werkzeug.uniplanSetzenTest({ arbeit: true });
+const monat = werkzeug.monatBauen(new Date(2026, 10, 1), new Date(2026, 10, 16, 10, 0), 3);
+werkzeug.uniplanSetzenTest({ arbeit: false });
+
+pruefe("42 Tage, jeder oeffnet sein Tagesfenster",
+       (monat.match(/data-tag-oeffnen="/g) || []).length === 42
+       && monat.indexOf('data-tag-oeffnen="2026-11-16"') >= 0);
+pruefe("heute ist genau einmal markiert", (monat.match(/monat-tag-heute/g) || []).length === 1);
+pruefe("die Tage der Nachbarmonate sind blass: 6 davor, 6 danach",
+       (monat.match(/monat-tag-fremd/g) || []).length === 12);
+pruefe("zwei Bloecke desselben Fachs sind EIN Streifen, ohne Modulnummer und abgesichert",
+       (monat.match(/>Management &lt;b&gt;</g) || []).length === 1 && monat.indexOf("<b>") < 0);
+pruefe("ein Termin mit Anmerkung hebt sich ab", /monat-streifen-hinweis[^>]*>Recht</.test(monat));
+pruefe("der Urlaub ist je Woche ein Balken: Fr-So und Mo-Mi",
+       /monat-streifen-urlaub monat-streifen-weiter-rechts"\s+style="grid-column:5 \/ 8; grid-row:2"/.test(monat)
+       && /monat-streifen-urlaub monat-streifen-weiter-links"\s+style="grid-column:1 \/ 4; grid-row:2"/.test(monat));
+pruefe("am 16. stehen vier Sachen: drei Streifen und '+1'",
+       monat.indexOf("Montag, 16.11., heute, 4 Einträge") >= 0
+       && />TEST Zahnarzt</.test(monat) && monat.indexOf(">+1<") >= 0 && monat.indexOf("TEST Abgabe") < 0);
+pruefe("die Arbeit aus dem Uni-Plan steht nicht im Monat", monat.indexOf(">Arbeit<") < 0);
+pruefe("Abgehaktes und To-dos ohne Datum auch nicht",
+       monat.indexOf("TEST schon fertig") < 0 && monat.indexOf("TEST ohne Datum im Monat") < 0
+       && monat.indexOf("Dienstag, 17.11.&quot;") < 0 && /aria-label="Dienstag, 17\.11\."/.test(monat));
+const monatVier = werkzeug.monatBauen(new Date(2026, 10, 1), new Date(2026, 10, 16, 10, 0), 4);
+pruefe("mit vier Bahnen passt alles, kein '+1' mehr",
+       monatVier.indexOf("TEST Abgabe") >= 0 && monatVier.indexOf("monat-mehr") < 0);
+
+STUNDENPLAN.termine = [];
+werkzeug.eigene([]);
+werkzeug.setzen({}, []);
+
 
 /* ====================================================================== */
 console.log("");

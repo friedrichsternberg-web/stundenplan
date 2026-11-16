@@ -198,8 +198,14 @@ const SPEICHER_SICHERUNG = "stundenplan.sicherung.vorPlaner";
 // Welche Woche gerade angezeigt wird, als Montag dieser Woche.
 let angezeigterMontag = montagDerWoche(new Date());
 
-// "liste" oder "kalender".
+// "liste", "kalender" (die Woche als Raster) oder "monat".
 let ansicht = "liste";
+
+/* Welcher Monat in der Monatsansicht steht, als sein Erster. Ein eigener
+   Wert neben angezeigterMontag, weil Blättern dort einen Monat weit geht
+   und nicht eine Woche. Beim Umschalten der Ansicht werden die beiden
+   aufeinander abgestimmt, siehe ansichtSetzen(). */
+let angezeigterMonat = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 /* Für welche Woche die vergangenen Tage in der Liste aufgeklappt sind,
    als Montag ("2026-09-21"). Leer heißt: zugeklappt.
@@ -612,9 +618,12 @@ function heuteSammeln(jetzt) {
    Überfälliges zuerst, dann heute, morgen und so weiter. Innerhalb einer
    Gruppe gilt die Reihenfolge aus aufgabenSammeln(), Wichtiges vorn.
 
-   Einträge ohne Termin im Plan fehlen hier. Sie haben kein Datum, also
-   auch keinen Platz in "als Nächstes"; im Reiter "To-dos" stehen sie. */
-const START_TODOS_REIHENFOLGE = ["ueberfaellig", "heute", "morgen", "woche", "naechste", "spaeter"];
+   To-dos ohne Datum kommen zuletzt: sie füllen die Karte auf, wenn sonst
+   nichts ansteht, drängen sich aber nie vor etwas mit Termin.
+
+   Notizen ohne Termin im Plan fehlen hier. Im Reiter "To-dos" stehen sie. */
+const START_TODOS_REIHENFOLGE = ["ueberfaellig", "heute", "morgen", "woche", "naechste", "spaeter",
+                                 "ohneDatum"];
 const START_TODOS_ANZAHL = 4;
 
 function startTodos(jetzt) {
@@ -870,6 +879,7 @@ function startZeichnen() {
     ? `<p class="start-leer">Nichts offen.</p>`
     : todos.auswahl.map(({ eintrag, gruppe }) => startTodoZeile(eintrag,
         gruppe === "ueberfaellig" || gruppe === "heute" || gruppe === "morgen"
+          || gruppe === "ohneDatum"
           ? gruppenTitel[gruppe]
           : tagLesbar(eintrag.art === "aufgabe" ? eintrag.datum : eintrag.termin.start.slice(0, 10)),
         gruppe === "ueberfaellig")).join("");
@@ -1003,6 +1013,7 @@ function startKlick(ereignis) {
     // In den Plan heißt: diese Woche, heute oben.
     if (neueSeite === "plan") {
       angezeigterMontag = montagDerWoche(new Date());
+      angezeigterMonat = monatsAnfang(new Date());
       vergangeneOffenFuer = "";
     }
     seiteSetzen(neueSeite);
@@ -1043,6 +1054,18 @@ function startKlick(ereignis) {
 /* Beide Ansichten zeigen dieselbe Woche, nur anders aufbereitet. Diese
    Funktion bereitet vor, was beide brauchen, und übergibt dann. */
 function wocheZeichnen() {
+  /* Der Monat ist ein eigenes Bild und braucht nichts von dem, was unten
+     für die Woche vorbereitet wird. Der Name wocheZeichnen() bleibt, weil
+     er an vierzig Stellen "den Plan neu zeichnen" bedeutet. */
+  if (ansicht === "monat") {
+    document.getElementById("wochenTitel").textContent =
+      MONATSNAMEN[angezeigterMonat.getMonth()] + " " + angezeigterMonat.getFullYear();
+    document.getElementById("tage").innerHTML =
+      monatBauen(angezeigterMonat, new Date(), monatBahnen());
+    if (tagesFensterSchluessel) tagesFensterZeichnen();
+    return;
+  }
+
   const montag = angezeigterMontag;
   const sonntag = tageDazu(montag, 6);
   const heuteSchluessel = tagesSchluessel(new Date());
@@ -1673,10 +1696,13 @@ const DATUM_SCHNELL = [
   ["morgen", "Morgen"],
   ["uebermorgen", "Übermorgen"],
   ["montag", "Nächster Montag"],
+  // Seit 16.11.2026: leert das Feld. Ein To-do ohne Fälligkeitstag.
+  ["ohne", "Ohne Datum"],
 ];
 
 function datumSchnellRechnen(name, heuteText) {
   const heute = heuteText || tagesSchluessel(new Date());
+  if (name === "ohne") return "";
   if (name === "heute") return heute;
   if (name === "morgen") return tagVerschieben(heute, 1);
   if (name === "uebermorgen") return tagVerschieben(heute, 2);
@@ -2615,7 +2641,17 @@ function aufgabenFuerTag(tagesschluessel) {
 }
 
 /* Legt eine Aufgabe an oder ändert eine bestehende. Leerer Text löscht sie –
-   genau wie bei den Notizen. */
+   genau wie bei den Notizen.
+
+   datum (seit 16.11.2026):
+     "2026-11-20"   fällig an diesem Tag
+     ""             ohne Fälligkeitstag – steht im Reiter To-dos unter
+                    "Ohne Datum" und in keinem Tag des Plans
+     undefined      nichts ändern (bei einer neuen Aufgabe: heute)
+
+   Der Unterschied zwischen "" und undefined ist der ganze Punkt: bis
+   dahin hieß ein leeres Datum "lass es, wie es ist", und damit ließ sich
+   ein Datum nie wieder entfernen. */
 function aufgabeSetzen(kennung, text, datum, wichtig, erinnerungVorgabe) {
   const sauber = (text || "").trim();
 
@@ -2629,7 +2665,7 @@ function aufgabeSetzen(kennung, text, datum, wichtig, erinnerungVorgabe) {
   const vorhandene = aufgabeZuKennung(kennung);
   if (vorhandene) {
     vorhandene.text = sauber;
-    if (datum) vorhandene.datum = datum;
+    if (typeof datum === "string") vorhandene.datum = datum;
     if (wichtig !== undefined) vorhandene.wichtig = Boolean(wichtig);
     if (erinnerungVorgabe !== undefined) {
       vorhandene.erinnerungVorgabe = erinnerungVorgabe;
@@ -2641,7 +2677,7 @@ function aufgabeSetzen(kennung, text, datum, wichtig, erinnerungVorgabe) {
       vorhandene.erinnerungVorgabe, vorhandene.datum));
     vorhandene.geaendert = Abgleich.jetzt();
   } else {
-    const tag = datum || tagesSchluessel(new Date());
+    const tag = typeof datum === "string" ? datum : tagesSchluessel(new Date());
     aufgaben.push(Object.assign({
       id: kennung,
       text: sauber,
@@ -2905,7 +2941,12 @@ function erinnerungHinweisSetzen() {
   const datum = datumsfeld ? datumsfeld.value : "";
 
   const zeitpunkt = erinnerungZeitpunkt(vorgabe, datum);
-  if (!zeitpunkt) { hinweis.textContent = ""; return; }
+  if (!zeitpunkt) {
+    // Gewählt, aber kein Tag: sonst speicherte man und es käme nie etwas.
+    hinweis.textContent = vorgabe && !datum ? "Ohne Datum keine Erinnerung." : "";
+    hinweis.classList.toggle("erinnerung-vorbei", Boolean(vorgabe && !datum));
+    return;
+  }
 
   const vergangen = zeitpunkt < new Date().toISOString().slice(0, 16);
   hinweis.textContent = vergangen
@@ -3062,14 +3103,17 @@ function notizKlick(ereignis) {
     const wichtigfeld = document.getElementById("notizWichtig");
     const erinnerungsfeld = document.getElementById("aufgabeErinnerung");
     const text = feld ? feld.value : "";
-    const datum = datumsfeld ? datumsfeld.value : "";
+    /* Gibt es das Datumsfeld, gilt, was drinsteht – auch leer, das heißt
+       "ohne Datum". Gibt es keins (Notiz an einem Termin), bleibt das
+       Datum unberührt. */
+    const datum = datumsfeld ? datumsfeld.value : undefined;
     const wichtig = wichtigfeld ? Boolean(wichtigfeld.checked) : false;
     const erinnerung = erinnerungsfeld ? erinnerungsfeld.value : "";
 
     if (zuSpeichern.indexOf("neu:") === 0) {
       // Erst jetzt bekommt die Aufgabe eine Kennung.
       aufgabeSetzen(neueAufgabenKennung(), text,
-                    datum || zuSpeichern.slice(4), wichtig, erinnerung);
+                    datum === undefined ? zuSpeichern.slice(4) : datum, wichtig, erinnerung);
     } else if (zuSpeichern.indexOf("eigen-") === 0) {
       aufgabeSetzen(zuSpeichern, text, datum, wichtig, erinnerung);
     } else {
@@ -3538,6 +3582,214 @@ function jetztLinieVerschieben() {
 }
 
 
+/* --- Ansicht 3: der ganze Monat (seit 16.11.2026) ------------------------
+
+   Wie die Monatsübersicht im Kalender auf dem iPhone: sieben Spalten von
+   Montag bis Sonntag, je Woche eine Zeile, in jedem Tag die Zahl und
+   darunter kleine farbige Streifen für das, was dort steht. Ein Tippen
+   auf einen Tag öffnet das Tagesfenster – dasselbe wie in der Wochen-
+   ansicht, mit allen Knöpfen.
+
+   Was in den Streifen steht:
+     - Ganztägiges und Mehrtägiges als EIN Balken über seine Tage
+     - Vorlesungen und eigene Termine, je Fach und Tag einmal: drei Blöcke
+       desselben Fachs hintereinander sind hier ein Streifen, nicht drei
+     - offene To-dos
+   Was fehlt: die Arbeitstage aus dem Uni-Plan. In einer Praxisphase
+   stünde sonst an jedem Werktag "Arbeit", und der Monat sähe überall
+   gleich voll aus. Im Tagesfenster steht sie weiterhin.
+
+   Mehr als monatBahnen() Streifen passen nicht in einen Tag. Der Rest
+   steht als "+2" darunter. */
+
+const MONATSNAMEN = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+                     "August", "September", "Oktober", "November", "Dezember"];
+
+function monatsAnfang(datum) {
+  return new Date(datum.getFullYear(), datum.getMonth(), 1);
+}
+
+/* Die Wochen eines Monats, jede als sieben Tage von Montag bis Sonntag.
+   Die erste und die letzte reichen in die Nachbarmonate hinein. Je nach
+   Monat sind es vier (Februar, der am Montag beginnt) bis sechs Zeilen. */
+function monatWochen(monat) {
+  const wochen = [];
+  const naechsterMonat = new Date(monat.getFullYear(), monat.getMonth() + 1, 1);
+  for (let montag = montagDerWoche(monat); montag < naechsterMonat; montag = tageDazu(montag, 7)) {
+    const woche = [];
+    for (let versatz = 0; versatz < 7; versatz++) woche.push(tageDazu(montag, versatz));
+    wochen.push(woche);
+  }
+  return wochen;
+}
+
+/* Von der Woche zum Monat, beim Umschalten in die Monatsansicht.
+
+   Steht die laufende Woche da, ist der laufende Monat gemeint – auch
+   wenn die Woche am Monatsrand liegt. Sonst entscheidet der Donnerstag,
+   so wie bei der Kalenderwoche: er liegt in dem Monat, zu dem die Woche
+   mehrheitlich gehört. */
+function monatZurWoche(montag, jetzt) {
+  if (tagesSchluessel(montag) === tagesSchluessel(montagDerWoche(jetzt))) return monatsAnfang(jetzt);
+  return monatsAnfang(tageDazu(montag, 3));
+}
+
+/* Und zurück. Passt die Woche, die vorher zu sehen war, noch zum Monat,
+   bleibt sie stehen: wer nur kurz in den Monat schaut, soll danach nicht
+   woanders landen. Sonst die laufende Woche, wenn es der laufende Monat
+   ist, und in jedem anderen Monat die Woche mit dem Ersten. */
+function wocheZumMonat(monat, montagVorher, jetzt) {
+  if (tagesSchluessel(monatZurWoche(montagVorher, jetzt)) === tagesSchluessel(monat)) return montagVorher;
+  if (tagesSchluessel(monatsAnfang(jetzt)) === tagesSchluessel(monat)) return montagDerWoche(jetzt);
+  return montagDerWoche(monat);
+}
+
+/* Wie viele Streifen in einen Tag passen. Am Handy drei, sonst wäre der
+   Monat höher als der Bildschirm; am großen Bildschirm vier. */
+function monatBahnen() {
+  return typeof window !== "undefined" && window.innerWidth >= 700 ? 4 : 3;
+}
+
+function monatBauen(monat, jetzt, sichtbar) {
+  const heute = tagesSchluessel(jetzt);
+
+  // Die Termine einmal nach Tagen ablegen, statt für jeden der bis zu
+  // 42 Tage alle Termine des Semesters durchzusehen.
+  const nachTag = new Map();
+  for (const termin of alleAngezeigtenTermine()) {
+    if (termin.arbeit) continue;
+    const schluessel = tagesSchluessel(termin.start);
+    if (!nachTag.has(schluessel)) nachTag.set(schluessel, []);
+    nachTag.get(schluessel).push(termin);
+  }
+
+  const kopf = [1, 2, 3, 4, 5, 6, 0].map(wochentag =>
+    `<span${wochentag === 0 || wochentag === 6 ? ` class="monat-kopf-we"` : ""}>${
+      WOCHENTAGE[wochentag].slice(0, 2)}</span>`).join("");
+
+  return `
+    <div class="kalender-rahmen monat-rahmen">
+      <div class="monat" style="--monat-bahnen:${sichtbar}">
+        <div class="monat-kopf" aria-hidden="true">${kopf}</div>
+        ${monatWochen(monat).map(woche =>
+            monatWocheBauen(woche, monat, heute, nachTag, sichtbar)).join("")}
+      </div>
+    </div>`;
+}
+
+/* Eine Wochenzeile. Die Streifen liegen in Bahnen übereinander, nach
+   derselben Regel wie die Ganztagszeile der Wochenansicht: jeder Eintrag
+   kommt in die oberste Bahn, die an all seinen Tagen noch frei ist. */
+function monatWocheBauen(woche, monat, heute, nachTag, sichtbar) {
+  const schluessel = woche.map(tag => tagesSchluessel(tag));
+  const fremd = woche.map(tag => tag.getMonth() !== monat.getMonth());
+  const eintraege = [];
+
+  // 1. Ganztägiges: ein Balken über alle Tage, die es in dieser Woche hat.
+  const gesehen = new Map();
+  schluessel.forEach((tag, spalte) => {
+    for (const termin of ganztagsTermineFuerTag(tag)) {
+      if (gesehen.has(termin.id)) { gesehen.get(termin.id).bis = spalte; continue; }
+      const eintrag = {
+        von: spalte, bis: spalte, text: termin.titel,
+        klasse: termin.wichtig ? "monat-streifen-wichtig"
+              : termin.urlaub ? "monat-streifen-urlaub" : "monat-streifen-eigen",
+        // Geht es vor oder nach dieser Woche weiter, fehlt dort die Rundung.
+        weiterLinks: termin.start.slice(0, 10) < schluessel[0],
+        weiterRechts: (termin.ende || termin.start).slice(0, 10) > schluessel[6],
+      };
+      gesehen.set(termin.id, eintrag);
+      eintraege.push(eintrag);
+    }
+  });
+  eintraege.sort((a, b) => (b.bis - b.von) - (a.bis - a.von) || a.von - b.von);
+
+  // 2. Termine mit Uhrzeit, in der Reihenfolge des Tages. Je Titel einer.
+  schluessel.forEach((tag, spalte) => {
+    const titelGesehen = new Set();
+    for (const termin of nachTag.get(tag) || []) {
+      if (titelGesehen.has(termin.titel)) continue;
+      titelGesehen.add(termin.titel);
+      eintraege.push({
+        von: spalte, bis: spalte, text: kurzerTitel(termin.titel),
+        klasse: termin.wichtig || istWichtig(termin.id) ? "monat-streifen-wichtig"
+              : termin.eigen ? "monat-streifen-eigen"
+              : termin.anmerkung ? "monat-streifen-hinweis" : "",
+      });
+    }
+  });
+
+  // 3. Offene To-dos. Abgehaktes steht im Tagesfenster, hier wäre es nur
+  //    ein durchgestrichener Streifen, der Platz wegnimmt.
+  schluessel.forEach((tag, spalte) => {
+    for (const aufgabe of aufgabenFuerTag(tag)) {
+      if (aufgabe.erledigt) continue;
+      eintraege.push({
+        von: spalte, bis: spalte, text: aufgabe.text,
+        klasse: aufgabe.wichtig ? "monat-streifen-wichtig" : "monat-streifen-todo",
+      });
+    }
+  });
+
+  // Bahnen vergeben: belegt[bahn][spalte] = true
+  const belegt = [];
+  for (const eintrag of eintraege) {
+    let bahn = 0;
+    for (;; bahn++) {
+      if (!belegt[bahn]) belegt[bahn] = [];
+      let frei = true;
+      for (let s = eintrag.von; s <= eintrag.bis; s++) if (belegt[bahn][s]) frei = false;
+      if (frei) break;
+    }
+    for (let s = eintrag.von; s <= eintrag.bis; s++) belegt[bahn][s] = true;
+    eintrag.bahn = bahn;
+  }
+
+  const anzahl = [0, 0, 0, 0, 0, 0, 0];     // alles an diesem Tag
+  const versteckt = [0, 0, 0, 0, 0, 0, 0];  // was keinen Platz mehr hatte
+  const streifen = eintraege.map(eintrag => {
+    for (let s = eintrag.von; s <= eintrag.bis; s++) {
+      anzahl[s]++;
+      if (eintrag.bahn >= sichtbar) versteckt[s]++;
+    }
+    if (eintrag.bahn >= sichtbar) return "";
+    // Liegt ein Streifen ganz im Nachbarmonat, ist er blass wie die Zahl.
+    let nurFremd = true;
+    for (let s = eintrag.von; s <= eintrag.bis; s++) if (!fremd[s]) nurFremd = false;
+    return `<div class="monat-streifen ${eintrag.klasse}${
+              eintrag.weiterLinks ? " monat-streifen-weiter-links" : ""}${
+              eintrag.weiterRechts ? " monat-streifen-weiter-rechts" : ""}${
+              nurFremd ? " monat-streifen-fremd" : ""}"
+         style="grid-column:${eintrag.von + 1} / ${eintrag.bis + 2}; grid-row:${eintrag.bahn + 2}"
+         aria-hidden="true">${sicher(eintrag.text)}</div>`;
+  }).join("");
+
+  /* Die Tage selbst liegen als Knöpfe UNTER den Streifen und reichen über
+     die ganze Zeilenhöhe. Die Streifen lassen Tippen durch (pointer-events
+     im Stilblatt): wohin man in einem Tag auch tippt, es öffnet den Tag.
+     Was dort steht, sagt der Knopf selbst an, die Streifen sind für
+     Vorleseprogramme ausgeblendet – sonst stünde alles doppelt da. */
+  const tage = woche.map((datum, spalte) => {
+    const ansage = WOCHENTAGE[datum.getDay()] + ", " + datumKurz(datum)
+      + (schluessel[spalte] === heute ? ", heute" : "")
+      + (anzahl[spalte] ? ", " + anzahl[spalte] + (anzahl[spalte] === 1 ? " Eintrag" : " Einträge") : "");
+    return `<button type="button" class="monat-tag${
+                schluessel[spalte] === heute ? " monat-tag-heute" : ""}${
+                fremd[spalte] ? " monat-tag-fremd" : ""}${
+                spalte >= 5 ? " monat-tag-we" : ""}"
+              style="grid-column:${spalte + 1}"
+              data-tag-oeffnen="${sicher(schluessel[spalte])}"
+              aria-label="${sicher(ansage)}"><span class="monat-zahl">${datum.getDate()}</span></button>`;
+  }).join("");
+
+  const mehr = versteckt.map((n, spalte) => n
+    ? `<div class="monat-mehr${fremd[spalte] ? " monat-streifen-fremd" : ""}"
+            style="grid-column:${spalte + 1}" aria-hidden="true">+${n}</div>` : "").join("");
+
+  return `<div class="monat-woche">${tage}${streifen}${mehr}</div>`;
+}
+
+
 /* Ein angetipptes Kalenderkästchen ausführlich zeigen.
 
    Im Kalender ist der Platz begrenzt – ein 45-Minuten-Kästchen ist keine
@@ -3742,7 +3994,8 @@ function aufgabenSammeln() {
       datum: aufgabe.datum,
       erinnerung: aufgabe.erinnerung || "",
       erinnerungVorgabe: aufgabe.erinnerungVorgabe || "",
-      start: aufgabe.datum + "T00:00",
+      // Ohne Datum ans Ende sortieren, wie die Notiz ohne Termin.
+      start: aufgabe.datum ? aufgabe.datum + "T00:00" : "9999",
     });
   }
 
@@ -3815,6 +4068,8 @@ const ZEITGRUPPEN = [
   { schluessel: "woche",        titel: "Diese Woche" },
   { schluessel: "naechste",     titel: "Nächste Woche" },
   { schluessel: "spaeter",      titel: "Später" },
+  // To-dos, die du bewusst ohne Fälligkeitstag angelegt hast.
+  { schluessel: "ohneDatum",    titel: "Ohne Datum" },
   { schluessel: "ohne",         titel: "Ohne Termin im Plan" },
 ];
 
@@ -3830,7 +4085,7 @@ function zeitgruppeVon(eintrag, heuteDatum) {
     ? eintrag.datum
     : (eintrag.termin ? eintrag.termin.start.slice(0, 10) : "");
 
-  if (!bezug) return "ohne";
+  if (!bezug) return eintrag.art === "aufgabe" ? "ohneDatum" : "ohne";
 
   const heute = tagesSchluessel(heuteDatum);
   if (bezug < heute) return "ueberfaellig";
@@ -3910,7 +4165,7 @@ function todosZeichnen() {
   /* Jede Zeitgruppe ist eine eigene Karte, mit einem Farbpunkt im Kopf,
      der zur Farbe im Balken oben passt. */
   const GRUPPEN_FARBE = { ueberfaellig: "rot", heute: "gelb", morgen: "blau", woche: "blau",
-                          naechste: "lila", spaeter: "grau", ohne: "grau" };
+                          naechste: "lila", spaeter: "grau", ohneDatum: "grau", ohne: "grau" };
 
   if (alle.length === 0) {
     stuecke.push(`
@@ -3984,8 +4239,10 @@ function aufgabeZeichnen(aufgabe, fach) {
 
   let wann;
   if (aufgabe.art === "aufgabe") {
-    // Freie Aufgabe: nur ein Tag, keine Uhrzeit und kein Fach.
-    wann = tagLesbar(aufgabe.datum);
+    // Freie Aufgabe: nur ein Tag, keine Uhrzeit und kein Fach. Unter der
+    // Überschrift "Ohne Datum" wäre "Ohne Datum" an jeder Zeile doppelt.
+    wann = aufgabe.datum ? tagLesbar(aufgabe.datum)
+                         : (fach === "ohneDatum" ? "" : "Ohne Datum");
   } else if (!termin) {
     wann = "Termin steht nicht mehr im Plan";
   } else {
@@ -4005,7 +4262,7 @@ function aufgabeZeichnen(aufgabe, fach) {
   if (offeneNotiz === aufgabe.kennung && seite === "todos") {
     return `
       <div class="todo todo-offen-bearbeiten">
-        <div class="todo-wann">${sicher(wann)}</div>
+        ${wann ? `<div class="todo-wann">${sicher(wann)}</div>` : ""}
         ${notizFeldZeichnen(aufgabe.kennung, aufgabe.text,
                             aufgabe.art === "aufgabe" ? aufgabe.datum : undefined)}
       </div>`;
@@ -4027,9 +4284,9 @@ function aufgabeZeichnen(aufgabe, fach) {
         <div class="todo-text">${
           aufgabe.wichtig ? `<span class="todo-stern">★</span>` : ""
         }${sicher(aufgabe.text)}</div>
-        <div class="todo-wann">
+        ${wann || markeZeigen ? `<div class="todo-wann">
           ${markeZeigen ? `<span class="todo-marke-vorbei">vorbei</span> ` : ""}${sicher(wann)}
-        </div>
+        </div>` : ""}
         ${aufgabe.erinnerung && !aufgabe.erledigt ? `
           <div class="todo-erinnerung">🔔 ${sicher(erinnerungLesbar(aufgabe))}</div>`
           : ""}
@@ -7159,11 +7416,13 @@ function abgleichUebernehmen(nutzlast) {
     }
 
     if (eintrag.art === "aufgabe" || kennung.indexOf("eigen-") === 0) {
-      if (typeof eintrag.datum !== "string" || !eintrag.datum) continue;
+      /* Ohne Datum ist seit 16.11.2026 erlaubt. Vorher wurde so ein
+         Eintrag hier übersprungen – und ein To-do, das Claude über den
+         Connector ohne Datum angelegt hatte, kam in der App nie an. */
       neueAufgaben.push({
         id: kennung,
         text: eintrag.text,
-        datum: eintrag.datum,
+        datum: typeof eintrag.datum === "string" ? eintrag.datum : "",
         erledigt: Boolean(eintrag.erledigt),
         wichtig: Boolean(eintrag.wichtig),
         erinnerungVorgabe: typeof eintrag.erinnerungVorgabe === "string"
@@ -7552,6 +7811,13 @@ function terminFormVerbinden() {
        an, ist fast nie der heutige Tag gemeint. Ist die laufende Woche
        zu sehen, bleibt es bei heute. */
     const heute = tagesSchluessel(new Date());
+    // Im Monat genauso: der laufende Monat schlägt heute vor, jeder
+    // andere seinen Ersten.
+    if (ansicht === "monat") {
+      const erster = tagesSchluessel(angezeigterMonat);
+      terminFormularZeigen("", erster === tagesSchluessel(monatsAnfang(new Date())) ? heute : erster);
+      return;
+    }
     const montagDerAnsicht = tagesSchluessel(angezeigterMontag);
     const montagHeute = tagesSchluessel(montagDerWoche(new Date()));
     terminFormularZeigen("", montagDerAnsicht === montagHeute ? heute : montagDerAnsicht);
@@ -8055,8 +8321,15 @@ function kopfZeichnen() {
   anzeige.title = "Zuletzt geprüft: " + zeitpunktLesbar(STUNDENPLAN.geprueftAm);
 }
 
-/* Schaltet zwischen Liste und Kalender um und hebt den aktiven Knopf hervor. */
+/* Schaltet zwischen Liste, Woche und Monat um und hebt den aktiven Knopf
+   hervor. */
 function ansichtSetzen(neueAnsicht) {
+  // Woche und Monat aufeinander abstimmen, siehe monatZurWoche().
+  if (neueAnsicht === "monat" && ansicht !== "monat") {
+    angezeigterMonat = monatZurWoche(angezeigterMontag, new Date());
+  } else if (neueAnsicht !== "monat" && ansicht === "monat") {
+    angezeigterMontag = wocheZumMonat(angezeigterMonat, angezeigterMontag, new Date());
+  }
   ansicht = neueAnsicht;
   try { localStorage.setItem(SPEICHER_ANSICHT, ansicht); }
   catch (fehler) { /* dann gilt die Wahl nur bis zum Neuladen */ }
@@ -8067,8 +8340,30 @@ function ansichtSetzen(neueAnsicht) {
     knopf.setAttribute("aria-pressed", aktiv ? "true" : "false");
   }
 
+  /* Im Monat gibt es nichts zu "bearbeiten": dort öffnet jedes Tippen das
+     Tagesfenster, und das hat seine Knöpfe immer. Der Schalter wäre ein
+     Knopf, der nichts tut – die Klasse blendet ihn aus. */
+  const planSeite = document.getElementById("seitePlan");
+  if (planSeite && planSeite.classList) planSeite.classList.toggle("plan-monat", ansicht === "monat");
+  const einheit = ansicht === "monat" ? "Monat" : "Woche";
+  const zurueck = document.getElementById("wocheZurueck");
+  const vor = document.getElementById("wocheVor");
+  if (zurueck) zurueck.setAttribute("aria-label", einheit + " zurück");
+  if (vor) vor.setAttribute("aria-label", einheit + " vor");
+
   wocheZeichnen();
   einblenden(document.getElementById("tage"));
+}
+
+/* Eine Woche oder einen Monat weiter (+1) oder zurück (-1), je nachdem,
+   was gerade zu sehen ist. */
+function planBlaettern(richtung) {
+  if (ansicht === "monat") {
+    angezeigterMonat = new Date(angezeigterMonat.getFullYear(),
+                                angezeigterMonat.getMonth() + richtung, 1);
+  } else {
+    angezeigterMontag = tageDazu(angezeigterMontag, 7 * richtung);
+  }
 }
 
 /* Hängt alles an, was zum Notizbuch gehört.
@@ -8400,7 +8695,14 @@ function knoepfeVerbinden() {
      kalenderTexteAnpassen() stammt aber noch von vorher. Ein volles
      Neuzeichnen braucht es dafür nicht, nur ein neues Ausmessen. */
   let messmarke = null;
+  let bahnenZuletzt = monatBahnen();
   window.addEventListener("resize", () => {
+    // Im Monat ändert sich nur etwas, wenn die Breite die Grenze kreuzt,
+    // ab der ein Streifen mehr in den Tag passt.
+    if (ansicht === "monat" && seite === "plan" && monatBahnen() !== bahnenZuletzt) {
+      bahnenZuletzt = monatBahnen();
+      wocheZeichnen();
+    }
     if (ansicht !== "kalender" || seite !== "plan") return;
     if (messmarke) clearTimeout(messmarke);
     // Ist das Fenster höher oder niedriger geworden, passt die
@@ -8418,19 +8720,20 @@ function knoepfeVerbinden() {
   }
 
   document.getElementById("wocheZurueck").addEventListener("click", () => {
-    angezeigterMontag = tageDazu(angezeigterMontag, -7);
+    planBlaettern(-1);
     wocheZeichnen();
     einblenden(document.getElementById("tage"), "zurueck");
   });
 
   document.getElementById("wocheVor").addEventListener("click", () => {
-    angezeigterMontag = tageDazu(angezeigterMontag, 7);
+    planBlaettern(1);
     wocheZeichnen();
     einblenden(document.getElementById("tage"), "vor");
   });
 
   document.getElementById("wocheHeute").addEventListener("click", () => {
     angezeigterMontag = montagDerWoche(new Date());
+    angezeigterMonat = monatsAnfang(new Date());
     /* Wer auf "Heute" tippt, will heute oben sehen - auch wenn er die
        vergangenen Tage vorhin aufgeklappt hatte. */
     vergangeneOffenFuer = "";
@@ -8688,7 +8991,7 @@ function starten() {
 
   try {
     const gemerkt = localStorage.getItem(SPEICHER_ANSICHT);
-    if (gemerkt === "kalender" || gemerkt === "liste") ansicht = gemerkt;
+    if (gemerkt === "kalender" || gemerkt === "liste" || gemerkt === "monat") ansicht = gemerkt;
 
     /* Der zuletzt offene Reiter gilt nur, wenn das kurz her ist – siehe
        ZURUECK_ZUR_UEBERSICHT_NACH. Fehlt die Zeit, stammt der Eintrag aus
