@@ -4505,3 +4505,130 @@ button:active:not(:disabled),
 }
 .zettel-versteckt-knopf svg { width: 15px; height: 15px; }
 .zettel-karte-versteckt { opacity: .6; }
+
+
+/* =========================================================================
+   MONATSANSICHT (16.11.2026)
+
+   Sieben Spalten, je Woche eine Zeile. Jede Wochenzeile ist ein eigenes
+   Raster: oben die Zeile für die Tageszahl, darunter --monat-bahnen
+   Zeilen für die Streifen, zuletzt eine schmale für "+2". Die Tage sind
+   Knöpfe über die ganze Zeilenhöhe, die Streifen liegen darüber und
+   lassen jedes Tippen durch.
+   ========================================================================= */
+
+.monat-rahmen { overflow: hidden; }
+
+.monat-kopf,
+.monat-woche {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.monat-kopf {
+  padding: 7px 0 6px;
+  border-bottom: 1px solid var(--glas-linie, var(--linie));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--schrift-leise);
+}
+.monat-kopf-we { opacity: .6; }
+
+.monat-woche {
+  grid-template-rows: 27px repeat(var(--monat-bahnen, 3), 16px) 11px;
+  padding-bottom: 2px;
+}
+.monat-woche + .monat-woche { border-top: 1px solid var(--glas-linie, var(--linie)); }
+
+.monat-tag {
+  grid-row: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  padding: 3px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--schrift);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.monat-tag:hover,
+.monat-tag:active { background: var(--akzent-flaeche); }
+.monat-tag:focus-visible { outline: 2px solid var(--akzent); outline-offset: -2px; }
+
+.monat-zahl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.monat-tag-we .monat-zahl { color: var(--schrift-leise); }
+.monat-tag-fremd .monat-zahl { opacity: .38; }
+.monat-tag-heute .monat-zahl {
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  opacity: 1;
+}
+
+.monat-streifen {
+  align-self: center;
+  min-width: 0;
+  height: 14px;
+  margin: 0 1.5px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--akzent);
+  color: var(--akzent-schrift);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  /* Abschneiden statt drei Punkte: in 50 Bildpunkten Breite wären die
+     Punkte ein Drittel des Platzes. */
+  text-overflow: clip;
+  pointer-events: none;
+}
+.monat-streifen-eigen { background: var(--eigen); color: #fff; }
+.monat-streifen-hinweis,
+.monat-streifen-urlaub { background: var(--geaendert); color: #fff; }
+.monat-streifen-todo { background: var(--notiz-rand); color: #fff; }
+.monat-streifen-wichtig { background: var(--wichtig); color: #fff; }
+.monat-streifen-weiter-links { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.monat-streifen-weiter-rechts { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.monat-streifen-fremd { opacity: .4; }
+
+.monat-mehr {
+  grid-row: -2;
+  align-self: center;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  color: var(--schrift-leise);
+  pointer-events: none;
+}
+
+/* Im Monat gibt es keinen Bearbeiten-Modus, siehe ansichtSetzen(). */
+.plan-monat #bearbeitenSchalter { display: none; }
+
+@media (min-width: 700px) {
+  .monat-woche { grid-template-rows: 34px repeat(var(--monat-bahnen, 4), 21px) 15px; }
+  .monat-zahl { min-width: 26px; height: 26px; font-size: 15px; }
+  .monat-streifen { height: 18px; margin: 0 3px; padding: 0 6px; border-radius: 5px; font-size: 11.5px; line-height: 18px; text-overflow: ellipsis; }
+  .monat-streifen-weiter-links { margin-left: 0; }
+  .monat-streifen-weiter-rechts { margin-right: 0; }
+  .monat-mehr { font-size: 11px; }
+}
